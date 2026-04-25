@@ -16,6 +16,9 @@ private:
     bool init() override;
     void onAdd(CCObject* sender);
     void refreshListItems();
+    void fetchGauntlets();
+    void createGauntletList(const matjson::Value& gauntlets);
+    cocos2d::CCNode* createGauntletCell(const matjson::Value& gauntlet);
 
     cue::ListNode* m_list = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;

@@ -51,8 +51,9 @@ bool GDXGauntletLayer::init() {
     bottomMenu->updateLayout();
 
     // title styling
-    auto titleOutline = CCSprite::createWithSpriteFrameName("GDX_title.png"_spr);
-    this->addChildAtPosition(titleOutline, Anchor::Top, {0, -30}, false);
+    auto title = CCSprite::createWithSpriteFrameName("GDX_title.png"_spr);
+    title->setScale(0.8f);
+    this->addChildAtPosition(title, Anchor::Top, {0, -30}, false);
 
     // gauntlet page container
     createGauntletPages(matjson::Value::array());

@@ -20,6 +20,7 @@ public:
 
 private:
     bool init() override;
+    void onClose(CCObject* sender) override;
     void onSave(CCObject* sender);
     void onCancel(CCObject* sender);
     void onAddLevel(CCObject* sender);

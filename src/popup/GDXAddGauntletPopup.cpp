@@ -34,9 +34,8 @@ void GDXAddGauntletPopup::refreshLevelList() {
 
     m_levelList->clear();
     m_levelCells.clear();
+
     if (m_levels.empty()) {
-        m_placeholderLabel = CCLabelBMFont::create("No levels added yet.", "goldFont.fnt");
-        m_levelList->addChildAtPosition(m_placeholderLabel, Anchor::Center, {0, 0}, false);
         return;
     }
 
@@ -224,10 +223,21 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
         if (cell->m_mainMenu) {
             // disable the view button and use its spot for the remove button
             auto viewBtn = cell->m_mainLayer->getChildByIDRecursive("view-button");
+            auto levelName = cell->m_mainLayer->getChildByIDRecursive("level-name");
             CCPoint removePos = CCPointZero;
             if (viewBtn) {
                 removePos = viewBtn->getPosition();
                 viewBtn->removeFromParent();
+            }
+
+            if (levelName) {
+                auto rewardValue = CCLabelBMFont::create(("Reward: " + numToString(m_pendingLevelReward)).c_str(), "chatFont.fnt");
+                rewardValue->setAnchorPoint({0.f, 0.5f});
+                rewardValue->setPosition({
+                    levelName->getPositionX() + levelName->getContentSize().width + 10.f,
+                    levelName->getPositionY(),
+                });
+                cell->m_mainLayer->addChild(rewardValue);
             }
 
             auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
@@ -238,6 +248,28 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
             deleteBtn->setUserObject(cell);
         }
     }
+}
+
+void GDXAddGauntletPopup::onClose(CCObject* sender) {
+    createQuickPopup(
+        "Cancel Adding Gauntlet?",
+        fmt::format("Are you sure you want to <cr>cancel adding this gauntlet</c>?\n<cy>All progress will be lost</c>."),
+        "No",
+        "Yes",
+        [this](auto, bool yes) {
+            if (!yes) return;
+
+            this->removeFromParent();
+
+            // clear delegate
+            auto glm = GameLevelManager::get();
+            if (!glm) {
+                return;
+            }
+            if (glm->m_levelManagerDelegate == this) {
+                glm->m_levelManagerDelegate = nullptr;
+            }
+        });
 }
 
 void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
