@@ -1,6 +1,6 @@
 # Gauntlet Deluxe
 
-**A <cl>community-run custom gauntlet levels.**
+**A <cl>community-run</c> custom gauntlet levels.**
 
 ---
 

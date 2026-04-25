@@ -12,6 +12,7 @@ private:
     void update(float dt) override;
     void keyBackClicked() override;
     void onInfo(CCObject* sender);
+    void onManageGauntlets(CCObject* sender);
     void onDot(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);

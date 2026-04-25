@@ -1,8 +1,7 @@
 #include "GDXGauntletLayer.hpp"
+#include "../popup/GDXGauntletManagePopup.hpp"
 #include <algorithm>
 #include <Geode/Geode.hpp>
-#include <Geode/binding/BoomScrollLayer.hpp>
-#include "Geode/ui/Layout.hpp"
 
 using namespace geode::prelude;
 
@@ -39,6 +38,12 @@ bool GDXGauntletLayer::init() {
     auto infoIconBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onInfo));
     bottomMenu->addChild(infoIconBtn);
 
+    // @geode-ignore(unknown-resource)
+    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("geode.loader/persistent.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
+    manageBtn->setPosition({0.f, -35.f});
+    bottomMenu->addChild(manageBtn);
+
     bottomMenu->updateLayout();
 
     // title styling
@@ -57,7 +62,7 @@ bool GDXGauntletLayer::init() {
         auto pages = CCArray::create();
         pages->retain();
 
-        auto createPage = [&](const char* text) {
+        auto gauntletPage = [&](const char* text) {
             auto page = CCLayer::create();
             auto label = CCLabelBMFont::create(text, "chatFont.fnt");
             label->setPosition({winSize.width / 2.f, winSize.height / 2.f});
@@ -66,9 +71,9 @@ bool GDXGauntletLayer::init() {
             return page;
         };
 
-        pages->addObject(createPage("Gauntlet Page 1"));
-        pages->addObject(createPage("Gauntlet Page 2"));
-        pages->addObject(createPage("Gauntlet Page 3"));
+        pages->addObject(gauntletPage("Gauntlet Page 1"));
+        pages->addObject(gauntletPage("Gauntlet Page 2"));
+        pages->addObject(gauntletPage("Gauntlet Page 3"));
 
         m_scrollLayer = BoomScrollLayer::create(pages, 0, true);
         m_scrollLayer->setPosition({0, 0});
@@ -83,6 +88,7 @@ bool GDXGauntletLayer::init() {
             }
         }
         m_scrollLayer->m_dotsVisible = false;
+        m_scrollLayer->m_looped = true;
 
         auto arrowMenu = CCMenu::create();
         arrowMenu->setPosition({0, 0});
@@ -140,6 +146,10 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
         "If you want to help out, join the Discord server linked on the mod page.",
         "OK")
         ->show();
+}
+
+void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
+    GDXGauntletManagePopup::create()->show();
 }
 
 void GDXGauntletLayer::update(float dt) {
