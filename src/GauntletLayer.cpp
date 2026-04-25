@@ -10,7 +10,7 @@ class $modify(GDXHookGauntletSelectLayer, GauntletSelectLayer) {
 
         // layout gauntlet in vanilla gd
         if (auto topRight = static_cast<CCMenu*>(this->getChildByID("top-right-menu"))) {
-            auto gauntletSpr = CCSprite::createWithSpriteFrameName("gauntletDeluxe.png"_spr);
+            auto gauntletSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletDeluxe.png"_spr);
             auto gauntletBtnSpr = AccountButtonSprite::create(gauntletSpr, AccountBaseColor::Gray, AccountBaseSize::Normal);
             auto gauntletBtn = CCMenuItemSpriteExtra::create(
                 gauntletBtnSpr, this, menu_selector(GDXHookGauntletSelectLayer::onGauntletButtonClick));

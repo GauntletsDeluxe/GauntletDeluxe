@@ -3,6 +3,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/Layout.hpp>
+#include <cue/ListNode.hpp>
 
 class GDXAddGauntletPopup;
 
@@ -16,6 +17,6 @@ private:
     void onAdd(CCObject* sender);
     void refreshListItems();
 
-    cocos2d::CCLayer* m_listLayer = nullptr;
+    cue::ListNode* m_list = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;
 };

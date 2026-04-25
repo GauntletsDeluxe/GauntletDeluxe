@@ -6,8 +6,8 @@
 		"mac": "2.2081",
 		"ios": "2.2081"
 	},
-	"id": "arcticwoof.gauntlet_deluxe",
-	"name": "Gauntlet Deluxe",
+	"id": "arcticwoof.gauntlets_deluxe",
+	"name": "Gauntlets Deluxe",
 	"version": "v1.0.0",
 	"developer": "ArcticWoof",
 	"description": "A fan-made gauntlet levels to try on.",
@@ -16,7 +16,9 @@
 	},
 	"resources": {
 		"spritesheets": {
-			"GDX_Sheet": ["resources/*.png"]
+			"GDX_Sheet": [
+				"resources/*.png"
+			]
 		}
 	}
 }

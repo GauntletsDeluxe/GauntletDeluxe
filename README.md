@@ -6,6 +6,6 @@
 
 ### About
 
-This mod adds a custom gauntlet to the game picked by the community.
+This mod adds a custom gauntlet to the game picked by the community. Contains fan-made gauntlets based of it's theme.
 
 ---

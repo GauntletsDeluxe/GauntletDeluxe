@@ -25,13 +25,11 @@ bool GDXGauntletManagePopup::init() {
         return false;
     }
 
-    this->setTitle("Manage Gauntlets");
+    setTitle("Manage Gauntlets");
 
-    auto panelSize = CCSizeMake(520.f, 360.f);
-    m_listLayer = CCLayer::create();
-    m_listLayer->setContentSize({panelSize.width - 40.f, panelSize.height - 120.f});
-    m_listLayer->setPosition({20.f, 80.f});
-    this->m_mainLayer->addChild(m_listLayer);
+    auto listSize = CCSizeMake(356.f, 200.f);
+    m_list = cue::ListNode::create(listSize);
+    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, 10.f});
 
     auto addBtn = CCMenuItemSpriteExtra::create(
         ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
@@ -52,29 +50,24 @@ void GDXGauntletManagePopup::refreshList() {
 }
 
 void GDXGauntletManagePopup::refreshListItems() {
-    if (!m_listLayer) {
+    if (!m_list) {
         return;
     }
 
-    m_listLayer->removeAllChildrenWithCleanup(true);
+    m_list->clear();
 
     if (s_gauntletList.empty()) {
         auto emptyLabel = CCLabelBMFont::create("No gauntlets yet. Press Add to create one.", "chatFont.fnt");
-        emptyLabel->setPosition({m_listLayer->getContentSize().width / 2.f, m_listLayer->getContentSize().height / 2.f});
-        m_listLayer->addChild(emptyLabel);
+        emptyLabel->setAnchorPoint({0.5f, 0.5f});
+        emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
+        m_list->addCell(emptyLabel);
         return;
     }
 
-    auto y = m_listLayer->getContentSize().height - 30.f;
     for (auto const& gauntlet : s_gauntletList) {
         auto entry = CCLabelBMFont::create(("- " + gauntlet.first).c_str(), "chatFont.fnt");
         entry->setAnchorPoint({0.f, 0.5f});
-        entry->setPosition({10.f, y});
-        m_listLayer->addChild(entry);
-        y -= 30.f;
-        if (y < 30.f) {
-            break;
-        }
+        m_list->addCell(entry);
     }
 }
 
