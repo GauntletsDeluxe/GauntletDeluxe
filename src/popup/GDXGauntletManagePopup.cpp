@@ -3,6 +3,7 @@
 #include "../include/GDXConstant.hpp"
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/utils/web.hpp>
 
 using namespace geode;
@@ -27,6 +28,12 @@ bool GDXGauntletManagePopup::init() {
 
     auto listSize = CCSizeMake(356.f, 200.f);
     m_list = cue::ListNode::create(listSize);
+    m_list->getScrollLayer()->m_contentLayer->setLayout(
+        ColumnLayout::create()
+            ->setGap(0.f)
+            ->setAxisReverse(true)
+            ->setAxisAlignment(AxisAlignment::End)
+            ->setAutoGrowAxis(0.f));
     m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, 0.f});
 
     auto addBtn = CCMenuItemSpriteExtra::create(
@@ -54,10 +61,19 @@ void GDXGauntletManagePopup::refreshListItems() {
     }
 
     m_list->clear();
-    auto emptyLabel = CCLabelBMFont::create("Loading gauntlets...", "chatFont.fnt");
-    emptyLabel->setAnchorPoint({0.5f, 0.5f});
-    emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
-    m_list->addCell(emptyLabel);
+    auto cell = CCLayer::create();
+    cell->setContentSize(m_list->getListSize());
+
+    auto spinner = LoadingSpinner::create(60.f);
+    if (spinner) {
+        spinner->setAnchorPoint({0.5f, 0.5f});
+        spinner->setPosition({cell->getContentSize().width / 2.f, cell->getContentSize().height / 2.f});
+        cell->addChild(spinner);
+    }
+
+    m_list->addCell(cell);
+    m_list->getScrollLayer()->m_contentLayer->updateLayout();
+    m_list->scrollToTop();
 }
 
 void GDXGauntletManagePopup::fetchGauntlets() {
@@ -93,6 +109,8 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
         emptyLabel->setAnchorPoint({0.5f, 0.5f});
         emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
         m_list->addCell(emptyLabel);
+        m_list->getScrollLayer()->m_contentLayer->updateLayout();
+        m_list->scrollToTop();
         return;
     }
 
@@ -104,10 +122,10 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
         auto cell = createGauntletCell(gauntlet);
         if (cell) {
             m_list->addCell(cell);
-            m_list->updateLayout();
         }
     }
-    m_list->updateLayout();
+    m_list->getScrollLayer()->m_contentLayer->updateLayout();
+    m_list->scrollToTop();
 }
 
 CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet) {

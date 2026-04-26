@@ -1,17 +1,6 @@
 ﻿#include "GDXAddGauntletPopup.hpp"
 #include "GDXGauntletManagePopup.hpp"
 #include <algorithm>
-#include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
-#include <Geode/binding/LevelCell.hpp>
-#include <Geode/binding/GameLevelManager.hpp>
-#include <Geode/binding/GJGameLevel.hpp>
-#include <Geode/binding/GJSearchObject.hpp>
-#include <Geode/ui/ColorPickPopup.hpp>
-#include <Geode/ui/TextInput.hpp>
-#include <Geode/ui/Layout.hpp>
-#include <Geode/utils/general.hpp>
-#include <Geode/utils/web.hpp>
 #include "../include/GDXConstant.hpp"
 #include <arc/runtime/Runtime.hpp>
 #include <argon/argon.hpp>
@@ -36,6 +25,7 @@ void GDXAddGauntletPopup::refreshLevelList() {
     m_levelCells.clear();
 
     if (m_levels.empty()) {
+        m_levelList->updateLayout(true);
         return;
     }
 
@@ -44,6 +34,7 @@ void GDXAddGauntletPopup::refreshLevelList() {
         auto line = CCLabelBMFont::create(lineText.c_str(), "chatFont.fnt");
         line->setAnchorPoint({0.f, 0.5f});
         m_levelList->addCell(line);
+        m_levelList->updateLayout(true);
     }
 }
 
@@ -110,6 +101,13 @@ bool GDXAddGauntletPopup::init() {
     auto listSize = CCSizeMake(356.f, 280.f);
     m_levelList = cue::ListNode::create(listSize);
     m_levelList->setScale(0.8f);
+    m_levelList->setCellHeight(90.f);
+    m_levelList->getScrollLayer()->m_contentLayer->setLayout(
+        ColumnLayout::create()
+            ->setGap(0.f)
+            ->setAxisReverse(true)
+            ->setAxisAlignment(AxisAlignment::End)
+            ->setAutoGrowAxis(listSize.height));
     m_mainLayer->addChildAtPosition(m_levelList, Anchor::Right, {-180.f, -10.f});
     refreshLevelList();
 
@@ -218,7 +216,6 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
         cell->setContentHeight(90.f);
         m_levelCells.push_back(cell);
         m_levelList->addCell(cell);
-        m_levelList->updateLayout();
 
         if (cell->m_mainMenu) {
             // disable the view button and use its spot for the remove button
@@ -248,28 +245,33 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
             deleteBtn->setUserObject(cell);
         }
     }
+    m_levelList->updateLayout(true);
 }
 
 void GDXAddGauntletPopup::onClose(CCObject* sender) {
-    createQuickPopup(
-        "Cancel Adding Gauntlet?",
-        fmt::format("Are you sure you want to <cr>cancel adding this gauntlet</c>?\n<cy>All progress will be lost</c>."),
-        "No",
-        "Yes",
-        [this](auto, bool yes) {
-            if (!yes) return;
+    if (m_unsaved) {
+        createQuickPopup(
+            "Cancel Adding Gauntlet?",
+            fmt::format("Are you sure you want to <cr>cancel adding this gauntlet</c>?\n<cy>All progress will be lost</c>."),
+            "No",
+            "Yes",
+            [this](auto, bool yes) {
+                if (!yes) return;
 
-            this->removeFromParent();
+                this->removeFromParent();
 
-            // clear delegate
-            auto glm = GameLevelManager::get();
-            if (!glm) {
-                return;
-            }
-            if (glm->m_levelManagerDelegate == this) {
-                glm->m_levelManagerDelegate = nullptr;
-            }
-        });
+                // clear delegate
+                auto glm = GameLevelManager::get();
+                if (!glm) {
+                    return;
+                }
+                if (glm->m_levelManagerDelegate == this) {
+                    glm->m_levelManagerDelegate = nullptr;
+                }
+            });
+    } else {
+        Popup::onClose(sender);
+    }
 }
 
 void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
@@ -309,7 +311,7 @@ void GDXAddGauntletPopup::onDeleteLevel(CCObject* sender) {
     }
 
     m_levelList->removeCell(idx);
-    m_levelList->updateLayout();
+    m_levelList->updateLayout(true);
 }
 
 void GDXAddGauntletPopup::onSave(CCObject* sender) {
@@ -380,6 +382,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
                     m_owner->refreshList();
                 }
                 upoup->showSuccessMessage("Gauntlet added successfully!");
+                m_unsaved = false;
                 this->onClose(nullptr);
             });
         }

@@ -36,6 +36,7 @@ private:
     int m_pendingLevelId = 0;
     int m_pendingLevelReward = 0;
     bool m_searchingLevel = false;
+    bool m_unsaved = true;
     gd::string m_pendingSearchKey;
     geode::TextInput* m_nameInput = nullptr;
     geode::TextInput* m_gauntletReward = nullptr;
