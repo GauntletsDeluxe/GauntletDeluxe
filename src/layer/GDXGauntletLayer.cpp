@@ -1,4 +1,5 @@
 #include "GDXGauntletLayer.hpp"
+#include "GDXGauntletLevelsLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
 #include <algorithm>
 #include <Geode/Geode.hpp>
@@ -6,6 +7,7 @@
 #include <Geode/utils/web.hpp>
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
+#include "Geode/ui/MDPopup.hpp"
 
 using namespace geode::prelude;
 
@@ -85,7 +87,43 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
 }
 
 void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
-    // TODO: handle gauntlet selection
+    auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!button || !m_gauntlets.isArray()) {
+        return;
+    }
+
+    auto idx = button->getTag();
+    if (idx < 0 || idx >= static_cast<int>(m_gauntlets.size())) {
+        return;
+    }
+
+    auto gauntlet = m_gauntlets[idx];
+    auto levelArray = gauntlet["levelIds"];
+    if (!levelArray.isArray()) {
+        return;
+    }
+
+    auto levels = CCArray::create();
+    for (auto i = 0u; i < levelArray.size(); ++i) {
+        auto levelValue = levelArray[i];
+        auto dict = CCDictionary::create();
+        dict->setObject(CCInteger::create(levelValue["levelId"].asInt().unwrapOr(0)), "levelId");
+        dict->setObject(CCString::create(levelValue["levelName"].asString().unwrapOr("-").c_str()), "levelName");
+        dict->setObject(CCString::create(levelValue["creatorName"].asString().unwrapOr("-").c_str()), "creatorName");
+        dict->setObject(CCString::create(levelValue["songName"].asString().unwrapOr("-").c_str()), "songName");
+        dict->setObject(CCInteger::create(levelValue["songId"].asInt().unwrapOr(0)), "songId");
+        dict->setObject(CCInteger::create(levelValue["reward"].asInt().unwrapOr(0)), "reward");
+        levels->addObject(dict);
+    }
+
+    auto scene = CCScene::create();
+    auto color = ccColor3B{
+        static_cast<GLubyte>(gauntlet["r"].asInt().unwrapOr(255)),
+        static_cast<GLubyte>(gauntlet["g"].asInt().unwrapOr(255)),
+        static_cast<GLubyte>(gauntlet["b"].asInt().unwrapOr(255)),
+    };
+    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color));
+    CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 }
 
 void GDXGauntletLayer::fetchGauntlets() {
@@ -141,7 +179,7 @@ GDXGauntletNode GDXGauntletNode::fromJson(const matjson::Value& gauntlet) {
     return node;
 }
 
-CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Value& gauntlet) {
+CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Value& gauntlet, std::size_t index) {
     auto node = GDXGauntletNode::fromJson(gauntlet);
     int gauntletIndex = node.id;
     std::string gauntletName = node.name;
@@ -156,7 +194,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     nameLabel->setAlignment(kCCTextAlignmentCenter);
     nameLabel->setPosition({gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height - 15});
     nameLabel->setAnchorPoint({0.5f, 1.0f});
-    nameLabel->setScale(0.5f);
+    nameLabel->limitLabelWidth(gauntletBg->getContentSize().width - 30.f, 0.5f, 0.3f);
 
     auto nameLabelShadow = CCLabelBMFont::create(formattedName.c_str(), "bigFont.fnt");
     nameLabelShadow->setAlignment(kCCTextAlignmentCenter);
@@ -164,7 +202,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     nameLabelShadow->setAnchorPoint({0.5f, 1.0f});
     nameLabelShadow->setColor({0, 0, 0});
     nameLabelShadow->setOpacity(60);
-    nameLabelShadow->setScale(0.5f);
+    nameLabelShadow->limitLabelWidth(gauntletBg->getContentSize().width - 30.f, 0.5f, 0.3f);
 
     gauntletBg->addChild(nameLabel, 3);
     gauntletBg->addChild(nameLabelShadow, 2);
@@ -183,15 +221,83 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     gauntletSprite->setPosition(gauntletBg->getContentSize() / 2);
     gauntletSpriteShadow->setPosition({gauntletSprite->getPositionX(), gauntletSprite->getPositionY() - 6});
 
+    auto rewardLabel = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
+    rewardLabel->setAlignment(kCCTextAlignmentLeft);
+    rewardLabel->setAnchorPoint({1.f, 0.5f});
+    rewardLabel->setScale(0.5f);
+    rewardLabel->limitLabelWidth(100.f, 0.5f, 0.35f);
+    rewardLabel->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
+    gauntletBg->addChild(rewardLabel, 3);
+
+    auto rewardLabelShadow = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
+    rewardLabelShadow->setAlignment(kCCTextAlignmentLeft);
+    rewardLabelShadow->setAnchorPoint({1.f, 0.5f});
+    rewardLabelShadow->limitLabelWidth(100.f, 0.5f, 0.35f);
+    rewardLabelShadow->setPosition({rewardLabel->getPositionX() + 2.f, rewardLabel->getPositionY() - 2.f});
+    rewardLabelShadow->setColor({0, 0, 0});
+    rewardLabelShadow->setOpacity(60);
+    gauntletBg->addChild(rewardLabelShadow, 2);
+
+    auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+    if (rewardIcon) {
+        rewardIcon->setScale(0.3f);
+        rewardIcon->setAnchorPoint({0.f, 0.5f});
+        rewardIcon->setPosition({rewardLabel->getPositionX() + 5, 50.f});
+        gauntletBg->addChild(rewardIcon, 3);
+    }
+
+    auto rewardIconShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+    if (rewardIconShadow) {
+        rewardIconShadow->setColor({0, 0, 0});
+        rewardIconShadow->setOpacity(60);
+        rewardIconShadow->setScale(0.3f);
+        rewardIconShadow->setAnchorPoint({0.f, 0.5f});
+        rewardIconShadow->setPosition({rewardLabel->getPositionX() + 5, 48.f});
+        gauntletBg->addChild(rewardIconShadow, 2);
+    }
+
+    auto infoMenu = CCMenu::create();
+    infoMenu->setPosition({0.f, 0.f});
+    gauntletBg->addChild(infoMenu, 4);
+
+    auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+    infoIconSpr->setScale(0.65f);
+    if (infoIconSpr) {
+        auto infoBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onGauntletInfo));
+        infoBtn->setTag(static_cast<int>(index));
+        infoBtn->setPosition({gauntletBg->getContentSize().width - 5.f, gauntletBg->getContentSize().height - 5.f});
+        infoMenu->addChild(infoBtn);
+    }
+
     auto button = CCMenuItemSpriteExtra::create(gauntletBg, this, menu_selector(GDXGauntletLayer::onGauntletButtonClick));
-    button->setTag(static_cast<int>(gauntletIndex));
+    button->setTag(static_cast<int>(index));
     m_gauntletButtons.push_back(button);
     button->m_scaleMultiplier = 1.05f;
     button->setVisible(true);
     return button;
 }
 
+void GDXGauntletLayer::onGauntletInfo(CCObject* sender) {
+    auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!button || !m_gauntlets.isArray()) {
+        return;
+    }
+
+    auto idx = button->getTag();
+    if (idx < 0 || idx >= static_cast<int>(m_gauntlets.size())) {
+        return;
+    }
+
+    auto gauntlet = m_gauntlets[idx];
+    auto title = gauntlet["name"].asString().unwrapOr("Gauntlet");
+    auto description = gauntlet["description"].asString().unwrapOr("No description available.");
+
+    MDPopup::create(title.c_str(), description.c_str(), "OK")->show();
+}
+
 void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
+    m_gauntlets = gauntlets;
+
     if (m_scrollLayer) {
         m_scrollLayer->removeFromParent();
         m_scrollLayer = nullptr;
@@ -222,7 +328,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
             pages->addObject(page);
         }
 
-        auto gauntletButton = createGauntletButton(gauntlets[i]);
+        auto gauntletButton = createGauntletButton(gauntlets[i], i);
         auto slotIndex = i % 3;
         if (pageMenu) {
             pageMenu->addChild(gauntletButton);

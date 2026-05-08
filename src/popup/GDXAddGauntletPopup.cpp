@@ -227,14 +227,11 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
                 viewBtn->removeFromParent();
             }
 
-            if (levelName) {
+            if (cell->m_backgroundLayer) {
                 auto rewardValue = CCLabelBMFont::create(("Reward: " + numToString(m_pendingLevelReward)).c_str(), "chatFont.fnt");
-                rewardValue->setAnchorPoint({0.f, 0.5f});
-                rewardValue->setPosition({
-                    levelName->getPositionX() + levelName->getContentSize().width + 10.f,
-                    levelName->getPositionY(),
-                });
-                cell->m_mainLayer->addChild(rewardValue);
+                rewardValue->setAnchorPoint({1.f, 0.5f});
+                rewardValue->setPosition({cell->m_backgroundLayer->getContentSize().width, 5.f});
+                cell->m_backgroundLayer->addChild(rewardValue);
             }
 
             auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
@@ -371,7 +368,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
         if (response.error() || response.cancelled() || !response.ok()) {
             geode::queueInMainThread([upoup, response] {
-                upoup->showFailMessage(gdx::getResponseFailMessage(response, "Failed to add gauntlet."));
+                upoup->showFailMessage(gdx::getResponseMessage(response, "Failed to add gauntlet."));
             });
             co_return;
         }

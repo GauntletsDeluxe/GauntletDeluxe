@@ -39,15 +39,17 @@ private:
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
     void onGauntletButtonClick(CCObject* sender);
+    void onGauntletInfo(CCObject* sender);
     void fetchGauntlets();
     void createGauntletPages(const matjson::Value& gauntlets);
     void updateDots();
 
-    CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet);
+    CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index);
     BoomScrollLayer* m_scrollLayer = nullptr;
     CCMenu* m_dotsMenu = nullptr;
     CCMenu* m_gauntletsMenu = nullptr;
     std::vector<CCMenuItemSpriteExtra*> m_dots;
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
+    matjson::Value m_gauntlets;
     int m_currentPage = -1;
 };
