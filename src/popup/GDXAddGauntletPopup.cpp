@@ -607,15 +607,14 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     }
 
     async::spawn([this, upoup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto authResult = co_await argon::startAuth(accountData);
-        if (!authResult) {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
             geode::queueInMainThread([upoup] {
                 upoup->showFailMessage("Authentication failed.");
             });
             co_return;
         }
 
-        auto token = std::move(authResult).unwrap();
         body["argonToken"] = std::move(token);
 
         auto response = co_await geode::utils::web::WebRequest()

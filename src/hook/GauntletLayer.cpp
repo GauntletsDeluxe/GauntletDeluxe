@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GauntletSelectLayer.hpp>
-#include "layer/GDXGauntletLayer.hpp"
+#include "../layer/GDXGauntletLayer.hpp"
 
 using namespace geode::prelude;
 

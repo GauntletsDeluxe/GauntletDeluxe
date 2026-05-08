@@ -1,11 +1,14 @@
 #include "GDXGauntletLayer.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
+#include "GDXLeaderboardLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
+#include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <algorithm>
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
+#include <Geode/ui/BasedButton.hpp>
 #include <Geode/utils/web.hpp>
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
@@ -31,7 +34,8 @@ bool GDXGauntletLayer::init() {
     auto director = CCDirector::sharedDirector();
     auto winSize = director->getWinSize();
     addBackButton(this, BackButtonStyle::Green);
-    addSideArt(this, SideArt::All, SideArtStyle::LayerGray, false);
+    addSideArt(this, SideArt::Bottom, SideArtStyle::LayerGray, false);
+    addSideArt(this, SideArt::TopLeft, SideArtStyle::LayerGray, false);
     auto bg = createLayerBG();
     bg->setColor({50, 50, 50});
     this->addChild(bg, -5);
@@ -46,6 +50,12 @@ bool GDXGauntletLayer::init() {
     auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
     auto infoIconBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onInfo));
     bottomMenu->addChild(infoIconBtn);
+
+    // leaderboard button
+    auto leaderboardIconSpr = CCSprite::createWithSpriteFrameName("GJ_levelLeaderboardBtn_001.png");
+    leaderboardIconSpr->setScale(0.6f);
+    auto leaderboardIconBtn = CCMenuItemSpriteExtra::create(leaderboardIconSpr, this, menu_selector(GDXGauntletLayer::onLeaderboard));
+    bottomMenu->addChild(leaderboardIconBtn);
 
     // @geode-ignore(unknown-resource)
     auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
@@ -85,6 +95,31 @@ bool GDXGauntletLayer::init() {
         this->addChild(m_loadingSpinner, 4);
     }
 
+    // users' gauntlet and level points
+    auto levelPointsSpr = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
+    levelPointsSpr->setPosition({winSize.width - 20, winSize.height - 20});
+    levelPointsSpr->setScale(0.3f);
+    this->addChild(levelPointsSpr);
+    m_levelPointsCounter = CCCounterLabel::create(static_cast<int>(m_levelPoints), "bigFont.fnt", FormatterType::Integer);
+    if (m_levelPointsCounter) {
+        m_levelPointsCounter->setPosition({levelPointsSpr->getPositionX() - 15, levelPointsSpr->getPositionY()});
+        m_levelPointsCounter->setAnchorPoint({1.0f, 0.5f});
+        m_levelPointsCounter->setScale(0.6f);
+        this->addChild(m_levelPointsCounter);
+    }
+
+    auto gauntletPointsSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+    gauntletPointsSpr->setPosition({winSize.width - 20, winSize.height - 50});
+    gauntletPointsSpr->setScale(0.4f);
+    this->addChild(gauntletPointsSpr);
+    m_gauntletPointsCounter = CCCounterLabel::create(static_cast<int>(m_gauntletPoints), "bigFont.fnt", FormatterType::Integer);
+    if (m_gauntletPointsCounter) {
+        m_gauntletPointsCounter->setPosition({gauntletPointsSpr->getPositionX() - 15, gauntletPointsSpr->getPositionY()});
+        m_gauntletPointsCounter->setAnchorPoint({1.0f, 0.5f});
+        m_gauntletPointsCounter->setScale(0.6f);
+        this->addChild(m_gauntletPointsCounter);
+    }
+
     // gauntlet page container
     createGauntletPages(matjson::Value::array());
     fetchUserData();
@@ -94,6 +129,16 @@ bool GDXGauntletLayer::init() {
     this->setKeypadEnabled(true);
 
     return true;
+}
+
+void GDXGauntletLayer::onEnter() {
+    CCLayer::onEnter();
+    fetchUserData();
+}
+
+void GDXGauntletLayer::onExit() {
+    this->unscheduleUpdate();
+    CCLayer::onExit();
 }
 
 void GDXGauntletLayer::keyBackClicked() {
@@ -111,6 +156,12 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
         ->show();
 }
 
+void GDXGauntletLayer::onLeaderboard(CCObject* sender) {
+    auto scene = CCScene::create();
+    scene->addChild(GDXLeaderboardLayer::create());
+    CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
+}
+
 void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     auto upopup = UploadActionPopup::create(nullptr, "Getting access...");
     upopup->show();
@@ -120,15 +171,14 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     body["accountId"] = accountData.accountId;
 
     async::spawn([upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto authResult = co_await argon::startAuth(accountData);
-        if (!authResult) {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
             geode::queueInMainThread([upopup] {
                 upopup->showFailMessage("Authentication failed.");
             });
             co_return;
         }
 
-        auto token = std::move(authResult).unwrap();
         body["argonToken"] = std::move(token);
         auto response = co_await geode::utils::web::WebRequest()
                             .url(url)
@@ -237,14 +287,15 @@ void GDXGauntletLayer::fetchGauntlets() {
     }
 
     auto url = std::string(gdx::BASE_API_URL) + "/getGauntlets";
-    async::spawn([this, url = std::move(url)]() -> arc::Future<> {
+    auto self = geode::Ref<GDXGauntletLayer>(this);
+    async::spawn([self = std::move(self), url = std::move(url)]() -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
                             .get(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([this] {
-                if (m_loadingSpinner) {
-                    m_loadingSpinner->setVisible(false);
+            geode::queueInMainThread([self]() {
+                if (self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
                 }
             });
             co_return;
@@ -252,20 +303,20 @@ void GDXGauntletLayer::fetchGauntlets() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            geode::queueInMainThread([this] {
-                if (m_loadingSpinner) {
-                    m_loadingSpinner->setVisible(false);
+            geode::queueInMainThread([self]() {
+                if (self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
                 }
             });
             co_return;
         }
 
         auto gauntlets = std::move(jsonResult).unwrap();
-        geode::queueInMainThread([this, gauntlets = std::move(gauntlets)]() mutable {
-            if (m_loadingSpinner) {
-                m_loadingSpinner->setVisible(false);
+        geode::queueInMainThread([self, gauntlets = std::move(gauntlets)]() mutable {
+            if (self->m_loadingSpinner) {
+                self->m_loadingSpinner->setVisible(false);
             }
-            createGauntletPages(gauntlets);
+            self->createGauntletPages(gauntlets);
         });
 
         co_return;
@@ -279,13 +330,13 @@ void GDXGauntletLayer::fetchUserData() {
     body["accountId"] = accountData.accountId;
     body["argonToken"] = std::string(accountData.gjp2);
 
-    async::spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto authResult = co_await argon::startAuth(accountData);
-        if (!authResult) {
+    auto self = geode::Ref<GDXGauntletLayer>(this);
+    async::spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
             co_return;
         }
 
-        auto token = std::move(authResult).unwrap();
         body["argonToken"] = std::move(token);
 
         auto response = co_await geode::utils::web::WebRequest()
@@ -308,18 +359,26 @@ void GDXGauntletLayer::fetchUserData() {
             co_return;
         }
 
-        geode::queueInMainThread([this, userData = std::move(userData)]() mutable {
-            m_userAccountId = userData["accountId"].asInt().unwrapOr(0);
-            m_username = userData["username"].asString().unwrapOr(" ");
-            m_gauntletPoints = userData["gauntletPoints"].asInt().unwrapOr(0);
-            m_levelPoints = userData["levelPoints"].asInt().unwrapOr(0);
-        });
+        geode::queueInMainThread([self, userData = std::move(userData)]() mutable {
+            self->m_userAccountId = userData["accountId"].asInt().unwrapOr(0);
+            self->m_username = userData["username"].asString().unwrapOr(" ");
+            self->m_gauntletPoints = userData["gauntletPoints"].asInt().unwrapOr(0);
+            self->m_levelPoints = userData["levelPoints"].asInt().unwrapOr(0);
+            if (self->m_levelPointsCounter) {
+                self->m_levelPointsCounter->setTargetCount(self->m_levelPoints);
+                Mod::get()->setSavedValue<int>("levelPoints", self->m_levelPoints);
+            }
+            if (self->m_gauntletPointsCounter) {
+                self->m_gauntletPointsCounter->setTargetCount(self->m_gauntletPoints);
+                Mod::get()->setSavedValue<int>("gauntletPoints", self->m_gauntletPoints);
+            }
 
-        log::debug("Fetched user data: accountId={}, username={}, gauntletPoints={}, levelPoints={}",
-            m_userAccountId,
-            m_username,
-            m_gauntletPoints,
-            m_levelPoints);
+            log::debug("Fetched user data: accountId={}, username={}, gauntletPoints={}, levelPoints={}",
+                self->m_userAccountId,
+                self->m_username,
+                self->m_gauntletPoints,
+                self->m_levelPoints);
+        });
 
         co_return;
     });

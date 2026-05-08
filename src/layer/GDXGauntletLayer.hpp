@@ -32,8 +32,10 @@ public:
 private:
     bool init() override;
     void update(float dt) override;
+    void onExit() override;
     void keyBackClicked() override;
     void onInfo(CCObject* sender);
+    void onLeaderboard(CCObject* sender);
     void onManageGauntlets(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
     void onDot(CCObject* sender);
@@ -45,6 +47,7 @@ private:
     void fetchUserData();
     void createGauntletPages(const matjson::Value& gauntlets);
     void updateDots();
+    void onEnter() override;
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index);
     BoomScrollLayer* m_scrollLayer = nullptr;
@@ -53,10 +56,12 @@ private:
     std::vector<CCMenuItemSpriteExtra*> m_dots;
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
     LoadingSpinner* m_loadingSpinner = nullptr;
+    CCCounterLabel* m_levelPointsCounter = nullptr;
+    CCCounterLabel* m_gauntletPointsCounter = nullptr;
     matjson::Value m_gauntlets;
     int m_userAccountId = 0;
     std::string m_username;
-    int m_gauntletPoints = 0;
-    int m_levelPoints = 0;
+    int m_gauntletPoints = Mod::get()->getSavedValue<int>("gauntletPoints", 0);
+    int m_levelPoints = Mod::get()->getSavedValue<int>("levelPoints", 0);
     int m_currentPage = -1;
 };

@@ -210,9 +210,9 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     }
 
     auto nameLabel = CCLabelBMFont::create(name.c_str(), "goldFont.fnt");
-    nameLabel->setAnchorPoint({0.f, 1.f});
-    nameLabel->setPosition({80.f, cell->getContentSize().height - 2.f});
-    nameLabel->setScale(0.8f);
+    nameLabel->setAnchorPoint({0.f, .5f});
+    nameLabel->setPosition({80.f, cell->getContentSize().height - 10.f});
+    nameLabel->limitLabelWidth(200.f, 0.8f, 0.35f);
     cell->addChild(nameLabel);
 
     if (!description.empty()) {
@@ -220,30 +220,35 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
             "chatFont.fnt",
             description,
             0.55f,
-            240.f,
+            200.f,
             {0.f, 1.f},
-            40,
-            false
-        );
+            10,
+            false);
         if (descriptionLabel) {
             descriptionLabel->setAnchorPoint({0.f, 1.f});
-            descriptionLabel->setPosition({80.f, cell->getContentSize().height - 30.f});
-            cell->addChild(descriptionLabel);
+            descriptionLabel->setPosition({85.f, cell->getContentSize().height - 30.f});
+            cell->addChild(descriptionLabel, 1);
         }
+        auto descriptionBg = NineSlice::create("square02_small.png");
+        descriptionBg->setContentSize({220, 40});
+        descriptionBg->setInsets({5, 5, 5, 5});
+        descriptionBg->setOpacity(100);
+
+        cell->addChildAtPosition(descriptionBg, Anchor::Center, {12.f, 0.f}, false);
     }
 
     auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
     if (rewardSpr) {
         rewardSpr->setScale(0.25f);
         rewardSpr->setAnchorPoint({1.f, 0.5f});
-        rewardSpr->setPosition({95.f, 16.f});
+        rewardSpr->setPosition({95.f, 13.f});
         cell->addChild(rewardSpr);
     }
 
     auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
     rewardLabel->setAnchorPoint({0.f, 0.5f});
-    rewardLabel->setPosition({100.f, 16.f});
-    rewardLabel->setScale(0.35f);
+    rewardLabel->setPosition({100.f, 13.f});
+    rewardLabel->limitLabelWidth(180.f, 0.35f, 0.2f);
     cell->addChild(rewardLabel);
 
     return cell;
@@ -307,15 +312,14 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
     auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
     upopup->show();
     async::spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto authResult = co_await argon::startAuth(accountData);
-        if (!authResult) {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
             geode::queueInMainThread([upopup] {
                 upopup->showFailMessage("Authentication failed.");
             });
             co_return;
         }
 
-        auto token = std::move(authResult).unwrap();
         body["argonToken"] = std::move(token);
 
         auto response = co_await geode::utils::web::WebRequest()
