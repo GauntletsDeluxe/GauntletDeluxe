@@ -1,6 +1,7 @@
 ﻿#include "GDXAddGauntletPopup.hpp"
 #include "GDXGauntletManagePopup.hpp"
 #include <algorithm>
+#include <unordered_map>
 #include "../include/GDXConstant.hpp"
 #include <arc/runtime/Runtime.hpp>
 #include <argon/argon.hpp>
@@ -255,6 +256,7 @@ void GDXAddGauntletPopup::applyEditMode() {
     m_levelCells.clear();
     m_pendingLevelFetches.clear();
 
+    gd::string levelIds;
     for (auto i = 0u; i < m_editGauntlet["levelIds"].size(); ++i) {
         auto entry = m_editGauntlet["levelIds"][i];
         if (!entry.isObject()) {
@@ -267,19 +269,27 @@ void GDXAddGauntletPopup::applyEditMode() {
             continue;
         }
 
+        if (!levelIds.empty()) {
+            levelIds += ",";
+        }
+        levelIds += numToString(levelId);
+
         m_levels.push_back({levelId, reward});
         m_levelCells.emplace_back(nullptr);
-
-        auto searchObj = GJSearchObject::create(SearchType::Type19, numToString(levelId));
-        if (!searchObj) {
-            continue;
-        }
-
-        m_pendingLevelFetches.push_back({searchObj->getKey(), numToString(levelId), levelId, reward, m_levels.size() - 1});
     }
 
     refreshLevelList();
-    loadNextPendingLevel();
+
+    if (!levelIds.empty()) {
+        auto glm = GameLevelManager::get();
+        if (glm) {
+            auto searchObj = GJSearchObject::create(SearchType::Type19, levelIds);
+            if (searchObj) {
+                m_pendingLevelFetches.push_back({searchObj->getKey(), levelIds, 0, 0, SIZE_MAX});
+                loadNextPendingLevel();
+            }
+        }
+    }
 }
 
 void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
@@ -385,7 +395,6 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
         m_levelInput->setString("");
         m_levelRewardInput->setString("");
 
-
         auto cell = createLevelCellFromLevel(level, m_pendingLevelReward);
         if (cell) {
             m_levelCells.push_back(cell);
@@ -397,6 +406,41 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
 
     auto pending = m_pendingLevelFetches[pendingIndex];
     m_pendingLevelFetches.erase(m_pendingLevelFetches.begin() + pendingIndex);
+    if (pending.index == SIZE_MAX) {
+        if (!levels || levels->count() == 0) {
+            geode::queueInMainThread([this] {
+                Notification::create("No online levels were found.", NotificationIcon::Error)->show();
+            });
+            return;
+        }
+
+        std::unordered_map<int, GJGameLevel*> foundLevels;
+        for (auto i = 0u; i < levels->count(); ++i) {
+            if (auto level = static_cast<GJGameLevel*>(levels->objectAtIndex(i))) {
+                foundLevels[level->m_levelID] = level;
+            }
+        }
+
+        bool inserted = false;
+        for (size_t i = 0; i < m_levels.size(); ++i) {
+            if (m_levelCells[i]) {
+                continue;
+            }
+            auto const& entry = m_levels[i];
+            auto it = foundLevels.find(entry.levelId);
+            if (it == foundLevels.end()) {
+                continue;
+            }
+            auto cell = createLevelCellFromLevel(it->second, entry.reward);
+            m_levelCells[i] = cell;
+            inserted = true;
+        }
+
+        if (inserted) {
+            refreshLevelList();
+        }
+        return;
+    }
 
     if (!levels || levels->count() == 0) {
         geode::queueInMainThread([this, pending] {
@@ -486,7 +530,11 @@ void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
     auto pending = m_pendingLevelFetches[pendingIndex];
     m_pendingLevelFetches.erase(m_pendingLevelFetches.begin() + pendingIndex);
     geode::queueInMainThread([this, pending] {
-        Notification::create(fmt::format("Failed to fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
+        if (pending.index == SIZE_MAX) {
+            Notification::create("Failed to fetch online levels for this gauntlet.", NotificationIcon::Error)->show();
+        } else {
+            Notification::create(fmt::format("Failed to fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
+        }
     });
 
     loadNextPendingLevel();
