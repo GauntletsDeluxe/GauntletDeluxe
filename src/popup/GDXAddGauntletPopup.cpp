@@ -270,9 +270,9 @@ void GDXAddGauntletPopup::applyEditMode() {
         }
 
         if (!levelIds.empty()) {
-            levelIds += ",";
+            levelIds.append(",");
         }
-        levelIds += numToString(levelId);
+        levelIds.append(numToString(levelId));
 
         m_levels.push_back({levelId, reward});
         m_levelCells.emplace_back(nullptr);

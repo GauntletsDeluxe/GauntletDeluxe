@@ -237,25 +237,25 @@ bool GDXGauntletLayer::init() {
     auto levelPointsSpr = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
     levelPointsSpr->setPosition({winSize.width - 20, winSize.height - 20});
     levelPointsSpr->setScale(0.3f);
-    this->addChild(levelPointsSpr);
+    this->addChild(levelPointsSpr, 5);
     m_levelPointsCounter = CCCounterLabel::create(static_cast<int>(m_levelPoints), "bigFont.fnt", FormatterType::Integer);
     if (m_levelPointsCounter) {
         m_levelPointsCounter->setPosition({levelPointsSpr->getPositionX() - 15, levelPointsSpr->getPositionY()});
         m_levelPointsCounter->setAnchorPoint({1.0f, 0.5f});
         m_levelPointsCounter->setScale(0.6f);
-        this->addChild(m_levelPointsCounter);
+        this->addChild(m_levelPointsCounter, 5);
     }
 
     auto gauntletPointsSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
     gauntletPointsSpr->setPosition({winSize.width - 20, winSize.height - 50});
     gauntletPointsSpr->setScale(0.4f);
-    this->addChild(gauntletPointsSpr);
+    this->addChild(gauntletPointsSpr, 5);
     m_gauntletPointsCounter = CCCounterLabel::create(static_cast<int>(m_gauntletPoints), "bigFont.fnt", FormatterType::Integer);
     if (m_gauntletPointsCounter) {
         m_gauntletPointsCounter->setPosition({gauntletPointsSpr->getPositionX() - 15, gauntletPointsSpr->getPositionY()});
         m_gauntletPointsCounter->setAnchorPoint({1.0f, 0.5f});
         m_gauntletPointsCounter->setScale(0.6f);
-        this->addChild(m_gauntletPointsCounter);
+        this->addChild(m_gauntletPointsCounter, 5);
     }
 
     // gauntlet page container
@@ -285,11 +285,17 @@ void GDXGauntletLayer::keyBackClicked() {
 }
 
 void GDXGauntletLayer::onInfo(CCObject* sender) {
-    FLAlertLayer::create(
+    MDPopup::create(
         "Gauntlet Deluxe",
-        "This is a work in progress mod that adds a new gauntlet mode to Geometry Dash. "
-        "The mod is currently in early development, so expect bugs and missing features. "
-        "If you want to help out, join the Discord server linked on the mod page.",
+        "**Gauntlet Deluxe** is a <cl>community-run mod</c> that adds a <cg>custom gauntlet to Geometry Dash</c>, featuring fan-made <co>gauntlets based on various themes</c>.\n"
+        "Players can earn points by completing <cp>levels</c> and <cr>gauntlets</c>, and <cl>compete on the leaderboard</c>.\n"
+        "The mod also allows for <cl>community-hosted creator contests</c>, where players can submit their own gauntlet levels to be featured in the mod.\n"
+        "\n---\n"
+        "### Points System\n"
+        "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>**Level Points**</c>: Earned by completing levels in a gauntlet.\n"
+        "Each level awards a different amount of points based on its difficulty and other factors.\n\n"
+        "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>**Gauntlet Points**</c>: Earned by completing entire gauntlets.\n"
+        "Each gauntlet awards a different amount of points based on the number of levels it contains, their difficulties, and other factors.\n",
         "OK")
         ->show();
 }

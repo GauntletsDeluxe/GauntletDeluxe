@@ -25,5 +25,9 @@
 		"source": "https://github.com/DumbCaveSpider/GDGauntletDeluxe",
 		"homepage": "https://arcticwoof.xyz/",
 		"community": "https://discord.gg/SeGasnzYfQ"
-	}
+	},
+	"tags":[
+		"content",
+		"online"
+	]
 }
