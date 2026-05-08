@@ -256,7 +256,7 @@ void GDXAddGauntletPopup::applyEditMode() {
     m_levelCells.clear();
     m_pendingLevelFetches.clear();
 
-    gd::string levelIds;
+    std::string levelIds;
     for (auto i = 0u; i < m_editGauntlet["levelIds"].size(); ++i) {
         auto entry = m_editGauntlet["levelIds"][i];
         if (!entry.isObject()) {
@@ -270,9 +270,9 @@ void GDXAddGauntletPopup::applyEditMode() {
         }
 
         if (!levelIds.empty()) {
-            levelIds.append(",");
+            levelIds += ",";
         }
-        levelIds.append(numToString(levelId));
+        levelIds += numToString(levelId);
 
         m_levels.push_back({levelId, reward});
         m_levelCells.emplace_back(nullptr);
