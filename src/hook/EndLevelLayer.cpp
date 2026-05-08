@@ -3,11 +3,87 @@
 #include <Geode/modify/EndLevelLayer.hpp>
 #include "../include/GDXConstant.hpp"
 #include "ccTypes.h"
+#include <Geode/utils/file.hpp>
 #include <Geode/utils/web.hpp>
+#include <asp/fs.hpp>
 #include <argon/argon.hpp>
 #include <arc/runtime/Runtime.hpp>
 
 using namespace geode::prelude;
+
+namespace {
+    static asp::fs::path getCompletedGauntletLevelsPath() {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
+        }
+        return dir / "completed_gauntlet_levels.json";
+    }
+
+    static std::vector<int> loadCompletedGauntletLevels() {
+        std::vector<int> out;
+        auto path = getCompletedGauntletLevelsPath();
+        if (!asp::fs::isFile(path).unwrapOr(false)) {
+            return out;
+        }
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read completed gauntlet levels file: {}", content.unwrapErr());
+            return out;
+        }
+        auto jsonResult = matjson::parse(content.unwrap());
+        if (!jsonResult) {
+            log::warn("Failed to parse completed gauntlet levels JSON: {}", jsonResult.unwrapErr());
+            return out;
+        }
+        auto data = std::move(jsonResult).unwrap();
+        if (data.isObject() && data["completedLevels"].isArray()) {
+            data = data["completedLevels"];
+        }
+        if (!data.isArray()) {
+            return out;
+        }
+        for (auto const& value : data) {
+            if (!value.isNumber()) {
+                continue;
+            }
+            auto maybeId = value.asInt();
+            if (maybeId) {
+                out.push_back(static_cast<int>(maybeId.unwrap()));
+            }
+        }
+        return out;
+    }
+
+    static bool saveCompletedGauntletLevels(std::vector<int> const& levels) {
+        auto path = getCompletedGauntletLevelsPath();
+        matjson::Value array = matjson::Value::array();
+        for (auto levelId : levels) {
+            array.push(levelId);
+        }
+        auto data = array.dump();
+        auto res = asp::fs::write(path, data.c_str(), data.size());
+        if (!res) {
+            log::warn("Failed to save completed gauntlet levels: {}", res.unwrapErr());
+        }
+        return static_cast<bool>(res);
+    }
+
+    static void addCompletedGauntletLevel(int levelId) {
+        auto levels = loadCompletedGauntletLevels();
+        bool hasLevel = false;
+        for (auto existingLevelId : levels) {
+            if (existingLevelId == levelId) {
+                hasLevel = true;
+                break;
+            }
+        }
+        if (!hasLevel) {
+            levels.push_back(levelId);
+            saveCompletedGauntletLevels(levels);
+        }
+    }
+}
 
 class $modify(GDXEndLevelLayer, EndLevelLayer) {
     void customSetup() override {
@@ -18,14 +94,14 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
         auto summaryContainer = typeinfo_cast<CCNode*>(this->m_mainLayer->getChildByID("summary-container"));
         if (summaryContainer) {
             auto accountData = argon::getGameAccountData();
-            auto levelId = this->m_playLayer->m_level->m_levelID;
+            int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
             auto url = std::string(gdx::BASE_API_URL) + "/completeLevel";
             matjson::Value body = matjson::Value::object();
             body["accountId"] = accountData.accountId;
             body["argonToken"] = "";
             body["levelId"] = static_cast<int>(levelId);
 
-            async::spawn([this, summaryContainer, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+            async::spawn([this, summaryContainer, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
                     co_return;
@@ -52,9 +128,21 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 }
 
                 auto rewardValue = result["reward"].asInt().unwrapOr(0);
-                geode::queueInMainThread([this, summaryContainer, rewardValue] {
+                geode::queueInMainThread([this, summaryContainer, rewardValue, levelId] {
                     if (!summaryContainer || summaryContainer->getChildByID("gauntlet-reward-node")) {
                         return;
+                    }
+                    auto completedLevels = loadCompletedGauntletLevels();
+                    bool hasLevel = false;
+                    for (auto existingLevelId : completedLevels) {
+                        if (existingLevelId == levelId) {
+                            hasLevel = true;
+                            break;
+                        }
+                    }
+                    if (!hasLevel) {
+                        completedLevels.push_back(levelId);
+                        saveCompletedGauntletLevels(completedLevels);
                     }
 
                     auto gauntletRewardNode = CCNodeRGBA::create();

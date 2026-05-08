@@ -9,13 +9,84 @@
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/ui/BasedButton.hpp>
+#include <Geode/ui/MDPopup.hpp>
+#include <Geode/utils/file.hpp>
 #include <Geode/utils/web.hpp>
+#include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
-#include "Geode/ui/MDPopup.hpp"
 #include <argon/argon.hpp>
 
 using namespace geode::prelude;
+
+namespace {
+    static asp::fs::path getCompletedGauntletLevelsPath() {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
+        }
+        return dir / "completed_gauntlet_levels.json";
+    }
+
+    static std::unordered_set<int> loadCompletedGauntletLevels() {
+        std::unordered_set<int> out;
+        auto path = getCompletedGauntletLevelsPath();
+        if (!asp::fs::isFile(path).unwrapOr(false)) {
+            return out;
+        }
+
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read completed gauntlet levels file: {}", content.unwrapErr());
+            return out;
+        }
+
+        auto jsonResult = matjson::parse(content.unwrap());
+        if (!jsonResult) {
+            log::warn("Failed to parse completed gauntlet levels JSON: {}", jsonResult.unwrapErr());
+            return out;
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (data.isObject() && data["completedLevels"].isArray()) {
+            data = data["completedLevels"];
+        }
+        if (!data.isArray()) {
+            return out;
+        }
+
+        for (auto const& value : data) {
+            if (!value.isNumber()) {
+                continue;
+            }
+            auto maybeId = value.asInt();
+            if (maybeId) {
+                out.insert(static_cast<int>(maybeId.unwrap()));
+            }
+        }
+        return out;
+    }
+
+    static bool saveCompletedGauntletLevels(std::unordered_set<int> const& levels) {
+        auto path = getCompletedGauntletLevelsPath();
+        matjson::Value array = matjson::Value::array();
+        for (auto levelId : levels) {
+            array.push(levelId);
+        }
+        auto data = array.dump();
+        auto res = asp::fs::write(path, data.c_str(), data.size());
+        if (!res) {
+            log::warn("Failed to save completed gauntlet levels: {}", res.unwrapErr());
+        }
+        return static_cast<bool>(res);
+    }
+
+    static bool addCompletedGauntletLevel(int levelId) {
+        auto levels = loadCompletedGauntletLevels();
+        levels.insert(levelId);
+        return saveCompletedGauntletLevels(levels);
+    }
+}
 
 GDXGauntletLayer* GDXGauntletLayer::create() {
     auto ret = new GDXGauntletLayer();
@@ -452,7 +523,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
 
     gauntletBg->addChild(gauntletSprite, 3);
     gauntletBg->addChild(gauntletSpriteShadow, 2);
-    gauntletSprite->setPosition(gauntletBg->getContentSize() / 2);
+    gauntletSprite->setPosition({gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10});
     gauntletSpriteShadow->setPosition({gauntletSprite->getPositionX(), gauntletSprite->getPositionY() - 6});
 
     auto rewardLabel = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
@@ -489,6 +560,18 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         rewardIconShadow->setPosition({rewardLabel->getPositionX() + 5, 48.f});
         gauntletBg->addChild(rewardIconShadow, 2);
     }
+
+    auto completedCount = 0;
+    for (auto const& level : node.levelIds) {
+        if (m_completedGauntletLevels.contains(level.levelId)) {
+            ++completedCount;
+        }
+    }
+    auto completionLabel = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
+    completionLabel->setScale(0.4f);
+    completionLabel->setAnchorPoint({0.5f, 0.5f});
+    completionLabel->setPosition({gauntletSprite->getPositionX(), gauntletSprite->getPositionY() - 40.f});
+    gauntletBg->addChild(completionLabel, 3);
 
     auto infoMenu = CCMenu::create();
     infoMenu->setPosition({0.f, 0.f});
@@ -532,6 +615,7 @@ void GDXGauntletLayer::onGauntletInfo(CCObject* sender) {
 void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
     m_gauntlets = gauntlets;
 
+    m_completedGauntletLevels = loadCompletedGauntletLevels();
     if (m_scrollLayer) {
         m_scrollLayer->removeFromParent();
         m_scrollLayer = nullptr;
@@ -575,26 +659,40 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
     this->addChild(m_scrollLayer);
 
     auto pageCount = pages->count();
-    if (pageCount > 2) {
-        auto navMenu = CCMenu::create();
-        navMenu->setPosition({0, 0});
-        this->addChild(navMenu, 3);
+    if (pageCount > 1) {
+        auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
+        auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
+        if (prevSpr) {
+            prevSpr->setFlipX(true);
+        }
 
-        auto prevBtnSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
-        prevBtnSpr->setFlipX(true);
-        auto prevBtn = CCMenuItemSpriteExtra::create(
-            prevBtnSpr,
+        m_prevPageBtn = CCMenuItemSpriteExtra::create(
+            prevSpr,
             this,
             menu_selector(GDXGauntletLayer::onPrev));
-        prevBtn->setPosition({winSize.width / 2.f - 100.f, 60.f});
-        navMenu->addChild(prevBtn);
-
-        auto nextBtn = CCMenuItemSpriteExtra::create(
-            CCSprite::createWithSpriteFrameName("navArrowBtn_001.png"),
+        m_nextPageBtn = CCMenuItemSpriteExtra::create(
+            nextSpr,
             this,
             menu_selector(GDXGauntletLayer::onNext));
-        nextBtn->setPosition({winSize.width / 2.f + 100.f, 60.f});
-        navMenu->addChild(nextBtn);
+
+        if (m_prevPageBtn) {
+            m_prevPageBtn->setPosition({25.f, winSize.height / 2.f});
+        }
+        if (m_nextPageBtn) {
+            m_nextPageBtn->setPosition({winSize.width - 25.f, winSize.height / 2.f});
+        }
+
+        auto navMenu = CCMenu::create();
+        navMenu->setPosition({0, 0});
+        if (m_prevPageBtn) {
+            navMenu->addChild(m_prevPageBtn);
+        }
+        if (m_nextPageBtn) {
+            navMenu->addChild(m_nextPageBtn);
+        }
+        this->addChild(navMenu, 2);
+
+        updatePageButtons();
     }
 
     pages->release();
@@ -608,22 +706,8 @@ void GDXGauntletLayer::update(float dt) {
     auto page = m_scrollLayer->m_page;
     if (page != m_currentPage) {
         m_currentPage = page;
-        updateDots();
+        updatePageButtons();
     }
-}
-
-void GDXGauntletLayer::onDot(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
-    auto it = std::find(m_dots.begin(), m_dots.end(), btn);
-    if (it == m_dots.end() || !m_scrollLayer) {
-        return;
-    }
-
-    auto idx = static_cast<int>(it - m_dots.begin());
-    m_scrollLayer->moveToPage(idx);
-    m_scrollLayer->updatePages();
-    m_scrollLayer->repositionPagesLooped();
-    updateDots();
 }
 
 void GDXGauntletLayer::onPrev(CCObject* sender) {
@@ -641,8 +725,8 @@ void GDXGauntletLayer::onPrev(CCObject* sender) {
 
     m_scrollLayer->moveToPage(page);
     m_scrollLayer->updatePages();
-    m_scrollLayer->repositionPagesLooped();
-    updateDots();
+    // m_scrollLayer->repositionPagesLooped();
+    updatePageButtons();
 }
 
 void GDXGauntletLayer::onNext(CCObject* sender) {
@@ -660,34 +744,30 @@ void GDXGauntletLayer::onNext(CCObject* sender) {
 
     m_scrollLayer->moveToPage(page);
     m_scrollLayer->updatePages();
-    m_scrollLayer->repositionPagesLooped();
-    updateDots();
+    // m_scrollLayer->repositionPagesLooped();
+    updatePageButtons();
 }
 
-void GDXGauntletLayer::updateDots() {
-    if (m_dots.empty() || !m_scrollLayer) {
+void GDXGauntletLayer::updatePageButtons() {
+    if (!m_scrollLayer) {
         return;
     }
 
     auto page = m_scrollLayer->m_page;
-    if (page < 0) {
-        page = static_cast<int>(m_dots.size()) + page;
-    }
-    if (page >= static_cast<int>(m_dots.size())) {
-        page %= static_cast<int>(m_dots.size());
+    auto totalPages = m_scrollLayer->getTotalPages();
+    if (totalPages <= 0) {
+        return;
     }
 
-    auto sfc = CCSpriteFrameCache::sharedSpriteFrameCache();
-    for (auto i = 0u; i < m_dots.size(); ++i) {
-        auto btn = m_dots[i];
-        auto spr = static_cast<CCSprite*>(btn->getNormalImage());
-        if (!spr) {
-            continue;
-        }
+    const bool prevEnabled = page > 0;
+    const bool nextEnabled = page < totalPages - 1;
 
-        auto frame = (static_cast<int>(i) == page)
-                         ? sfc->spriteFrameByName("gj_navDotBtn_on_001.png")
-                         : sfc->spriteFrameByName("gj_navDotBtn_off_001.png");
-        spr->setDisplayFrame(frame);
+    if (m_prevPageBtn) {
+        m_prevPageBtn->setEnabled(prevEnabled);
+        m_prevPageBtn->setOpacity(prevEnabled ? 255 : 100);
+    }
+    if (m_nextPageBtn) {
+        m_nextPageBtn->setEnabled(nextEnabled);
+        m_nextPageBtn->setOpacity(nextEnabled ? 255 : 100);
     }
 }

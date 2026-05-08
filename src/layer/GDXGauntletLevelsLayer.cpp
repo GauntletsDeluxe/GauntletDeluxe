@@ -2,11 +2,62 @@
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <cue/RepeatingBackground.hpp>
+#include <asp/fs.hpp>
 #include "Geode/ui/Layout.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 
 using namespace geode::prelude;
+
+namespace {
+    static asp::fs::path getCompletedGauntletLevelsPath() {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
+        }
+        return dir / "completed_gauntlet_levels.json";
+    }
+
+    static std::unordered_set<int> loadCompletedGauntletLevels() {
+        std::unordered_set<int> out;
+        auto path = getCompletedGauntletLevelsPath();
+        if (!asp::fs::isFile(path).unwrapOr(false)) {
+            return out;
+        }
+
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read completed gauntlet levels file: {}", content.unwrapErr());
+            return out;
+        }
+
+        auto jsonResult = matjson::parse(content.unwrap());
+        if (!jsonResult) {
+            log::warn("Failed to parse completed gauntlet levels JSON: {}", jsonResult.unwrapErr());
+            return out;
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (data.isObject() && data["completedLevels"].isArray()) {
+            data = data["completedLevels"];
+        }
+        if (!data.isArray()) {
+            return out;
+        }
+
+        for (auto const& value : data) {
+            if (!value.isNumber()) {
+                continue;
+            }
+            auto maybeId = value.asInt();
+            if (maybeId) {
+                out.insert(static_cast<int>(maybeId.unwrap()));
+            }
+        }
+        return out;
+    }
+}
 
 static std::string getStringFromDict(CCDictionary* dict, const char* key) {
     if (!dict) {
@@ -70,6 +121,15 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     auto winSize = CCDirector::sharedDirector()->getWinSize();
     auto titleLabel = CCLabelBMFont::create(m_gauntletTitle.c_str(), "goldFont.fnt");
     titleLabel->setScale(0.9f);
+    titleLabel->setAnchorPoint({0.5f, 0.5f});
+
+    auto titleShadow = CCLabelBMFont::create(m_gauntletTitle.c_str(), "goldFont.fnt");
+    titleShadow->setScale(0.9f);
+    titleShadow->setColor({0, 0, 0});
+    titleShadow->setOpacity(140);
+    titleShadow->setAnchorPoint({0.5f, 0.5f});
+
+    this->addChildAtPosition(titleShadow, Anchor::Top, {4, -24}, false);
     this->addChildAtPosition(titleLabel, Anchor::Top, {0, -20}, false);
 
     if (m_levels.empty()) {
@@ -91,6 +151,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     std::vector<CCPoint> centers;
     bool showPath = true;
 
+    auto completedLevels = loadCompletedGauntletLevels();
     for (auto i = 0u; i < m_levels.size(); ++i) {
         const auto& entry = m_levels[i];
         auto gauntletSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
@@ -100,6 +161,16 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
         const float iconScale = 0.75f;
         gauntletSprite->setScale(iconScale);
+
+        if (completedLevels.contains(entry.levelId)) {
+            auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+            if (completedIcon) {
+                completedIcon->setScale(0.6f);
+                completedIcon->setAnchorPoint({1.f, 1.f});
+                completedIcon->setPosition({gauntletSprite->getContentSize().width - 6.f, gauntletSprite->getContentSize().height - 6.f});
+                gauntletSprite->addChild(completedIcon, 4);
+            }
+        }
 
         auto spriteShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
         if (spriteShadow) {

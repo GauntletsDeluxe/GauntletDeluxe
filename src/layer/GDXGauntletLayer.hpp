@@ -1,4 +1,6 @@
 #include <Geode/Geode.hpp>
+#include <asp/fs.hpp>
+#include <unordered_set>
 #include <vector>
 
 using namespace geode::prelude;
@@ -38,7 +40,6 @@ private:
     void onLeaderboard(CCObject* sender);
     void onManageGauntlets(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
-    void onDot(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
     void onGauntletButtonClick(CCObject* sender);
@@ -46,19 +47,20 @@ private:
     void fetchGauntlets();
     void fetchUserData();
     void createGauntletPages(const matjson::Value& gauntlets);
-    void updateDots();
+    void updatePageButtons();
     void onEnter() override;
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index);
     BoomScrollLayer* m_scrollLayer = nullptr;
-    CCMenu* m_dotsMenu = nullptr;
     CCMenu* m_gauntletsMenu = nullptr;
-    std::vector<CCMenuItemSpriteExtra*> m_dots;
+    CCMenuItemSpriteExtra* m_prevPageBtn = nullptr;
+    CCMenuItemSpriteExtra* m_nextPageBtn = nullptr;
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
     LoadingSpinner* m_loadingSpinner = nullptr;
     CCCounterLabel* m_levelPointsCounter = nullptr;
     CCCounterLabel* m_gauntletPointsCounter = nullptr;
     matjson::Value m_gauntlets;
+    std::unordered_set<int> m_completedGauntletLevels;
     int m_userAccountId = 0;
     std::string m_username;
     int m_gauntletPoints = Mod::get()->getSavedValue<int>("gauntletPoints", 0);
