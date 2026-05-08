@@ -63,6 +63,10 @@ void GDXGauntletManagePopup::refreshListItems() {
     }
 
     m_list->clear();
+    if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
+        m_list->getScrollLayer()->m_contentLayer->removeAllChildrenWithCleanup(true);
+    }
+
     auto cell = CCLayer::create();
     cell->setContentSize(m_list->getListSize());
 
@@ -74,7 +78,9 @@ void GDXGauntletManagePopup::refreshListItems() {
     }
 
     m_list->addCell(cell);
-    m_list->getScrollLayer()->m_contentLayer->updateLayout();
+    if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
+        m_list->getScrollLayer()->m_contentLayer->updateLayout();
+    }
     m_list->scrollToTop();
 }
 
@@ -107,10 +113,12 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
 
     m_list->clear();
     if (!gauntlets.isArray() || gauntlets.size() == 0) {
-        auto emptyLabel = CCLabelBMFont::create("No gauntlets available.", "chatFont.fnt");
-        emptyLabel->setAnchorPoint({0.5f, 0.5f});
-        emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
+        auto emptyLabel = CCLabelBMFont::create("No gauntlets available.", "goldFont.fnt");
+        m_list->setCellHeight(m_list->getListSize().height);
         m_list->addCell(emptyLabel);
+        emptyLabel->setAnchorPoint({0.5f, 0.5f});
+        emptyLabel->setScale(0.8f);
+        emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
         m_list->getScrollLayer()->m_contentLayer->updateLayout();
         m_list->scrollToTop();
         return;
@@ -137,13 +145,14 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     auto name = gauntlet["name"].asString().unwrapOr("Unknown");
     auto description = gauntlet["description"].asString().unwrapOr("");
     auto reward = gauntlet["reward"].asInt().unwrapOr(0);
+    auto gauntletIndex = gauntlet["index"].asInt().unwrapOr(index);
 
     auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
     if (deleteSpr) {
         deleteSpr->setScale(0.7f);
     }
     auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
-    deleteBtn->setTag(index);
+    deleteBtn->setTag(gauntletIndex);
     deleteBtn->setPosition({cell->getContentSize().width - 30.f, cell->getContentSize().height / 2.f});
     auto cellMenu = CCMenu::create(deleteBtn, nullptr);
     if (cellMenu) {

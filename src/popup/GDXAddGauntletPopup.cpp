@@ -195,6 +195,10 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
     }
 
     m_searchingLevel = false;
+    auto glm = GameLevelManager::get();
+    if (glm && glm->m_levelManagerDelegate == this) {
+        glm->m_levelManagerDelegate = nullptr;
+    }
 
     if (!levels || levels->count() == 0) {
         geode::queueInMainThread([this] {
@@ -276,18 +280,18 @@ void GDXAddGauntletPopup::onClose(CCObject* sender) {
             [this](auto, bool yes) {
                 if (!yes) return;
 
-                this->removeFromParent();
-
-                // clear delegate
                 auto glm = GameLevelManager::get();
-                if (!glm) {
-                    return;
-                }
-                if (glm->m_levelManagerDelegate == this) {
+                if (glm && glm->m_levelManagerDelegate == this) {
                     glm->m_levelManagerDelegate = nullptr;
                 }
+
+                this->removeFromParent();
             });
     } else {
+        auto glm = GameLevelManager::get();
+        if (glm && glm->m_levelManagerDelegate == this) {
+            glm->m_levelManagerDelegate = nullptr;
+        }
         Popup::onClose(sender);
     }
 }
@@ -301,6 +305,10 @@ void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
     }
 
     m_searchingLevel = false;
+    auto glm = GameLevelManager::get();
+    if (glm && glm->m_levelManagerDelegate == this) {
+        glm->m_levelManagerDelegate = nullptr;
+    }
     geode::queueInMainThread([this, key] {
         Notification::create("Failed to fetch the online level", NotificationIcon::Error)->show();
     });

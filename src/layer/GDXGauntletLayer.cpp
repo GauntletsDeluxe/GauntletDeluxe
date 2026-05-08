@@ -273,14 +273,14 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     rewardLabel->setAlignment(kCCTextAlignmentLeft);
     rewardLabel->setAnchorPoint({1.f, 0.5f});
     rewardLabel->setScale(0.5f);
-    rewardLabel->limitLabelWidth(100.f, 0.5f, 0.35f);
+    rewardLabel->limitLabelWidth(50.f, 0.5f, 0.35f);
     rewardLabel->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
     gauntletBg->addChild(rewardLabel, 3);
 
     auto rewardLabelShadow = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
     rewardLabelShadow->setAlignment(kCCTextAlignmentLeft);
     rewardLabelShadow->setAnchorPoint({1.f, 0.5f});
-    rewardLabelShadow->limitLabelWidth(100.f, 0.5f, 0.35f);
+    rewardLabelShadow->limitLabelWidth(50.f, 0.5f, 0.35f);
     rewardLabelShadow->setPosition({rewardLabel->getPositionX() + 2.f, rewardLabel->getPositionY() - 2.f});
     rewardLabelShadow->setColor({0, 0, 0});
     rewardLabelShadow->setOpacity(60);

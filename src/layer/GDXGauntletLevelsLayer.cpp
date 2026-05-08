@@ -116,9 +116,6 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         nameLabel->setAnchorPoint({0.5f, 0.f});
         nameLabel->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height + 16.f});
         nameLabel->setScale(0.5f);
-        if (nameLabel->getContentSize().width >= 120.f) {
-            showPath = false;
-        }
         gauntletSprite->addChild(nameLabel, 2);
 
         auto nameLabelShadow = CCLabelBMFont::create(entry.levelName.c_str(), "bigFont.fnt");
