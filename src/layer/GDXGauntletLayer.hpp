@@ -35,6 +35,7 @@ private:
     void keyBackClicked() override;
     void onInfo(CCObject* sender);
     void onManageGauntlets(CCObject* sender);
+    void onRefreshGauntlets(CCObject* sender);
     void onDot(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
@@ -50,6 +51,7 @@ private:
     CCMenu* m_gauntletsMenu = nullptr;
     std::vector<CCMenuItemSpriteExtra*> m_dots;
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
+    LoadingSpinner* m_loadingSpinner = nullptr;
     matjson::Value m_gauntlets;
     int m_currentPage = -1;
 };

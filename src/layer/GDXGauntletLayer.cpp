@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
+#include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/utils/web.hpp>
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
@@ -52,10 +53,34 @@ bool GDXGauntletLayer::init() {
 
     bottomMenu->updateLayout();
 
+    auto refreshSpr = CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png");
+    refreshSpr->setScale(0.75f);
+    auto refreshBtn = CCMenuItemSpriteExtra::create(
+        refreshSpr,
+        this,
+        menu_selector(GDXGauntletLayer::onRefreshGauntlets));
+
+    auto refreshMenu = CCMenu::create(refreshBtn, nullptr);
+    if (refreshMenu) {
+        refreshMenu->setPosition({winSize.width - 30, 70});
+        refreshMenu->setContentHeight(100);
+        refreshMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+        this->addChild(refreshMenu, 2);
+    }
+
+    refreshMenu->updateLayout();
+
     // title styling
     auto title = CCSprite::createWithSpriteFrameName("GDX_title.png"_spr);
     title->setScale(0.8f);
     this->addChildAtPosition(title, Anchor::Top, {0, -30}, false);
+
+    m_loadingSpinner = LoadingSpinner::create(60.f);
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setPosition({winSize.width / 2.f, winSize.height / 2.f});
+        m_loadingSpinner->setVisible(false);
+        this->addChild(m_loadingSpinner, 4);
+    }
 
     // gauntlet page container
     createGauntletPages(matjson::Value::array());
@@ -84,6 +109,12 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
 
 void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     GDXGauntletManagePopup::create()->show();
+}
+
+void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
+    m_gauntlets = matjson::Value::array();
+    createGauntletPages(m_gauntlets);
+    fetchGauntlets();
 }
 
 void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
@@ -127,22 +158,39 @@ void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
 }
 
 void GDXGauntletLayer::fetchGauntlets() {
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setVisible(true);
+    }
+
     auto url = std::string(gdx::BASE_API_URL) + "/getGauntlets";
     async::spawn([this, url = std::move(url)]() -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
                             .get(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
+            geode::queueInMainThread([this] {
+                if (m_loadingSpinner) {
+                    m_loadingSpinner->setVisible(false);
+                }
+            });
             co_return;
         }
 
         auto jsonResult = response.json();
         if (!jsonResult) {
+            geode::queueInMainThread([this] {
+                if (m_loadingSpinner) {
+                    m_loadingSpinner->setVisible(false);
+                }
+            });
             co_return;
         }
 
         auto gauntlets = std::move(jsonResult).unwrap();
         geode::queueInMainThread([this, gauntlets = std::move(gauntlets)]() mutable {
+            if (m_loadingSpinner) {
+                m_loadingSpinner->setVisible(false);
+            }
             createGauntletPages(gauntlets);
         });
 

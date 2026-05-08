@@ -5,6 +5,7 @@
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/utils/web.hpp>
+#include <argon/argon.hpp>
 
 using namespace geode;
 using namespace geode::prelude;
@@ -53,6 +54,7 @@ void GDXGauntletManagePopup::onAdd(CCObject* sender) {
 
 void GDXGauntletManagePopup::refreshList() {
     refreshListItems();
+    fetchGauntlets();
 }
 
 void GDXGauntletManagePopup::refreshListItems() {
@@ -119,7 +121,7 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
         if (!gauntlet.isObject()) {
             continue;
         }
-        auto cell = createGauntletCell(gauntlet);
+        auto cell = createGauntletCell(gauntlet, static_cast<int>(i));
         if (cell) {
             m_list->addCell(cell);
         }
@@ -128,13 +130,26 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
     m_list->scrollToTop();
 }
 
-CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet) {
+CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet, int index) {
     auto cell = CCLayer::create();
     cell->setContentSize({356.f, 90.f});
 
     auto name = gauntlet["name"].asString().unwrapOr("Unknown");
     auto description = gauntlet["description"].asString().unwrapOr("");
     auto reward = gauntlet["reward"].asInt().unwrapOr(0);
+
+    auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+    if (deleteSpr) {
+        deleteSpr->setScale(0.7f);
+    }
+    auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
+    deleteBtn->setTag(index);
+    deleteBtn->setPosition({cell->getContentSize().width - 30.f, cell->getContentSize().height / 2.f});
+    auto cellMenu = CCMenu::create(deleteBtn, nullptr);
+    if (cellMenu) {
+        cellMenu->setPosition({0.f, 0.f});
+        cell->addChild(cellMenu);
+    }
 
     // temp gauntlet sprite (REPLACE WITH ACTUAL GAUNTLET)
     auto gauntletSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
@@ -159,11 +174,82 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         cell->addChild(descriptionLabel);
     }
 
-    auto rewardLabel = CCLabelBMFont::create(("Reward: " + numToString(reward)).c_str(), "bigFont.fnt");
+    auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+    if (rewardSpr) {
+        rewardSpr->setScale(0.25f);
+        rewardSpr->setAnchorPoint({1.f, 0.5f});
+        rewardSpr->setPosition({95.f, 16.f});
+        cell->addChild(rewardSpr);
+    }
+
+    auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
     rewardLabel->setAnchorPoint({0.f, 0.5f});
-    rewardLabel->setPosition({80.f, 16.f});
+    rewardLabel->setPosition({100.f, 16.f});
     rewardLabel->setScale(0.35f);
     cell->addChild(rewardLabel);
 
     return cell;
+}
+
+void GDXGauntletManagePopup::onDelete(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto gauntletIndex = btn->getTag();
+    createQuickPopup(
+        "Delete Gauntlet?",
+        fmt::format("Are you sure you want to <cr>delete this gauntlet</c>?"),
+        "No",
+        "Yes",
+        [this, gauntletIndex](auto, bool yes) {
+            if (!yes) {
+                return;
+            }
+            this->deleteGauntletAtIndex(gauntletIndex);
+        });
+}
+
+void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::BASE_API_URL) + "/deleteGauntlet";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["argonToken"] = std::string(accountData.gjp2);
+    body["gauntletIndex"] = index;
+
+    auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
+    upopup->show();
+    async::spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto authResult = co_await argon::startAuth(accountData);
+        if (!authResult) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Authentication failed.");
+            });
+            co_return;
+        }
+
+        auto token = std::move(authResult).unwrap();
+        body["argonToken"] = std::move(token);
+
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            geode::queueInMainThread([response, upopup] {
+                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to delete gauntlet."));
+            });
+            co_return;
+        }
+
+        geode::queueInMainThread([this, upopup] {
+            this->refreshList();
+            upopup->showSuccessMessage("Gauntlet deleted successfully.");
+        });
+        co_return;
+    });
 }

@@ -96,12 +96,17 @@ bool GDXAddGauntletPopup::init() {
         this,
         menu_selector(GDXAddGauntletPopup::onPickColor));
     colorBtn->setPosition({m_descriptionInput->getPositionX() + 90, m_descriptionInput->getPositionY()});
+    colorBtn->m_scaleMultiplier = 1.05f;
     m_buttonMenu->addChild(colorBtn);
+
+    auto colorLabel = CCLabelBMFont::create("Color", "goldFont.fnt");
+    colorLabel->setScale(0.4);
+    colorBtn->addChildAtPosition(colorLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
 
     auto listSize = CCSizeMake(356.f, 280.f);
     m_levelList = cue::ListNode::create(listSize);
     m_levelList->setScale(0.8f);
-    m_levelList->setCellHeight(90.f);
+    m_levelList->setCellHeight(50.f);
     m_levelList->getScrollLayer()->m_contentLayer->setLayout(
         ColumnLayout::create()
             ->setGap(0.f)
@@ -122,6 +127,11 @@ bool GDXAddGauntletPopup::init() {
 
 void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
     if (!m_levelInput || !m_levelRewardInput || !m_levelList || !m_gauntletReward || m_searchingLevel) {
+        return;
+    }
+
+    if (m_levels.size() >= 5) {
+        Notification::create("You may only add up to 5 levels.", NotificationIcon::Error)->show();
         return;
     }
 
@@ -210,10 +220,11 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
         m_placeholderLabel = nullptr;
     }
 
-    auto cell = LevelCell::create(356.f, 90.f);
+    auto cell = LevelCell::create(356.f, 50.f);
     if (cell) {
+        cell->m_compactView = true;
         cell->loadFromLevel(level);
-        cell->setContentHeight(90.f);
+        cell->setContentHeight(50.f);
         m_levelCells.push_back(cell);
         m_levelList->addCell(cell);
 
@@ -228,21 +239,31 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
             }
 
             if (cell->m_backgroundLayer) {
-                auto rewardValue = CCLabelBMFont::create(("Reward: " + numToString(m_pendingLevelReward)).c_str(), "chatFont.fnt");
+                auto rewardValue = CCLabelBMFont::create((numToString(m_pendingLevelReward)).c_str(), "bigFont.fnt");
                 rewardValue->setAnchorPoint({1.f, 0.5f});
-                rewardValue->setPosition({cell->m_backgroundLayer->getContentSize().width, 5.f});
-                cell->m_backgroundLayer->addChild(rewardValue);
+                rewardValue->setScale(0.5f);
+                rewardValue->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
+                cell->m_mainLayer->addChild(rewardValue);
+
+                auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
+                if (rewardIcon) {
+                    rewardIcon->setScale(0.2f);
+                    rewardIcon->setAnchorPoint({0.f, 0.5f});
+                    rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 22.f, 10.f});
+                    cell->m_mainLayer->addChild(rewardIcon);
+                }
             }
 
             auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+            deleteSpr->setScale(0.5f);
             auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXAddGauntletPopup::onDeleteLevel));
 
-            deleteBtn->setPosition(removePos);
+            deleteBtn->setPosition(removePos + ccp(20.f, 10.f));
             cell->m_mainMenu->addChild(deleteBtn);
             deleteBtn->setUserObject(cell);
         }
     }
-    m_levelList->updateLayout(true);
+    m_levelList->getScrollLayer()->m_contentLayer->updateLayout(true);
 }
 
 void GDXAddGauntletPopup::onClose(CCObject* sender) {
