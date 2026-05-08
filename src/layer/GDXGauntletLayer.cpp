@@ -1,6 +1,7 @@
 #include "GDXGauntletLayer.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
+#include <Geode/binding/UploadActionPopup.hpp>
 #include <algorithm>
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
@@ -9,6 +10,7 @@
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/MDPopup.hpp"
+#include <argon/argon.hpp>
 
 using namespace geode::prelude;
 
@@ -46,7 +48,8 @@ bool GDXGauntletLayer::init() {
     bottomMenu->addChild(infoIconBtn);
 
     // @geode-ignore(unknown-resource)
-    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("geode.loader/persistent.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    manageLabel->setScale(0.7f);
     auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
     manageBtn->setPosition({0.f, -35.f});
     bottomMenu->addChild(manageBtn);
@@ -84,6 +87,7 @@ bool GDXGauntletLayer::init() {
 
     // gauntlet page container
     createGauntletPages(matjson::Value::array());
+    fetchUserData();
     fetchGauntlets();
 
     this->scheduleUpdate();
@@ -108,7 +112,77 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
 }
 
 void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
-    GDXGauntletManagePopup::create()->show();
+    auto upopup = UploadActionPopup::create(nullptr, "Getting access...");
+    upopup->show();
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::BASE_API_URL) + "/getAccess";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+
+    async::spawn([upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto authResult = co_await argon::startAuth(accountData);
+        if (!authResult) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Authentication failed.");
+            });
+            co_return;
+        }
+
+        auto token = std::move(authResult).unwrap();
+        body["argonToken"] = std::move(token);
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            geode::queueInMainThread([upopup, response] {
+                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to get access."));
+            });
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        if (!jsonResult) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Failed to get access.");
+            });
+            co_return;
+        }
+
+        auto result = std::move(jsonResult).unwrap();
+        bool success = result["success"].asBool().unwrapOr(false);
+        if (!result.isObject() || !success) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Failed to get access.");
+            });
+            co_return;
+        }
+
+        // get those roles lol
+        bool isMod = result["isMod"].asBool().unwrapOr(false);
+        bool isManager = result["isManager"].asBool().unwrapOr(false);
+
+        if (isMod) Mod::get()->setSavedValue("isMod", isMod);
+        if (isManager) Mod::get()->setSavedValue("isManager", isManager);
+
+        if (!isManager && !isMod) {
+            geode::queueInMainThread([upopup, response] {
+                upopup->showFailMessage(gdx::getResponseMessage(response, "Permissions Denied"));
+            });
+            co_return;
+        }
+
+        if (gdx::isManager() || gdx::isMod()) {
+            geode::queueInMainThread([upopup]() {
+                upopup->onClose(nullptr);
+                GDXGauntletManagePopup::create()->show();
+            });
+        }
+
+        co_return;
+    });
 }
 
 void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
@@ -193,6 +267,59 @@ void GDXGauntletLayer::fetchGauntlets() {
             }
             createGauntletPages(gauntlets);
         });
+
+        co_return;
+    });
+}
+
+void GDXGauntletLayer::fetchUserData() {
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::BASE_API_URL) + "/getUser";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["argonToken"] = std::string(accountData.gjp2);
+
+    async::spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto authResult = co_await argon::startAuth(accountData);
+        if (!authResult) {
+            co_return;
+        }
+
+        auto token = std::move(authResult).unwrap();
+        body["argonToken"] = std::move(token);
+
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        if (!jsonResult) {
+            co_return;
+        }
+
+        auto userData = std::move(jsonResult).unwrap();
+        if (!userData.isObject() || !userData["success"].asBool().unwrapOr(false)) {
+            co_return;
+        }
+
+        geode::queueInMainThread([this, userData = std::move(userData)]() mutable {
+            m_userAccountId = userData["accountId"].asInt().unwrapOr(0);
+            m_username = userData["username"].asString().unwrapOr(" ");
+            m_gauntletPoints = userData["gauntletPoints"].asInt().unwrapOr(0);
+            m_levelPoints = userData["levelPoints"].asInt().unwrapOr(0);
+        });
+
+        log::debug("Fetched user data: accountId={}, username={}, gauntletPoints={}, levelPoints={}",
+            m_userAccountId,
+            m_username,
+            m_gauntletPoints,
+            m_levelPoints);
 
         co_return;
     });

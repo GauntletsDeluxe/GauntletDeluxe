@@ -17,8 +17,17 @@ class GDXGauntletManagePopup;
 class GDXAddGauntletPopup : public geode::Popup, public LevelManagerDelegate {
 public:
     static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner);
+    static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index);
 
 private:
+    struct PendingLevelFetch {
+        gd::string key;
+        gd::string query;
+        int levelId = 0;
+        int reward = 0;
+        size_t index = 0;
+    };
+
     bool init() override;
     void onClose(CCObject* sender) override;
     void onSave(CCObject* sender);
@@ -27,12 +36,15 @@ private:
     void onPickColor(CCObject* sender);
     void onDeleteLevel(CCObject* sender);
     void refreshLevelList();
+    void applyEditMode();
+    void loadNextPendingLevel();
+    LevelCell* createLevelCellFromLevel(GJGameLevel* level, int reward);
+    void configureLevelCell(LevelCell* cell, int reward);
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) override;
     void loadLevelsFailed(char const* key, int type) override;
 
     GDXGauntletManagePopup* m_owner = nullptr;
-    cocos2d::CCLabelBMFont* m_placeholderLabel = nullptr;
     int m_pendingLevelId = 0;
     int m_pendingLevelReward = 0;
     bool m_searchingLevel = false;
@@ -49,4 +61,8 @@ private:
     geode::ColorPickPopup* m_colorPopup = nullptr;
     std::vector<LevelRewardEntry> m_levels;
     std::vector<LevelCell*> m_levelCells;
+    std::vector<PendingLevelFetch> m_pendingLevelFetches;
+    bool m_editMode = false;
+    int m_editIndex = -1;
+    matjson::Value m_editGauntlet;
 };

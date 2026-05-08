@@ -13,4 +13,12 @@ namespace gdx {
             return message;
         return fallback;
     }
+
+    inline bool isManager() {
+        return Mod::get()->getSavedValue<bool>("isManager");
+    }
+
+    inline bool isMod() {
+        return Mod::get()->getSavedValue<bool>("isMod");
+    }
 }

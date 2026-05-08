@@ -42,6 +42,7 @@ private:
     void onGauntletButtonClick(CCObject* sender);
     void onGauntletInfo(CCObject* sender);
     void fetchGauntlets();
+    void fetchUserData();
     void createGauntletPages(const matjson::Value& gauntlets);
     void updateDots();
 
@@ -53,5 +54,9 @@ private:
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
     LoadingSpinner* m_loadingSpinner = nullptr;
     matjson::Value m_gauntlets;
+    int m_userAccountId = 0;
+    std::string m_username;
+    int m_gauntletPoints = 0;
+    int m_levelPoints = 0;
     int m_currentPage = -1;
 };

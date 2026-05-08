@@ -5,43 +5,153 @@
 #include <arc/runtime/Runtime.hpp>
 #include <argon/argon.hpp>
 #include <cue/ListNode.hpp>
+#include <Geode/ui/LoadingSpinner.hpp>
 #include <string>
 #include <string_view>
 
 using namespace geode;
 using namespace geode::prelude;
 
+LevelCell* GDXAddGauntletPopup::createLevelCellFromLevel(GJGameLevel* level, int reward) {
+    if (!level) {
+        return nullptr;
+    }
+
+    auto cell = LevelCell::create(356.f, 50.f);
+    if (!cell) {
+        return nullptr;
+    }
+
+    cell->m_compactView = true;
+    cell->loadFromLevel(level);
+    cell->setContentHeight(50.f);
+    configureLevelCell(cell, reward);
+    return cell;
+}
+
+void GDXAddGauntletPopup::loadNextPendingLevel() {
+    if (m_searchingLevel || m_pendingLevelFetches.empty()) {
+        return;
+    }
+
+    auto pending = m_pendingLevelFetches.front();
+    auto glm = GameLevelManager::get();
+    if (!glm) {
+        return;
+    }
+
+    m_searchingLevel = true;
+    m_pendingSearchKey = pending.key;
+    if (glm->m_levelManagerDelegate == this) {
+        glm->m_levelManagerDelegate = nullptr;
+    }
+    glm->m_levelManagerDelegate = this;
+
+    auto searchObj = GJSearchObject::create(SearchType::Type19, pending.query);
+    if (!searchObj) {
+        m_searchingLevel = false;
+        m_pendingLevelFetches.erase(m_pendingLevelFetches.begin());
+        loadNextPendingLevel();
+        return;
+    }
+
+    glm->getOnlineLevels(searchObj);
+}
+
+void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
+    if (!cell || !cell->m_mainMenu) {
+        return;
+    }
+
+    auto viewBtn = cell->m_mainLayer->getChildByIDRecursive("view-button");
+    CCPoint removePos = CCPointZero;
+    if (viewBtn) {
+        removePos = viewBtn->getPosition();
+        viewBtn->removeFromParent();
+    }
+
+    if (cell->m_backgroundLayer) {
+        auto rewardValue = CCLabelBMFont::create(numToString(reward).c_str(), "bigFont.fnt");
+        rewardValue->setAnchorPoint({1.f, 0.5f});
+        rewardValue->setScale(0.5f);
+        rewardValue->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
+        cell->m_mainLayer->addChild(rewardValue);
+
+        auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
+        if (rewardIcon) {
+            rewardIcon->setScale(0.2f);
+            rewardIcon->setAnchorPoint({0.f, 0.5f});
+            rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 22.f, 10.f});
+            cell->m_mainLayer->addChild(rewardIcon);
+        }
+    }
+
+    auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+    deleteSpr->setScale(0.5f);
+    auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXAddGauntletPopup::onDeleteLevel));
+    deleteBtn->setPosition(removePos + ccp(20.f, 10.f));
+    cell->m_mainMenu->addChild(deleteBtn);
+    deleteBtn->setUserObject(cell);
+}
+
 void GDXAddGauntletPopup::refreshLevelList() {
     if (!m_levelList) {
         return;
     }
 
-    if (m_placeholderLabel) {
-        m_placeholderLabel->removeFromParent();
-        m_placeholderLabel = nullptr;
-    }
-
     m_levelList->clear();
-    m_levelCells.clear();
+
+    if (m_levelCells.size() < m_levels.size()) {
+        m_levelCells.resize(m_levels.size(), nullptr);
+    }
 
     if (m_levels.empty()) {
         m_levelList->updateLayout(true);
         return;
     }
 
-    for (auto const& entry : m_levels) {
-        auto lineText = std::string("- ") + numToString(entry.levelId) + " (reward " + numToString(entry.reward) + ")";
-        auto line = CCLabelBMFont::create(lineText.c_str(), "chatFont.fnt");
-        line->setAnchorPoint({0.f, 0.5f});
-        m_levelList->addCell(line);
-        m_levelList->updateLayout(true);
+    for (size_t i = 0; i < m_levels.size(); ++i) {
+        auto* cell = m_levelCells[i];
+        if (cell) {
+            m_levelList->addCell(cell);
+            continue;
+        }
+
+        auto spinnerCell = CCLayer::create();
+        spinnerCell->setContentSize({356.f, 50.f});
+
+        auto spinner = LoadingSpinner::create(30.f);
+        if (spinner) {
+            spinner->setAnchorPoint({0.5f, 0.5f});
+            spinner->setPosition({spinnerCell->getContentSize().width / 2.f, spinnerCell->getContentSize().height / 2.f});
+            spinnerCell->addChild(spinner);
+        }
+
+        m_levelList->addCell(spinnerCell);
     }
+
+    m_levelList->updateLayout(true);
 }
 
 GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner) {
     auto ret = new GDXAddGauntletPopup();
     ret->m_owner = owner;
     if (ret && ret->init()) {
+        ret->autorelease();
+        return ret;
+    }
+    delete ret;
+    return nullptr;
+}
+
+GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index) {
+    auto ret = new GDXAddGauntletPopup();
+    ret->m_owner = owner;
+    ret->m_editMode = true;
+    ret->m_editIndex = index;
+    ret->m_editGauntlet = gauntlet;
+    if (ret && ret->init()) {
+        ret->applyEditMode();
         ret->autorelease();
         return ret;
     }
@@ -125,6 +235,53 @@ bool GDXAddGauntletPopup::init() {
     return true;
 }
 
+void GDXAddGauntletPopup::applyEditMode() {
+    if (!m_editMode || !m_editGauntlet.isObject()) {
+        return;
+    }
+
+    this->setTitle("Edit Gauntlet");
+    m_nameInput->setString(m_editGauntlet["name"].asString().unwrapOr(""));
+    m_descriptionInput->setString(m_editGauntlet["description"].asString().unwrapOr(""));
+    m_gauntletReward->setString(numToString(m_editGauntlet["reward"].asInt().unwrapOr(0)).c_str());
+    m_selectedColor.r = static_cast<GLubyte>(m_editGauntlet["r"].asInt().unwrapOr(255));
+    m_selectedColor.g = static_cast<GLubyte>(m_editGauntlet["g"].asInt().unwrapOr(255));
+    m_selectedColor.b = static_cast<GLubyte>(m_editGauntlet["b"].asInt().unwrapOr(255));
+    if (m_colorSpr) {
+        m_colorSpr->setColor(m_selectedColor);
+    }
+
+    m_levels.clear();
+    m_levelCells.clear();
+    m_pendingLevelFetches.clear();
+
+    for (auto i = 0u; i < m_editGauntlet["levelIds"].size(); ++i) {
+        auto entry = m_editGauntlet["levelIds"][i];
+        if (!entry.isObject()) {
+            continue;
+        }
+
+        auto levelId = static_cast<int>(entry["levelId"].asInt().unwrapOr(0));
+        auto reward = static_cast<int>(entry["reward"].asInt().unwrapOr(0));
+        if (levelId <= 0) {
+            continue;
+        }
+
+        m_levels.push_back({levelId, reward});
+        m_levelCells.emplace_back(nullptr);
+
+        auto searchObj = GJSearchObject::create(SearchType::Type19, numToString(levelId));
+        if (!searchObj) {
+            continue;
+        }
+
+        m_pendingLevelFetches.push_back({searchObj->getKey(), numToString(levelId), levelId, reward, m_levels.size() - 1});
+    }
+
+    refreshLevelList();
+    loadNextPendingLevel();
+}
+
 void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
     if (!m_levelInput || !m_levelRewardInput || !m_levelList || !m_gauntletReward || m_searchingLevel) {
         return;
@@ -190,7 +347,7 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
     if (!m_searchingLevel) {
         return;
     }
-    if (key && m_pendingSearchKey != key) {
+    if (!key || m_pendingSearchKey != key) {
         return;
     }
 
@@ -200,10 +357,52 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
         glm->m_levelManagerDelegate = nullptr;
     }
 
+    size_t pendingIndex = SIZE_MAX;
+    for (size_t i = 0; i < m_pendingLevelFetches.size(); ++i) {
+        if (m_pendingLevelFetches[i].key == key) {
+            pendingIndex = i;
+            break;
+        }
+    }
+
+    if (pendingIndex == SIZE_MAX) {
+        if (!levels || levels->count() == 0) {
+            geode::queueInMainThread([this] {
+                Notification::create("No online level was found for that ID.", NotificationIcon::Error)->show();
+            });
+            return;
+        }
+
+        auto level = static_cast<GJGameLevel*>(levels->objectAtIndex(0));
+        if (!level) {
+            geode::queueInMainThread([this] {
+                Notification::create("Search returned an invalid result.", NotificationIcon::Error)->show();
+            });
+            return;
+        }
+
+        m_levels.push_back({m_pendingLevelId, m_pendingLevelReward});
+        m_levelInput->setString("");
+        m_levelRewardInput->setString("");
+
+
+        auto cell = createLevelCellFromLevel(level, m_pendingLevelReward);
+        if (cell) {
+            m_levelCells.push_back(cell);
+            m_levelList->addCell(cell);
+            m_levelList->getScrollLayer()->m_contentLayer->updateLayout(true);
+        }
+        return;
+    }
+
+    auto pending = m_pendingLevelFetches[pendingIndex];
+    m_pendingLevelFetches.erase(m_pendingLevelFetches.begin() + pendingIndex);
+
     if (!levels || levels->count() == 0) {
-        geode::queueInMainThread([this] {
-            Notification::create("Online level was found for that ID.", NotificationIcon::Error)->show();
+        geode::queueInMainThread([this, pending] {
+            Notification::create(fmt::format("Could not fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
         });
+        loadNextPendingLevel();
         return;
     }
 
@@ -212,62 +411,21 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
         geode::queueInMainThread([this] {
             Notification::create("Search returned an invalid result.", NotificationIcon::Error)->show();
         });
+        loadNextPendingLevel();
         return;
     }
 
-    m_levels.push_back({m_pendingLevelId, m_pendingLevelReward});
-    m_levelInput->setString("");
-    m_levelRewardInput->setString("");
-
-    if (m_placeholderLabel) {
-        m_placeholderLabel->removeFromParent();
-        m_placeholderLabel = nullptr;
+    auto cell = createLevelCellFromLevel(level, pending.reward);
+    if (pending.index < m_levelCells.size()) {
+        m_levelCells[pending.index] = cell;
     }
 
-    auto cell = LevelCell::create(356.f, 50.f);
     if (cell) {
-        cell->m_compactView = true;
-        cell->loadFromLevel(level);
-        cell->setContentHeight(50.f);
-        m_levelCells.push_back(cell);
-        m_levelList->addCell(cell);
-
-        if (cell->m_mainMenu) {
-            // disable the view button and use its spot for the remove button
-            auto viewBtn = cell->m_mainLayer->getChildByIDRecursive("view-button");
-            auto levelName = cell->m_mainLayer->getChildByIDRecursive("level-name");
-            CCPoint removePos = CCPointZero;
-            if (viewBtn) {
-                removePos = viewBtn->getPosition();
-                viewBtn->removeFromParent();
-            }
-
-            if (cell->m_backgroundLayer) {
-                auto rewardValue = CCLabelBMFont::create((numToString(m_pendingLevelReward)).c_str(), "bigFont.fnt");
-                rewardValue->setAnchorPoint({1.f, 0.5f});
-                rewardValue->setScale(0.5f);
-                rewardValue->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
-                cell->m_mainLayer->addChild(rewardValue);
-
-                auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
-                if (rewardIcon) {
-                    rewardIcon->setScale(0.2f);
-                    rewardIcon->setAnchorPoint({0.f, 0.5f});
-                    rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 22.f, 10.f});
-                    cell->m_mainLayer->addChild(rewardIcon);
-                }
-            }
-
-            auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
-            deleteSpr->setScale(0.5f);
-            auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXAddGauntletPopup::onDeleteLevel));
-
-            deleteBtn->setPosition(removePos + ccp(20.f, 10.f));
-            cell->m_mainMenu->addChild(deleteBtn);
-            deleteBtn->setUserObject(cell);
-        }
+        m_levelList->getScrollLayer()->m_contentLayer->updateLayout(true);
     }
-    m_levelList->getScrollLayer()->m_contentLayer->updateLayout(true);
+
+    refreshLevelList();
+    loadNextPendingLevel();
 }
 
 void GDXAddGauntletPopup::onClose(CCObject* sender) {
@@ -300,7 +458,7 @@ void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
     if (!m_searchingLevel) {
         return;
     }
-    if (key && m_pendingSearchKey != key) {
+    if (!key || m_pendingSearchKey != key) {
         return;
     }
 
@@ -309,9 +467,29 @@ void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
     if (glm && glm->m_levelManagerDelegate == this) {
         glm->m_levelManagerDelegate = nullptr;
     }
-    geode::queueInMainThread([this, key] {
-        Notification::create("Failed to fetch the online level", NotificationIcon::Error)->show();
+
+    size_t pendingIndex = SIZE_MAX;
+    for (size_t i = 0; i < m_pendingLevelFetches.size(); ++i) {
+        if (m_pendingLevelFetches[i].key == key) {
+            pendingIndex = i;
+            break;
+        }
+    }
+
+    if (pendingIndex == SIZE_MAX) {
+        geode::queueInMainThread([this] {
+            Notification::create("Failed to fetch the online level", NotificationIcon::Error)->show();
+        });
+        return;
+    }
+
+    auto pending = m_pendingLevelFetches[pendingIndex];
+    m_pendingLevelFetches.erase(m_pendingLevelFetches.begin() + pendingIndex);
+    geode::queueInMainThread([this, pending] {
+        Notification::create(fmt::format("Failed to fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
     });
+
+    loadNextPendingLevel();
 }
 
 void GDXAddGauntletPopup::onDeleteLevel(CCObject* sender) {
@@ -359,7 +537,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     auto accountData = argon::getGameAccountData();
     auto levels = m_levels;
     auto color = m_selectedColor;
-    auto url = std::string(gdx::BASE_API_URL) + "/addGauntlet";
+    auto url = std::string(gdx::BASE_API_URL) + (m_editMode ? "/editGauntlet" : "/addGauntlet");
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["argonToken"] = std::string(accountData.gjp2);
@@ -369,6 +547,9 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     body["r"] = color.r;
     body["g"] = color.g;
     body["b"] = color.b;
+    if (m_editMode) {
+        body["index"] = m_editIndex;
+    }
     body["levels"] = matjson::Value::array();
     for (auto const& entry : levels) {
         matjson::Value levelObj = matjson::Value::object();
@@ -407,7 +588,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
                 if (m_owner) {
                     m_owner->refreshList();
                 }
-                upoup->showSuccessMessage("Gauntlet added successfully!");
+                upoup->showSuccessMessage(m_editMode ? "Gauntlet updated successfully!" : "Gauntlet added successfully!");
                 m_unsaved = false;
                 this->onClose(nullptr);
             });

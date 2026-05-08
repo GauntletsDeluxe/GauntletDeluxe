@@ -196,33 +196,35 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
     if (showPath) {
         // draw an outward-curving path between gauntlets
+        // i wanna commit die with this path math stuff frfr
+        // i kinda forgor what all of these means so sure comment it
         const int dotCount = 5;
         const float baseCurve = 0.25f;
         for (auto j = 0u; j + 1 < centers.size(); ++j) {
-            auto a = centers[j];
-            auto b = centers[j + 1];
-            float dx = b.x - a.x;
-            float dy = b.y - a.y;
-            float midX = (a.x + b.x) * 0.5f;
-            float midY = (a.y + b.y) * 0.5f;
-            float perpX = -dy;
-            float perpY = dx;
-            float perpLen = std::sqrt(perpX * perpX + perpY * perpY);
-            if (perpLen != 0.0f) {
+            auto a = centers[j];                                       // point a
+            auto b = centers[j + 1];                                   // point b
+            float dx = b.x - a.x;                                      // vector from a to b
+            float dy = b.y - a.y;                                      // vector from a to b
+            float midX = (a.x + b.x) * 0.5f;                           // midpoint between a and b
+            float midY = (a.y + b.y) * 0.5f;                           // midpoint between a and b
+            float perpX = -dy;                                         // perpendicular vector to ab
+            float perpY = dx;                                          // perpendicular vector to ab
+            float perpLen = std::sqrt(perpX * perpX + perpY * perpY);  // length of the perpendicular vector
+            if (perpLen != 0.0f) {                                     // normalize the perpendicular vector
                 perpX /= perpLen;
                 perpY /= perpLen;
             }
-            float curveStrength = std::max(50.f, std::abs(dx) * baseCurve);
-            float sign = (j % 2 == 0) ? -1.f : 1.f;
-            float controlX = midX + perpX * curveStrength * sign;
-            float controlY = midY + perpY * curveStrength * sign;
-
+            float curveStrength = std::max(50.f, std::abs(dx) * baseCurve);  // curve strength based on distance, with a minimum value
+            float controlX = midX + perpX * curveStrength * 1;               // control point for the quadratic Bezier curve
+            float controlY = midY + perpY * curveStrength * 1;
+            // i could do different type of curves n stuff but this is fine
+            // leetcode questions ah moment am i right???
             for (int k = 1; k <= dotCount; ++k) {
-                float t = static_cast<float>(k) / static_cast<float>(dotCount + 1);
-                float inv = 1.f - t;
-                float x = inv * inv * a.x + 2.f * inv * t * controlX + t * t * b.x;
-                float y = inv * inv * a.y + 2.f * inv * t * controlY + t * t * b.y;
-                auto dot = CCSprite::createWithSpriteFrameName("uiDot_001.png");
+                float t = static_cast<float>(k) / static_cast<float>(dotCount + 1);  // parameter from 0 to 1 along the curve
+                float inv = 1.f - t;                                                 // inverse of t for the Bezier formula
+                float x = inv * inv * a.x + 2.f * inv * t * controlX + t * t * b.x;  // quadratic Bezier formula for x coordinate
+                float y = inv * inv * a.y + 2.f * inv * t * controlY + t * t * b.y;  // quadratic Bezier formula for y coordinate
+                auto dot = CCSprite::createWithSpriteFrameName("uiDot_001.png");     // simple dot sprite for the path
                 if (!dot) {
                     continue;
                 }
