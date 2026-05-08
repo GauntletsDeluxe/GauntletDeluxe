@@ -42,6 +42,7 @@ private:
     void onRefreshGauntlets(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
+    void onCompleteGauntlet(CCObject* sender);
     void onGauntletButtonClick(CCObject* sender);
     void onGauntletInfo(CCObject* sender);
     void fetchGauntlets();
@@ -49,6 +50,7 @@ private:
     void createGauntletPages(const matjson::Value& gauntlets);
     void updatePageButtons();
     void onEnter() override;
+    
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index);
     BoomScrollLayer* m_scrollLayer = nullptr;
@@ -61,6 +63,7 @@ private:
     CCCounterLabel* m_gauntletPointsCounter = nullptr;
     matjson::Value m_gauntlets;
     std::unordered_set<int> m_completedGauntletLevels;
+    std::unordered_set<int> m_claimedGauntlets;
     int m_userAccountId = 0;
     std::string m_username;
     int m_gauntletPoints = Mod::get()->getSavedValue<int>("gauntletPoints", 0);

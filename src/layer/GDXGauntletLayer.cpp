@@ -86,6 +86,73 @@ namespace {
         levels.insert(levelId);
         return saveCompletedGauntletLevels(levels);
     }
+
+    static asp::fs::path getCompletedGauntletPath() {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("Failed to create completed gauntlet save directory: {}", res.unwrapErr().message());
+        }
+        return dir / "completed_gauntlets.json";
+    }
+
+    static std::unordered_set<int> loadCompletedGauntlets() {
+        std::unordered_set<int> out;
+        auto path = getCompletedGauntletPath();
+        if (!asp::fs::isFile(path).unwrapOr(false)) {
+            return out;
+        }
+
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read completed gauntlets file: {}", content.unwrapErr());
+            return out;
+        }
+
+        auto jsonResult = matjson::parse(content.unwrap());
+        if (!jsonResult) {
+            log::warn("Failed to parse completed gauntlets JSON: {}", jsonResult.unwrapErr());
+            return out;
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (data.isObject() && data["completedGauntlets"].isArray()) {
+            data = data["completedGauntlets"];
+        }
+        if (!data.isArray()) {
+            return out;
+        }
+
+        for (auto const& value : data) {
+            if (!value.isNumber()) {
+                continue;
+            }
+            auto maybeId = value.asInt();
+            if (maybeId) {
+                out.insert(static_cast<int>(maybeId.unwrap()));
+            }
+        }
+        return out;
+    }
+
+    static bool saveCompletedGauntlets(std::unordered_set<int> const& gauntlets) {
+        auto path = getCompletedGauntletPath();
+        matjson::Value array = matjson::Value::array();
+        for (auto gauntletId : gauntlets) {
+            array.push(gauntletId);
+        }
+        auto data = array.dump();
+        auto res = asp::fs::write(path, data.c_str(), data.size());
+        if (!res) {
+            log::warn("Failed to save completed gauntlets: {}", res.unwrapErr());
+        }
+        return static_cast<bool>(res);
+    }
+
+    static bool addCompletedGauntlet(int gauntletId) {
+        auto gauntlets = loadCompletedGauntlets();
+        gauntlets.insert(gauntletId);
+        return saveCompletedGauntlets(gauntlets);
+    }
 }
 
 GDXGauntletLayer* GDXGauntletLayer::create() {
@@ -285,8 +352,8 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         bool isMod = result["isMod"].asBool().unwrapOr(false);
         bool isManager = result["isManager"].asBool().unwrapOr(false);
 
-        if (isMod) Mod::get()->setSavedValue("isMod", isMod);
-        if (isManager) Mod::get()->setSavedValue("isManager", isManager);
+        Mod::get()->setSavedValue("isMod", isMod);
+        Mod::get()->setSavedValue("isManager", isManager);
 
         if (!isManager && !isMod) {
             geode::queueInMainThread([upopup, response] {
@@ -310,6 +377,14 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
     m_gauntlets = matjson::Value::array();
     createGauntletPages(m_gauntlets);
     fetchGauntlets();
+
+    if (m_prevPageBtn != nullptr) {
+        m_prevPageBtn->removeFromParent();
+    }
+
+    if (m_nextPageBtn != nullptr) {
+        m_nextPageBtn->removeFromParent();
+    }
 }
 
 void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
@@ -526,47 +601,90 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     gauntletSprite->setPosition({gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10});
     gauntletSpriteShadow->setPosition({gauntletSprite->getPositionX(), gauntletSprite->getPositionY() - 6});
 
-    auto rewardLabel = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
-    rewardLabel->setAlignment(kCCTextAlignmentLeft);
-    rewardLabel->setAnchorPoint({1.f, 0.5f});
-    rewardLabel->setScale(0.5f);
-    rewardLabel->limitLabelWidth(50.f, 0.5f, 0.35f);
-    rewardLabel->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
-    gauntletBg->addChild(rewardLabel, 3);
-
-    auto rewardLabelShadow = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
-    rewardLabelShadow->setAlignment(kCCTextAlignmentLeft);
-    rewardLabelShadow->setAnchorPoint({1.f, 0.5f});
-    rewardLabelShadow->limitLabelWidth(50.f, 0.5f, 0.35f);
-    rewardLabelShadow->setPosition({rewardLabel->getPositionX() + 2.f, rewardLabel->getPositionY() - 2.f});
-    rewardLabelShadow->setColor({0, 0, 0});
-    rewardLabelShadow->setOpacity(60);
-    gauntletBg->addChild(rewardLabelShadow, 2);
-
-    auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
-    if (rewardIcon) {
-        rewardIcon->setScale(0.3f);
-        rewardIcon->setAnchorPoint({0.f, 0.5f});
-        rewardIcon->setPosition({rewardLabel->getPositionX() + 5, 50.f});
-        gauntletBg->addChild(rewardIcon, 3);
-    }
-
-    auto rewardIconShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
-    if (rewardIconShadow) {
-        rewardIconShadow->setColor({0, 0, 0});
-        rewardIconShadow->setOpacity(60);
-        rewardIconShadow->setScale(0.3f);
-        rewardIconShadow->setAnchorPoint({0.f, 0.5f});
-        rewardIconShadow->setPosition({rewardLabel->getPositionX() + 5, 48.f});
-        gauntletBg->addChild(rewardIconShadow, 2);
-    }
-
     auto completedCount = 0;
     for (auto const& level : node.levelIds) {
         if (m_completedGauntletLevels.contains(level.levelId)) {
             ++completedCount;
         }
     }
+
+    bool hasCompletedAllLevels = !node.levelIds.empty() && completedCount == static_cast<int>(node.levelIds.size());
+    bool isClaimedGauntlet = hasCompletedAllLevels && m_claimedGauntlets.contains(gauntletIndex);
+    CCMenuItemSpriteExtra* rewardBtn = nullptr;
+
+    if (isClaimedGauntlet) {
+        auto completedIconShadow = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+        if (completedIconShadow) {
+            completedIconShadow->setColor({0, 0, 0});
+            completedIconShadow->setOpacity(80);
+            completedIconShadow->setScale(1.5f);
+            completedIconShadow->setPosition({gauntletBg->getContentSize().width / 2.f + 2.f, 48.f});
+            gauntletBg->addChild(completedIconShadow, 3);
+        }
+
+        auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+        if (completedIcon) {
+            completedIcon->setScale(1.5f);
+            completedIcon->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
+            gauntletBg->addChild(completedIcon, 4);
+        }
+    } else if (hasCompletedAllLevels) {
+        auto rewardBtnSpr = CCSprite::createWithSpriteFrameName("GJ_rewardBtn_001.png");
+        if (rewardBtnSpr) {
+            rewardBtn = CCMenuItemSpriteExtra::create(rewardBtnSpr, this, menu_selector(GDXGauntletLayer::onCompleteGauntlet));
+            rewardBtn->setTag(gauntletIndex);
+            rewardBtn->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
+            auto rewardMenu = CCMenu::create(rewardBtn, nullptr);
+            if (rewardMenu) {
+                rewardMenu->setPosition({0.f, 0.f});
+                gauntletBg->addChild(rewardMenu, 3);
+            }
+        }
+    } else {
+        auto rewardLabel = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
+        rewardLabel->setAlignment(kCCTextAlignmentLeft);
+        rewardLabel->setAnchorPoint({1.f, 0.5f});
+        rewardLabel->setScale(0.5f);
+        rewardLabel->limitLabelWidth(50.f, 0.5f, 0.35f);
+        rewardLabel->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
+        gauntletBg->addChild(rewardLabel, 3);
+
+        auto rewardLabelShadow = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
+        rewardLabelShadow->setAlignment(kCCTextAlignmentLeft);
+        rewardLabelShadow->setAnchorPoint({1.f, 0.5f});
+        rewardLabelShadow->limitLabelWidth(50.f, 0.5f, 0.35f);
+        rewardLabelShadow->setPosition({rewardLabel->getPositionX() + 2.f, rewardLabel->getPositionY() - 2.f});
+        rewardLabelShadow->setColor({0, 0, 0});
+        rewardLabelShadow->setOpacity(60);
+        gauntletBg->addChild(rewardLabelShadow, 2);
+
+        auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+        if (rewardIcon) {
+            rewardIcon->setScale(0.3f);
+            rewardIcon->setAnchorPoint({0.f, 0.5f});
+            rewardIcon->setPosition({rewardLabel->getPositionX() + 5, 50.f});
+            gauntletBg->addChild(rewardIcon, 3);
+        }
+
+        auto rewardIconShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+        if (rewardIconShadow) {
+            rewardIconShadow->setColor({0, 0, 0});
+            rewardIconShadow->setOpacity(60);
+            rewardIconShadow->setScale(0.3f);
+            rewardIconShadow->setAnchorPoint({0.f, 0.5f});
+            rewardIconShadow->setPosition({rewardLabel->getPositionX() + 5, 48.f});
+            gauntletBg->addChild(rewardIconShadow, 2);
+        }
+    }
+
+    auto completionLabelShadow = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
+    completionLabelShadow->setScale(0.4f);
+    completionLabelShadow->setAnchorPoint({0.5f, 0.5f});
+    completionLabelShadow->setPosition({gauntletSprite->getPositionX() + 2.f, gauntletSprite->getPositionY() - 42.f});
+    completionLabelShadow->setColor({0, 0, 0});
+    completionLabelShadow->setOpacity(60);
+    gauntletBg->addChild(completionLabelShadow, 2);
+
     auto completionLabel = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
     completionLabel->setScale(0.4f);
     completionLabel->setAnchorPoint({0.5f, 0.5f});
@@ -594,6 +712,138 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     return button;
 }
 
+void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
+    auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
+    CCPoint buttonPos = button->getPosition();
+    if (!button) {
+        return;
+    }
+
+    auto gauntletIndex = button->getTag();
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::BASE_API_URL) + "/completeGauntlet";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["gauntletIndex"] = gauntletIndex;
+
+    auto rewardSpinner = LoadingSpinner::create(45.f);
+    if (rewardSpinner) {
+        rewardSpinner->setPosition(buttonPos);
+        rewardSpinner->setVisible(true);
+        if (auto parent = button->getParent()) {
+            parent->addChild(rewardSpinner, 4);
+        } else {
+            this->addChild(rewardSpinner, 4);
+        }
+        button->setVisible(false);
+    }
+
+    auto self = geode::Ref<GDXGauntletLayer>(this);
+    async::spawn([self = std::move(self), button, buttonPos, rewardSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), gauntletIndex]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            geode::queueInMainThread([self, button, buttonPos, rewardSpinner]() {
+                if (button) {
+                    button->setVisible(true);
+                }
+                if (rewardSpinner) {
+                    rewardSpinner->removeFromParent();
+                }
+                Notification::create("Authentication failed", NotificationIcon::Warning)->show();
+            });
+            co_return;
+        }
+
+        body["argonToken"] = std::move(token);
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            geode::queueInMainThread([self, button, buttonPos, rewardSpinner, response]() {
+                if (button) {
+                    button->setVisible(true);
+                }
+                if (rewardSpinner) {
+                    rewardSpinner->removeFromParent();
+                }
+                Notification::create(gdx::getResponseMessage(response, "Failed to claim gauntlet"), NotificationIcon::Warning)->show();
+            });
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        if (!jsonResult) {
+            geode::queueInMainThread([self, button, buttonPos, rewardSpinner, response]() {
+                if (button) {
+                    button->setVisible(true);
+                }
+                if (rewardSpinner) {
+                    rewardSpinner->removeFromParent();
+                }
+                Notification::create(gdx::getResponseMessage(response, "Failed to claim gauntlet"), NotificationIcon::Warning)->show();
+            });
+            co_return;
+        }
+
+        auto result = std::move(jsonResult).unwrap();
+        bool success = result["success"].asBool().unwrapOr(false);
+        auto newGauntletPoints = result["gauntletPoints"].asInt().unwrapOr(self->m_gauntletPoints);
+
+        geode::queueInMainThread([self, button, buttonPos, rewardSpinner, success, newGauntletPoints, response, gauntletIndex]() mutable {
+            if (rewardSpinner) {
+                rewardSpinner->removeFromParent();
+            }
+            if (!success) {
+                if (button) {
+                    button->setVisible(true);
+                }
+                Notification::create(gdx::getResponseMessage(response, "Failed to claim gauntlet"), NotificationIcon::Warning)->show();
+                return;
+            }
+
+            self->m_gauntletPoints = static_cast<int>(newGauntletPoints);
+            if (self->m_gauntletPointsCounter) {
+                self->m_gauntletPointsCounter->setTargetCount(self->m_gauntletPoints);
+                Mod::get()->setSavedValue<int>("gauntletPoints", self->m_gauntletPoints);
+            }
+
+            self->m_claimedGauntlets.insert(gauntletIndex);
+            addCompletedGauntlet(gauntletIndex);
+
+            if (button && button->getParent()) {
+                auto completedIconShadow = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+                if (completedIconShadow) {
+                    completedIconShadow->setColor({0, 0, 0});
+                    completedIconShadow->setOpacity(80);
+                    completedIconShadow->setScale(1.5f);
+                    completedIconShadow->setPosition({buttonPos.x + 2.f, buttonPos.y - 2.f});
+                    button->getParent()->addChild(completedIconShadow, 3);
+                }
+
+                auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+                if (completedIcon) {
+                    completedIcon->setScale(1.5f);
+                    completedIcon->setPosition(buttonPos);
+                    button->getParent()->addChild(completedIcon, 4);
+                }
+            }
+
+            Notification::create("Gauntlet Completed!", NotificationIcon::Success)->show();
+            // @geode-ignore(unknown-resource)
+            FMODAudioEngine::sharedEngine()->playEffect("gold02.ogg");
+            auto circleWave = CCCircleWave::create(10.f, 110.f, 0.5f, false);
+            circleWave->setPosition(buttonPos);
+            circleWave->m_color = ccColor3B({255, 100, 100});
+            button->getParent()->addChild(circleWave, 3);
+        });
+
+        co_return;
+    });
+}
+
 void GDXGauntletLayer::onGauntletInfo(CCObject* sender) {
     auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
     if (!button || !m_gauntlets.isArray()) {
@@ -616,6 +866,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
     m_gauntlets = gauntlets;
 
     m_completedGauntletLevels = loadCompletedGauntletLevels();
+    m_claimedGauntlets = loadCompletedGauntlets();
     if (m_scrollLayer) {
         m_scrollLayer->removeFromParent();
         m_scrollLayer = nullptr;
@@ -706,8 +957,8 @@ void GDXGauntletLayer::update(float dt) {
     auto page = m_scrollLayer->m_page;
     if (page != m_currentPage) {
         m_currentPage = page;
-        updatePageButtons();
     }
+    updatePageButtons();
 }
 
 void GDXGauntletLayer::onPrev(CCObject* sender) {

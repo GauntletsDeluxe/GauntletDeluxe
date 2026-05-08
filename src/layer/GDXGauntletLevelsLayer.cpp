@@ -165,9 +165,9 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         if (completedLevels.contains(entry.levelId)) {
             auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
             if (completedIcon) {
-                completedIcon->setScale(0.6f);
-                completedIcon->setAnchorPoint({1.f, 1.f});
-                completedIcon->setPosition({gauntletSprite->getContentSize().width - 6.f, gauntletSprite->getContentSize().height - 6.f});
+                completedIcon->setID("completed-icon");
+                completedIcon->setScale(1.5f);
+                completedIcon->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
                 gauntletSprite->addChild(completedIcon, 4);
             }
         }
@@ -309,6 +309,59 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     this->scheduleUpdate();
 
     return true;
+}
+
+void GDXGauntletLevelsLayer::onEnter() {
+    CCLayer::onEnter();
+    this->refreshCompletionIcons();
+}
+
+void GDXGauntletLevelsLayer::refreshCompletionIcons() {
+    if (!m_levelsMenu) {
+        return;
+    }
+
+    auto completedLevels = loadCompletedGauntletLevels();
+    auto children = m_levelsMenu->getChildren();
+    for (auto i = 0u; i < children->count(); ++i) {
+        auto child = static_cast<CCNode*>(children->objectAtIndex(i));
+        auto button = typeinfo_cast<CCMenuItemSpriteExtra*>(child);
+        if (!button) {
+            continue;
+        }
+
+        auto levelId = button->getTag();
+        bool isCompleted = completedLevels.contains(levelId);
+
+        cocos2d::CCSprite* gauntletSprite = nullptr;
+        auto buttonChildren = button->getChildren();
+        for (auto j = 0u; j < buttonChildren->count(); ++j) {
+            auto inner = static_cast<CCNode*>(buttonChildren->objectAtIndex(j));
+            auto sprite = typeinfo_cast<CCSprite*>(inner);
+            if (sprite) {
+                gauntletSprite = sprite;
+                break;
+            }
+        }
+        if (!gauntletSprite) {
+            continue;
+        }
+
+        auto existingIcon = gauntletSprite->getChildByID("completed-icon");
+        if (isCompleted) {
+            if (!existingIcon) {
+                auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+                if (completedIcon) {
+                    completedIcon->setID("completed-icon");
+                    completedIcon->setScale(1.5f);
+                    completedIcon->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
+                    gauntletSprite->addChild(completedIcon, 4);
+                }
+            }
+        } else if (existingIcon) {
+            existingIcon->removeFromParent();
+        }
+    }
 }
 
 void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {

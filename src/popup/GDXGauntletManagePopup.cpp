@@ -8,6 +8,7 @@
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/utils/web.hpp>
 #include <argon/argon.hpp>
+#include <Geode/ui/Scrollbar.hpp>
 
 using namespace geode;
 using namespace geode::prelude;
@@ -38,6 +39,9 @@ bool GDXGauntletManagePopup::init() {
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
     m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, 0.f});
+    m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
+    m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
+    this->scheduleUpdate();
 
     auto addBtn = CCMenuItemSpriteExtra::create(
         ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
@@ -139,6 +143,10 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
     }
     m_list->getScrollLayer()->m_contentLayer->updateLayout();
     m_list->scrollToTop();
+}
+
+void GDXGauntletManagePopup::update(float dt) {
+    geode::Popup::update(dt);
 }
 
 CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet, int index) {

@@ -14,6 +14,7 @@ public:
 
 private:
     bool init() override;
+    void update(float dt) override;
     void onAdd(CCObject* sender);
     void onDelete(CCObject* sender);
     void onEdit(CCObject* sender);
@@ -22,8 +23,8 @@ private:
     void createGauntletList(const matjson::Value& gauntlets);
     void deleteGauntletAtIndex(int index);
     cocos2d::CCNode* createGauntletCell(const matjson::Value& gauntlet, int index);
-
     cue::ListNode* m_list = nullptr;
+    geode::Scrollbar* m_scrollbar = nullptr;
     matjson::Value m_gauntlets;
     cocos2d::CCMenu* m_menu = nullptr;
 };

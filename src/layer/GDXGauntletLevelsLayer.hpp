@@ -18,9 +18,11 @@ public:
 
 private:
     bool init(cocos2d::CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color);
+    void onEnter() override;
     void keyBackClicked() override;
     void update(float dt) override;
     void onLevelClicked(CCObject* sender);
+    void refreshCompletionIcons();
 
     std::vector<GDXGauntletLevelEntry> m_levels;
     std::string m_gauntletTitle;

@@ -60,6 +60,8 @@ bool GDXLeaderboardLayer::init() {
         }
     }
 
+    m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
+    m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {25.f, 0.f});
     createTabs();
 
     this->setKeypadEnabled(true);
@@ -233,7 +235,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 }
                 auto levelPointLabel = CCLabelBMFont::create(GameToolbox::pointsToString(levelPoints).c_str(), "bigFont.fnt");
                 levelPointLabel->setAnchorPoint({1.f, 0.5f});
-                levelPointLabel->setPosition({cell->getContentSize().width - 30.f, cell->getContentSize().height / 2.f + 10.f});
+                levelPointLabel->setPosition({cell->getContentSize().width - 35.f, cell->getContentSize().height / 2.f + 10.f});
                 levelPointLabel->limitLabelWidth(100.f, 0.5f, 0.35f);
                 cell->addChild(levelPointLabel);
 
@@ -246,7 +248,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 }
                 auto gauntletPointLabel = CCLabelBMFont::create(GameToolbox::pointsToString(gauntletPoints).c_str(), "bigFont.fnt");
                 gauntletPointLabel->setAnchorPoint({1.f, 0.5f});
-                gauntletPointLabel->setPosition({cell->getContentSize().width - 30.f, cell->getContentSize().height / 2.f - 10.f});
+                gauntletPointLabel->setPosition({cell->getContentSize().width - 35.f, cell->getContentSize().height / 2.f - 10.f});
                 gauntletPointLabel->limitLabelWidth(100.f, 0.5f, 0.35f);
                 cell->addChild(gauntletPointLabel);
 
