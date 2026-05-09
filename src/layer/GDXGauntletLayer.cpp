@@ -1071,8 +1071,10 @@ void GDXGauntletLayer::update(float dt) {
         return;
     }
 
-    m_scrollLayer->updatePages();
-    auto page = m_scrollLayer->m_page;
+    auto page = m_scrollLayer->pageNumberForPosition(m_scrollLayer->getPosition());
+    if (page < 0 || page >= m_scrollLayer->getTotalPages()) {
+        page = m_scrollLayer->m_page;
+    }
     if (page != m_currentPage) {
         m_currentPage = page;
         updatePageButtons();
@@ -1122,7 +1124,10 @@ void GDXGauntletLayer::updatePageButtons() {
         return;
     }
 
-    auto page = m_scrollLayer->m_page;
+    auto page = m_scrollLayer->pageNumberForPosition(m_scrollLayer->getPosition());
+    if (page < 0 || page >= m_scrollLayer->getTotalPages()) {
+        page = m_scrollLayer->m_page;
+    }
     auto totalPages = m_scrollLayer->getTotalPages();
     if (totalPages <= 0) {
         return;
