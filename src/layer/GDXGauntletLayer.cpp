@@ -1071,11 +1071,12 @@ void GDXGauntletLayer::update(float dt) {
         return;
     }
 
+    m_scrollLayer->updatePages();
     auto page = m_scrollLayer->m_page;
     if (page != m_currentPage) {
         m_currentPage = page;
+        updatePageButtons();
     }
-    updatePageButtons();
 }
 
 void GDXGauntletLayer::onPrev(CCObject* sender) {

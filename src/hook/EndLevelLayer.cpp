@@ -127,7 +127,8 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 }
 
                 auto rewardValue = result["reward"].asInt().unwrapOr(0);
-                geode::queueInMainThread([this, rewardValue, levelId] {
+                auto levelPointsValue = result["levelPoints"].asInt().unwrapOr(0);
+                geode::queueInMainThread([this, rewardValue, levelPointsValue, levelId] {
                     auto completedLevels = loadCompletedGauntletLevels();
                     bool hasLevel = false;
                     for (auto existingLevelId : completedLevels) {
@@ -142,7 +143,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     }
 
                     auto gauntletRewardNode = CCNodeRGBA::create();
-                    gauntletRewardNode->setContentHeight(30.f);
+                    gauntletRewardNode->setContentHeight(45.f);
                     gauntletRewardNode->setScale(1.8f);
                     gauntletRewardNode->setOpacity(0);
                     gauntletRewardNode->setID("gauntlet-reward-node");
@@ -150,19 +151,30 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     if (rewardSpr) {
                         rewardSpr->setScale(0.4f);
                         rewardSpr->setAnchorPoint({0.f, 0.5f});
-                        rewardSpr->setPosition({5.f, gauntletRewardNode->getContentSize().height / 2.f});
+                        rewardSpr->setPosition({5.f, gauntletRewardNode->getContentSize().height * 0.65f});
                         gauntletRewardNode->addChild(rewardSpr);
                     }
 
-                    auto rewardLabel = CCLabelBMFont::create(numToString(rewardValue).c_str(), "bigFont.fnt");
+                    auto rewardText = std::string("+" + numToString(rewardValue));
+                    auto rewardLabel = CCLabelBMFont::create(rewardText.c_str(), "bigFont.fnt");
                     if (rewardLabel) {
                         rewardLabel->setAnchorPoint({1.f, 0.5f});
                         rewardLabel->setScale(0.8f);
-                        rewardLabel->setPosition({0.f, gauntletRewardNode->getContentSize().height / 2.f});
+                        rewardLabel->setPosition({0.f, gauntletRewardNode->getContentSize().height * 0.65f});
                         gauntletRewardNode->addChild(rewardLabel);
                     }
 
-                    gauntletRewardNode->setPosition({50.f, m_listLayer->getContentSize().height / 2});
+                    auto levelPointsText = std::string("(" + numToString(levelPointsValue) + ")");
+                    auto levelPointsLabel = CCLabelBMFont::create(levelPointsText.c_str(), "bigFont.fnt");
+                    if (levelPointsLabel) {
+                        levelPointsLabel->setAnchorPoint({1.f, 0.5f});
+                        levelPointsLabel->setScale(0.4f);
+                        levelPointsLabel->setColor({255, 115, 255});
+                        levelPointsLabel->setPosition({0.f, gauntletRewardNode->getContentSize().height * 0.25f});
+                        gauntletRewardNode->addChild(levelPointsLabel);
+                    }
+
+                    gauntletRewardNode->setPosition({55.f, m_listLayer->getContentSize().height / 2 - 15});
                     m_listLayer->addChild(gauntletRewardNode);
 
                     auto scaleAction = CCScaleBy::create(.6f, .8f);
@@ -174,7 +186,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     // @geode-ignore(unknown-resource)
                     FMODAudioEngine::sharedEngine()->playEffect("gold02.ogg");
                     auto circleWave = CCCircleWave::create(10.f, 110.f, 0.5f, false);
-                    circleWave->setPosition(gauntletRewardNode->getPosition());
+                    circleWave->setPosition(gauntletRewardNode->getPosition() + ccp(0.f, 10.f));
                     circleWave->m_color = ccColor3B({191, 3, 226});
                     m_listLayer->addChild(circleWave);
                 });
