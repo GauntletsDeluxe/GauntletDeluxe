@@ -396,8 +396,9 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     body["accountId"] = accountData.accountId;
     body["argonToken"] = std::string(accountData.gjp2);
 
+    auto gauntletsCopy = m_gauntlets;
     auto self = geode::Ref<GDXGauntletLayer>(this);
-    m_syncAccountTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_syncAccountTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData), gauntletsCopy = std::move(gauntletsCopy)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([upopup] {
@@ -476,7 +477,6 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
 
         auto levelsSaved = saveCompletedGauntletLevels(completedLevels);
         auto gauntletsSaved = saveCompletedGauntlets(completedGauntlets);
-        auto gauntletsCopy = self->m_gauntlets;
 
         co_await geode::async::waitForMainThread([self, upopup, levelsSaved, gauntletsSaved, gauntletsCopy = std::move(gauntletsCopy)]() mutable {
             if (levelsSaved && gauntletsSaved) {
