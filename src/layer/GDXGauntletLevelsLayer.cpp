@@ -1,11 +1,13 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
+#include "../include/GDXConstant.hpp"
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
 #include <cue/RepeatingBackground.hpp>
 #include <asp/fs.hpp>
 #include "Geode/ui/Layout.hpp"
+#include "Geode/ui/LazySprite.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 
 using namespace geode::prelude;
@@ -73,6 +75,66 @@ static int getIntFromDict(CCDictionary* dict, const char* key) {
     }
     auto value = static_cast<CCInteger*>(dict->objectForKey(key));
     return value ? value->getValue() : 0;
+}
+
+static bool isLazyImageLoaded(LazySprite* image) {
+    if (!image) {
+        return false;
+    }
+
+    auto texture = image->getTexture();
+    return texture && texture->getName() != 0;
+}
+
+static void removeLoadedGauntletFallbacks(CCMenu* menu) {
+    if (!menu) {
+        return;
+    }
+
+    auto children = menu->getChildren();
+    if (!children) {
+        return;
+    }
+
+    for (auto i = 0u; i < children->count(); ++i) {
+        auto child = static_cast<CCNode*>(children->objectAtIndex(i));
+        auto btn = typeinfo_cast<CCMenuItemSpriteExtra*>(child);
+        if (!btn) {
+            continue;
+        }
+
+        auto buttonChildren = btn->getChildren();
+        if (!buttonChildren) {
+            continue;
+        }
+
+        LazySprite* lazyImage = nullptr;
+        CCNode* fallback = nullptr;
+        CCNode* fallbackShadow = nullptr;
+        for (auto j = 0u; j < buttonChildren->count(); ++j) {
+            auto inner = static_cast<CCNode*>(buttonChildren->objectAtIndex(j));
+            if (!inner) {
+                continue;
+            }
+
+            if (inner->getID() == "gauntlet-image") {
+                lazyImage = typeinfo_cast<LazySprite*>(inner);
+            } else if (inner->getID() == "gauntlet-fallback") {
+                fallback = inner;
+            } else if (inner->getID() == "gauntlet-fallback-shadow") {
+                fallbackShadow = inner;
+            }
+        }
+
+        if (lazyImage && isLazyImageLoaded(lazyImage)) {
+            if (fallback) {
+                fallback->removeFromParent();
+            }
+            if (fallbackShadow) {
+                fallbackShadow->removeFromParent();
+            }
+        }
+    }
 }
 
 GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color) {
@@ -154,13 +216,46 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     auto completedLevels = loadCompletedGauntletLevels();
     for (auto i = 0u; i < m_levels.size(); ++i) {
         const auto& entry = m_levels[i];
-        auto gauntletSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        auto gauntletSprite = LazySprite::create({90.f, 90.f}, false);
         if (!gauntletSprite) {
             continue;
         }
 
         const float iconScale = 0.75f;
         gauntletSprite->setScale(iconScale);
+        gauntletSprite->setID("gauntlet-image");
+
+        auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        auto fallbackShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        if (fallbackShadow) {
+            fallbackShadow->setColor({0, 0, 0});
+            fallbackShadow->setOpacity(120);
+            fallbackShadow->setScaleX(1.f);
+            fallbackShadow->setScaleY(1.1f);
+            fallbackShadow->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f - 5.f});
+            fallbackShadow->setID("gauntlet-fallback-shadow");
+            gauntletSprite->addChild(fallbackShadow, -1);
+        }
+        if (fallbackSprite) {
+            fallbackSprite->setID("gauntlet-fallback");
+            fallbackSprite->setScale(1.f);
+            fallbackSprite->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
+            gauntletSprite->addChild(fallbackSprite, 0);
+        }
+
+        auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(entry.levelId) + ".png";
+        gauntletSprite->setAutoResize(true);
+        gauntletSprite->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+        gauntletSprite->setLoadCallback([fallbackSprite, fallbackShadow](geode::Result<> const& result) {
+            if (result) {
+                if (fallbackSprite) {
+                    fallbackSprite->removeFromParent();
+                }
+                if (fallbackShadow) {
+                    fallbackShadow->removeFromParent();
+                }
+            }
+        });
 
         if (completedLevels.contains(entry.levelId)) {
             auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
@@ -170,16 +265,6 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                 completedIcon->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
                 gauntletSprite->addChild(completedIcon, 4);
             }
-        }
-
-        auto spriteShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
-        if (spriteShadow) {
-            spriteShadow->setColor({0, 0, 0});
-            spriteShadow->setOpacity(120);
-            spriteShadow->setScaleX(1.f);
-            spriteShadow->setScaleY(1.1f);
-            spriteShadow->setPosition(gauntletSprite->getContentSize() / 2.f - CCPoint{0, 5.f});
-            gauntletSprite->addChild(spriteShadow, -1);
         }
 
         auto nameLabel = CCLabelBMFont::create(entry.levelName.c_str(), "bigFont.fnt");
@@ -428,6 +513,7 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
 }
 
 void GDXGauntletLevelsLayer::update(float dt) {
+    removeLoadedGauntletFallbacks(m_levelsMenu);
     if (m_pendingKey.empty()) {
         return;
     }

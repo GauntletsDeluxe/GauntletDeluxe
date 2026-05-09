@@ -16,6 +16,7 @@
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
+#include "Geode/ui/LazySprite.hpp"
 #include <argon/argon.hpp>
 
 using namespace geode::prelude;
@@ -702,17 +703,34 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
 
     gauntletBg->setColor({static_cast<GLubyte>(node.r), static_cast<GLubyte>(node.g), static_cast<GLubyte>(node.b)});
 
-    std::string spriteName = fmt::format("GDX_gauntletUnknown.png"_spr, gauntletIndex);
-    auto gauntletSprite = CCSprite::createWithSpriteFrameName(spriteName.c_str());
-    auto gauntletSpriteShadow = CCSprite::createWithSpriteFrameName(spriteName.c_str());
-    gauntletSpriteShadow->setColor({0, 0, 0});
-    gauntletSpriteShadow->setOpacity(50);
-    gauntletSpriteShadow->setScaleY(1.2f);
+    auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+    auto fallbackSpriteShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+    if (fallbackSpriteShadow) {
+        fallbackSpriteShadow->setColor({0, 0, 0});
+        fallbackSpriteShadow->setOpacity(50);
+        fallbackSpriteShadow->setScaleY(1.2f);
+    }
 
-    gauntletBg->addChild(gauntletSprite, 3);
-    gauntletBg->addChild(gauntletSpriteShadow, 2);
-    gauntletSprite->setPosition({gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10});
-    gauntletSpriteShadow->setPosition({gauntletSprite->getPositionX(), gauntletSprite->getPositionY() - 6});
+    auto const imageCenter = ccp(gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10);
+    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png";
+    auto gauntletImage = LazySprite::create({90.f, 90.f}, false);
+    if (gauntletImage) {
+        gauntletImage->setAutoResize(true);
+        gauntletImage->setPosition(imageCenter);
+        gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+    }
+
+    if (fallbackSprite) {
+        fallbackSprite->setPosition(imageCenter);
+        gauntletBg->addChild(fallbackSprite, 2);
+        if (fallbackSpriteShadow) {
+            fallbackSpriteShadow->setPosition({imageCenter.x, imageCenter.y - 6});
+            gauntletBg->addChild(fallbackSpriteShadow, 1);
+        }
+    }
+    if (gauntletImage) {
+        gauntletBg->addChild(gauntletImage, 3);
+    }
 
     auto completedCount = 0;
     for (auto const& level : node.levelIds) {
@@ -793,7 +811,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     auto completionLabelShadow = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
     completionLabelShadow->setScale(0.4f);
     completionLabelShadow->setAnchorPoint({0.5f, 0.5f});
-    completionLabelShadow->setPosition({gauntletSprite->getPositionX() + 2.f, gauntletSprite->getPositionY() - 42.f});
+    completionLabelShadow->setPosition({imageCenter.x + 2.f, imageCenter.y - 42.f});
     completionLabelShadow->setColor({0, 0, 0});
     completionLabelShadow->setOpacity(60);
     gauntletBg->addChild(completionLabelShadow, 2);
@@ -801,7 +819,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     auto completionLabel = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
     completionLabel->setScale(0.4f);
     completionLabel->setAnchorPoint({0.5f, 0.5f});
-    completionLabel->setPosition({gauntletSprite->getPositionX(), gauntletSprite->getPositionY() - 40.f});
+    completionLabel->setPosition({imageCenter.x, imageCenter.y - 40.f});
     gauntletBg->addChild(completionLabel, 3);
 
     auto infoMenu = CCMenu::create();

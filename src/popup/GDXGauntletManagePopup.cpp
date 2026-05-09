@@ -2,10 +2,12 @@
 #include "GDXAddGauntletPopup.hpp"
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
+#include "Geode/utils/general.hpp"
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/MultilineBitmapFont.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
+#include <Geode/ui/LazySprite.hpp>
 #include <Geode/utils/web.hpp>
 #include <argon/argon.hpp>
 #include <Geode/ui/Scrollbar.hpp>
@@ -48,12 +50,38 @@ bool GDXGauntletManagePopup::init() {
             ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onAdd));
-        m_buttonMenu->addChildAtPosition(addBtn, Anchor::Bottom, {0, 25}, false);
+        m_buttonMenu->addChildAtPosition(addBtn, Anchor::BottomRight, {-110, 25}, false);
+
+        auto openManageBtn = CCMenuItemSpriteExtra::create(
+            ButtonSprite::create("Asset Manager", "goldFont.fnt", "GJ_button_05.png"),
+            this,
+            menu_selector(GDXGauntletManagePopup::onManageAssets));
+        m_buttonMenu->addChildAtPosition(openManageBtn, Anchor::BottomLeft, {115, 25}, false);
     }
 
     refreshListItems();
     fetchGauntlets();
     return true;
+}
+
+void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
+    auto accountData = argon::getGameAccountData();
+    async::spawn([accountData]() -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            co_return;
+        }
+
+        auto url = fmt::format(
+            "{}/gauntletImageManage?accountId={}&argonToken={}",
+            std::string(gdx::BASE_API_URL),
+            accountData.accountId,
+            token);
+        geode::queueInMainThread([url = std::move(url)]() {
+            utils::web::openLinkInBrowser(url);
+        });
+        co_return;
+    });
 }
 
 void GDXGauntletManagePopup::onAdd(CCObject* sender) {
@@ -213,13 +241,22 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
 
     cellMenu->updateLayout();
 
-    // temp gauntlet sprite (REPLACE WITH ACTUAL GAUNTLET)
-    auto gauntletSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+    auto const gauntletSpritePosition = ccp(40.f, cell->getContentSize().height / 2.f);
+    auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
 
-    if (gauntletSprite) {
-        gauntletSprite->setScale(0.65f);
-        gauntletSprite->setPosition({40.f, cell->getContentSize().height / 2.f});
-        cell->addChild(gauntletSprite);
+    if (fallbackSprite) {
+        fallbackSprite->setScale(0.65f);
+        fallbackSprite->setPosition(gauntletSpritePosition);
+        cell->addChild(fallbackSprite, 2);
+    }
+
+    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png";
+    auto gauntletImage = LazySprite::create({72.f, 72.f}, false);
+    if (gauntletImage) {
+        gauntletImage->setAutoResize(true);
+        gauntletImage->setPosition(gauntletSpritePosition);
+        gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+        cell->addChild(gauntletImage, 3);
     }
 
     auto nameLabel = CCLabelBMFont::create(name.c_str(), "goldFont.fnt");
