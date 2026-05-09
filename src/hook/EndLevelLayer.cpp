@@ -91,8 +91,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
         log::debug("{} completed", m_playLayer->m_level->m_levelID);
         if (m_playLayer->m_level->m_normalPercent != 100) return;
         // get the summaryContainer
-        auto summaryContainer = typeinfo_cast<CCNode*>(this->m_mainLayer->getChildByID("summary-container"));
-        if (summaryContainer) {
+        if (this->m_listLayer) {
             auto accountData = argon::getGameAccountData();
             int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
             auto url = std::string(gdx::BASE_API_URL) + "/completeLevel";
@@ -101,7 +100,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             body["argonToken"] = "";
             body["levelId"] = static_cast<int>(levelId);
 
-            async::spawn([this, summaryContainer, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
+            async::spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
                     co_return;
@@ -128,10 +127,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 }
 
                 auto rewardValue = result["reward"].asInt().unwrapOr(0);
-                geode::queueInMainThread([this, summaryContainer, rewardValue, levelId] {
-                    if (!summaryContainer || summaryContainer->getChildByID("gauntlet-reward-node")) {
-                        return;
-                    }
+                geode::queueInMainThread([this, rewardValue, levelId] {
                     auto completedLevels = loadCompletedGauntletLevels();
                     bool hasLevel = false;
                     for (auto existingLevelId : completedLevels) {
@@ -147,7 +143,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
                     auto gauntletRewardNode = CCNodeRGBA::create();
                     gauntletRewardNode->setContentHeight(30.f);
-                    gauntletRewardNode->setScale(1.2f);
+                    gauntletRewardNode->setScale(1.8f);
                     gauntletRewardNode->setOpacity(0);
                     gauntletRewardNode->setID("gauntlet-reward-node");
                     auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
@@ -166,8 +162,10 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                         gauntletRewardNode->addChild(rewardLabel);
                     }
 
-                    summaryContainer->addChild(gauntletRewardNode);
-                    auto scaleAction = CCScaleBy::create(.6f, .6f);
+                    gauntletRewardNode->setPosition({50.f, m_listLayer->getContentSize().height / 2});
+                    m_listLayer->addChild(gauntletRewardNode);
+
+                    auto scaleAction = CCScaleBy::create(.6f, .8f);
                     auto bounceAction = CCEaseBounceOut::create(scaleAction);
                     auto fadeAction = CCFadeIn::create(0.6f);
                     auto spawnAction = CCSpawn::createWithTwoActions(bounceAction, fadeAction);
@@ -178,8 +176,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     auto circleWave = CCCircleWave::create(10.f, 110.f, 0.5f, false);
                     circleWave->setPosition(gauntletRewardNode->getPosition());
                     circleWave->m_color = ccColor3B({191, 3, 226});
-                    summaryContainer->addChild(circleWave);
-                    summaryContainer->updateLayout();
+                    m_listLayer->addChild(circleWave);
                 });
                 co_return;
             });

@@ -39,6 +39,7 @@ private:
     void onInfo(CCObject* sender);
     void onLeaderboard(CCObject* sender);
     void onManageGauntlets(CCObject* sender);
+    void onSyncAccount(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);

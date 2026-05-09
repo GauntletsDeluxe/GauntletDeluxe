@@ -43,11 +43,13 @@ bool GDXGauntletManagePopup::init() {
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
     this->scheduleUpdate();
 
-    auto addBtn = CCMenuItemSpriteExtra::create(
-        ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
-        this,
-        menu_selector(GDXGauntletManagePopup::onAdd));
-    m_buttonMenu->addChildAtPosition(addBtn, Anchor::Bottom, {0, 25}, false);
+    if (gdx::isManager()) {
+        auto addBtn = CCMenuItemSpriteExtra::create(
+            ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
+            this,
+            menu_selector(GDXGauntletManagePopup::onAdd));
+        m_buttonMenu->addChildAtPosition(addBtn, Anchor::Bottom, {0, 25}, false);
+    }
 
     refreshListItems();
     fetchGauntlets();
@@ -190,15 +192,18 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     }
 
     // delete gauntlet
-    auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
-    deleteSpr->setScale(0.7f);
+    if (gdx::isManager()) {
+        // delete gauntlet
+        auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+        deleteSpr->setScale(0.7f);
 
-    auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
-    deleteBtn->setTag(gauntletIndex);
-    cellMenu->addChild(deleteBtn);
+        auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
+        deleteBtn->setTag(gauntletIndex);
+        cellMenu->addChild(deleteBtn);
+    }
 
     // edit gauntlet
-    if (gdx::isManager()) {
+    if (gdx::isManager() || gdx::isMod()) {
         auto editSpr = CCSprite::createWithSpriteFrameName("GJ_editBtn_001.png");
         editSpr->setScale(0.4f);
         auto editBtn = CCMenuItemSpriteExtra::create(editSpr, this, menu_selector(GDXGauntletManagePopup::onEdit));

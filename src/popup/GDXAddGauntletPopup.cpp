@@ -72,17 +72,22 @@ void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
     }
 
     if (cell->m_backgroundLayer) {
-        auto rewardValue = CCLabelBMFont::create(numToString(reward).c_str(), "bigFont.fnt");
-        rewardValue->setAnchorPoint({1.f, 0.5f});
-        rewardValue->setScale(0.5f);
-        rewardValue->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
-        cell->m_mainLayer->addChild(rewardValue);
+        auto rewardInput = TextInput::create(60.f, numToString(reward).c_str(), "bigFont.fnt");
+        if (rewardInput) {
+            rewardInput->setCommonFilter(CommonFilter::Int);
+            rewardInput->setString(numToString(reward).c_str());
+            rewardInput->setAnchorPoint({1.f, 0.5f});
+            rewardInput->setScale(0.55f);
+            rewardInput->setPosition({cell->m_backgroundLayer->getContentSize().width - 30.f, 10.f});
+            rewardInput->setID("level-reward-input");
+            cell->m_mainLayer->addChild(rewardInput, 3);
+        }
 
         auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
         if (rewardIcon) {
             rewardIcon->setScale(0.2f);
             rewardIcon->setAnchorPoint({0.f, 0.5f});
-            rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 22.f, 10.f});
+            rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
             cell->m_mainLayer->addChild(rewardIcon);
         }
     }
@@ -93,6 +98,23 @@ void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
     deleteBtn->setPosition(removePos + ccp(20.f, 10.f));
     cell->m_mainMenu->addChild(deleteBtn);
     deleteBtn->setUserObject(cell);
+
+    auto upSpr = CCSprite::createWithSpriteFrameName("PBtn_Arrow_001.png");
+    if (upSpr) {
+        upSpr->setRotation(180.f);
+        auto upBtn = CCMenuItemSpriteExtra::create(upSpr, this, menu_selector(GDXAddGauntletPopup::onMoveLevelUp));
+        upBtn->setPosition({-20, removePos.y + 10.f});
+        upBtn->setUserObject(cell);
+        cell->m_mainMenu->addChild(upBtn);
+    }
+
+    auto downSpr = CCSprite::createWithSpriteFrameName("PBtn_Arrow_001.png");
+    if (downSpr) {
+        auto downBtn = CCMenuItemSpriteExtra::create(downSpr, this, menu_selector(GDXAddGauntletPopup::onMoveLevelDown));
+        downBtn->setPosition({-20, removePos.y - 10.f});
+        downBtn->setUserObject(cell);
+        cell->m_mainMenu->addChild(downBtn);
+    }
 }
 
 void GDXAddGauntletPopup::refreshLevelList() {
@@ -190,12 +212,6 @@ bool GDXAddGauntletPopup::init() {
     m_levelRewardInput->setLabel("Reward");
     m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Left, {155, -20});
 
-    auto addLevelBtn = CCMenuItemSpriteExtra::create(
-        ButtonSprite::create("Add Level", "goldFont.fnt", "GJ_button_05.png"),
-        this,
-        menu_selector(GDXAddGauntletPopup::onAddLevel));
-    m_buttonMenu->addChildAtPosition(addLevelBtn, Anchor::Left, {110, -60}, false);
-
     auto colorSpr = CCSprite::create("GJ_squareB_01.png");
     colorSpr->setScale(0.4f);
     if (colorSpr) {
@@ -227,11 +243,24 @@ bool GDXAddGauntletPopup::init() {
     m_mainLayer->addChildAtPosition(m_levelList, Anchor::Right, {-180.f, -10.f});
     refreshLevelList();
 
+    auto addLevelBtn = CCMenuItemSpriteExtra::create(
+        ButtonSprite::create("Add Level", "goldFont.fnt", "GJ_button_05.png"),
+        this,
+        menu_selector(GDXAddGauntletPopup::onAddLevel));
+
     auto saveBtn = CCMenuItemSpriteExtra::create(
         ButtonSprite::create("Save", "goldFont.fnt", "GJ_button_01.png"),
         this,
         menu_selector(GDXAddGauntletPopup::onSave));
-    m_buttonMenu->addChildAtPosition(saveBtn, Anchor::BottomLeft, {110, 25}, false);
+
+    m_settingsMenu = CCMenu::create(addLevelBtn, saveBtn, nullptr);
+    m_settingsMenu->setLayout(ColumnLayout::create()
+            ->setGap(10.f)
+            ->setAxisAlignment(AxisAlignment::Center)
+            ->setAxisReverse(true));
+    m_settingsMenu->setContentHeight(100.f);
+    m_settingsMenu->updateLayout();
+    m_mainLayer->addChildAtPosition(m_settingsMenu, Anchor::BottomLeft, {110, 55}, false);
 
     return true;
 }
@@ -566,6 +595,64 @@ void GDXAddGauntletPopup::onDeleteLevel(CCObject* sender) {
     m_levelList->updateLayout(true);
 }
 
+void GDXAddGauntletPopup::onMoveLevelUp(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto cell = static_cast<LevelCell*>(btn->getUserObject());
+    if (!cell) {
+        return;
+    }
+
+    auto it = std::find(m_levelCells.begin(), m_levelCells.end(), cell);
+    if (it == m_levelCells.end()) {
+        return;
+    }
+
+    auto idx = static_cast<size_t>(it - m_levelCells.begin());
+    if (idx == 0) {
+        return;
+    }
+
+    std::swap(m_levelCells[idx], m_levelCells[idx - 1]);
+    if (idx < m_levels.size()) {
+        std::swap(m_levels[idx], m_levels[idx - 1]);
+    }
+    m_unsaved = true;
+    refreshLevelList();
+}
+
+void GDXAddGauntletPopup::onMoveLevelDown(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto cell = static_cast<LevelCell*>(btn->getUserObject());
+    if (!cell) {
+        return;
+    }
+
+    auto it = std::find(m_levelCells.begin(), m_levelCells.end(), cell);
+    if (it == m_levelCells.end()) {
+        return;
+    }
+
+    auto idx = static_cast<size_t>(it - m_levelCells.begin());
+    if (idx + 1 >= m_levelCells.size()) {
+        return;
+    }
+
+    std::swap(m_levelCells[idx], m_levelCells[idx + 1]);
+    if (idx < m_levels.size() - 1) {
+        std::swap(m_levels[idx], m_levels[idx + 1]);
+    }
+    m_unsaved = true;
+    refreshLevelList();
+}
+
 void GDXAddGauntletPopup::onSave(CCObject* sender) {
     if (!m_owner || !m_nameInput || !m_descriptionInput) {
         return;
@@ -583,6 +670,18 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     }
 
     auto accountData = argon::getGameAccountData();
+    for (auto i = 0u; i < m_levels.size() && i < m_levelCells.size(); ++i) {
+        if (!m_levelCells[i]) {
+            continue;
+        }
+        auto rewardInput = typeinfo_cast<TextInput*>(m_levelCells[i]->getChildByIDRecursive("level-reward-input"));
+        if (!rewardInput) {
+            continue;
+        }
+        auto rewardString = rewardInput->getString();
+        m_levels[i].reward = numFromString<int>(rewardString).unwrapOr(m_levels[i].reward);
+    }
+
     auto levels = m_levels;
     auto color = m_selectedColor;
     auto url = std::string(gdx::BASE_API_URL) + (m_editMode ? "/editGauntlet" : "/addGauntlet");

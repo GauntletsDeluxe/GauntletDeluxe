@@ -35,6 +35,8 @@ private:
     void onAddLevel(CCObject* sender);
     void onPickColor(CCObject* sender);
     void onDeleteLevel(CCObject* sender);
+    void onMoveLevelUp(CCObject* sender);
+    void onMoveLevelDown(CCObject* sender);
     void refreshLevelList();
     void applyEditMode();
     void loadNextPendingLevel();
@@ -65,4 +67,5 @@ private:
     bool m_editMode = false;
     int m_editIndex = -1;
     matjson::Value m_editGauntlet;
+    cocos2d::CCMenu* m_settingsMenu = nullptr;
 };

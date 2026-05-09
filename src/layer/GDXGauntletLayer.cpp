@@ -14,6 +14,7 @@
 #include <Geode/utils/web.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
+#include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
 #include <argon/argon.hpp>
 
@@ -204,6 +205,7 @@ bool GDXGauntletLayer::init() {
 
     bottomMenu->updateLayout();
 
+    // refresh gauntlet
     auto refreshSpr = CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png");
     refreshSpr->setScale(0.75f);
     auto refreshBtn = CCMenuItemSpriteExtra::create(
@@ -211,7 +213,11 @@ bool GDXGauntletLayer::init() {
         this,
         menu_selector(GDXGauntletLayer::onRefreshGauntlets));
 
-    auto refreshMenu = CCMenu::create(refreshBtn, nullptr);
+    // sync account
+    // @geode-ignore(unknown-resource)
+    auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("geode.loader/update.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto syncBtn = CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXGauntletLayer::onSyncAccount));
+    auto refreshMenu = CCMenu::create(refreshBtn, syncBtn, nullptr);
     if (refreshMenu) {
         refreshMenu->setPosition({winSize.width - 30, 70});
         refreshMenu->setContentHeight(100);
@@ -379,18 +385,115 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     });
 }
 
+void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
+    auto upopup = UploadActionPopup::create(nullptr, "Syncing account...");
+    upopup->show();
+
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::BASE_API_URL) + "/syncUser";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["argonToken"] = std::string(accountData.gjp2);
+
+    auto self = geode::Ref<GDXGauntletLayer>(this);
+    async::spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Authentication failed.");
+            });
+            co_return;
+        }
+
+        body["argonToken"] = std::move(token);
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            geode::queueInMainThread([upopup, response] {
+                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to sync account."));
+            });
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        if (!jsonResult) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Failed to sync account.");
+            });
+            co_return;
+        }
+
+        auto result = std::move(jsonResult).unwrap();
+        bool success = result["success"].asBool().unwrapOr(false);
+        if (!success) {
+            geode::queueInMainThread([upopup] {
+                upopup->showFailMessage("Failed to sync account.");
+            });
+            co_return;
+        }
+
+        std::unordered_set<int> completedLevels;
+        if (result["completedLevels"].isArray()) {
+            for (auto const& entry : result["completedLevels"]) {
+                if (entry.isNumber()) {
+                    auto maybeId = entry.asInt();
+                    if (maybeId) {
+                        completedLevels.insert(static_cast<int>(maybeId.unwrap()));
+                    }
+                } else if (entry.isString()) {
+                    auto idString = entry.asString().unwrapOr("");
+                    auto maybeId = numFromString<int>(idString);
+                    if (maybeId) {
+                        completedLevels.insert(maybeId.unwrap());
+                    }
+                }
+            }
+        }
+
+        std::unordered_set<int> completedGauntlets;
+        if (result["completedGauntlets"].isArray()) {
+            for (auto const& entry : result["completedGauntlets"]) {
+                if (entry.isNumber()) {
+                    auto maybeId = entry.asInt();
+                    if (maybeId) {
+                        completedGauntlets.insert(static_cast<int>(maybeId.unwrap()));
+                    }
+                } else if (entry.isString()) {
+                    auto idString = entry.asString().unwrapOr("");
+                    auto maybeId = numFromString<int>(idString);
+                    if (maybeId) {
+                        completedGauntlets.insert(maybeId.unwrap());
+                    }
+                }
+            }
+        }
+
+        auto levelsSaved = saveCompletedGauntletLevels(completedLevels);
+        auto gauntletsSaved = saveCompletedGauntlets(completedGauntlets);
+
+        geode::queueInMainThread([self, upopup, levelsSaved, gauntletsSaved]() {
+            if (levelsSaved && gauntletsSaved) {
+                upopup->showSuccessMessage("Account synced successfully.");
+                self->m_completedGauntletLevels = loadCompletedGauntletLevels();
+                self->m_claimedGauntlets = loadCompletedGauntlets();
+                self->createGauntletPages(self->m_gauntlets);
+            } else {
+                upopup->showFailMessage("Failed to save sync data.");
+            }
+        });
+
+        co_return;
+    });
+}
+
 void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
     m_gauntlets = matjson::Value::array();
     createGauntletPages(m_gauntlets);
     fetchGauntlets();
-
-    if (m_prevPageBtn != nullptr) {
-        m_prevPageBtn->removeFromParent();
-    }
-
-    if (m_nextPageBtn != nullptr) {
-        m_nextPageBtn->removeFromParent();
-    }
 }
 
 void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
@@ -883,6 +986,14 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
         }
     }
     m_gauntletButtons.clear();
+
+    if (m_prevPageBtn != nullptr) {
+        m_prevPageBtn->removeFromParent();
+    }
+
+    if (m_nextPageBtn != nullptr) {
+        m_nextPageBtn->removeFromParent();
+    }
 
     const auto winSize = CCDirector::sharedDirector()->getWinSize();
     const float cardWidth = 110.f;

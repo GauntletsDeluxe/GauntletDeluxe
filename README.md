@@ -1,4 +1,4 @@
-# Gauntlet Deluxe
+# Gauntlets Deluxe
 
 **A <cl>community-run</c> custom gauntlet levels.**
 
@@ -9,6 +9,8 @@
 This mod adds a custom gauntlet to the game picked by the community. Contains **fan-made gauntlets** based of it's theme.
 
 Allows <cl>community-run</c> creator contest/gauntlet events hosted here!
+
+### <co>You can find the Gauntlets Deluxe at the Gauntlets tab in the Creator Page. You will find the button at the top right of the screen in the Gauntlet tab.</c>
 
 ---
 
