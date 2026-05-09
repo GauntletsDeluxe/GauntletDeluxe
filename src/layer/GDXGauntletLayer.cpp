@@ -322,7 +322,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
 
-    async::spawn([upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_syncAccountTask.spawn([upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             geode::queueInMainThread([upopup] {
@@ -384,7 +384,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         }
 
         co_return;
-    });
+    }, [](){});
 }
 
 void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
@@ -398,7 +398,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     body["argonToken"] = std::string(accountData.gjp2);
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
-    async::spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_syncAccountTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             geode::queueInMainThread([upopup] {
@@ -489,7 +489,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         });
 
         co_return;
-    });
+    }, [](){});
 }
 
 void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
@@ -545,7 +545,7 @@ void GDXGauntletLayer::fetchGauntlets() {
 
     auto url = std::string(gdx::BASE_API_URL) + "/getGauntlets";
     auto self = geode::Ref<GDXGauntletLayer>(this);
-    async::spawn([self = std::move(self), url = std::move(url)]() -> arc::Future<> {
+    m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
                             .get(url);
 
@@ -577,7 +577,7 @@ void GDXGauntletLayer::fetchGauntlets() {
         });
 
         co_return;
-    });
+    }, [](){});
 }
 
 void GDXGauntletLayer::fetchUserData() {
@@ -588,7 +588,7 @@ void GDXGauntletLayer::fetchUserData() {
     body["argonToken"] = std::string(accountData.gjp2);
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
-    async::spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_fetchUserDataTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_return;
@@ -638,7 +638,7 @@ void GDXGauntletLayer::fetchUserData() {
         });
 
         co_return;
-    });
+    }, [](){});
 }
 
 GDXGauntletNode GDXGauntletNode::fromJson(const matjson::Value& gauntlet) {
@@ -873,7 +873,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
     }
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
-    async::spawn([self = std::move(self), button, buttonPos, rewardSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), gauntletIndex]() mutable -> arc::Future<> {
+    m_completeGauntletTask.spawn([self = std::move(self), button, buttonPos, rewardSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), gauntletIndex]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             geode::queueInMainThread([self, button, buttonPos, rewardSpinner]() {
@@ -975,7 +975,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
         });
 
         co_return;
-    });
+    }, [](){});
 }
 
 void GDXGauntletLayer::onGauntletInfo(CCObject* sender) {

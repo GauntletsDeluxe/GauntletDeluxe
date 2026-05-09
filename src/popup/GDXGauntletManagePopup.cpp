@@ -66,7 +66,7 @@ bool GDXGauntletManagePopup::init() {
 
 void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
     auto accountData = argon::getGameAccountData();
-    async::spawn([accountData]() -> arc::Future<> {
+    m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_return;
@@ -81,7 +81,7 @@ void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
             utils::web::openLinkInBrowser(url);
         });
         co_return;
-    });
+    }, []() {});
 }
 
 void GDXGauntletManagePopup::onAdd(CCObject* sender) {
@@ -122,7 +122,7 @@ void GDXGauntletManagePopup::refreshListItems() {
 
 void GDXGauntletManagePopup::fetchGauntlets() {
     auto url = std::string(gdx::BASE_API_URL) + "/getGauntlets";
-    async::spawn([this, url = std::move(url)]() -> arc::Future<> {
+    m_fetchGauntletsTask.spawn([this, url = std::move(url)]() -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
                             .get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
@@ -139,7 +139,7 @@ void GDXGauntletManagePopup::fetchGauntlets() {
             createGauntletList(gauntlets);
         });
         co_return;
-    });
+    }, []() {});
 }
 
 void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets) {
@@ -361,7 +361,7 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
 
     auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
     upopup->show();
-    async::spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_deleteGauntletTask.spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             geode::queueInMainThread([upopup] {
@@ -390,5 +390,5 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
             upopup->showSuccessMessage("Gauntlet deleted successfully.");
         });
         co_return;
-    });
+    }, []() {});
 }

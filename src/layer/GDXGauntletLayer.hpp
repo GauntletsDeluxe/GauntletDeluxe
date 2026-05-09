@@ -70,4 +70,9 @@ private:
     int m_gauntletPoints = Mod::get()->getSavedValue<int>("gauntletPoints", 0);
     int m_levelPoints = Mod::get()->getSavedValue<int>("levelPoints", 0);
     int m_currentPage = -1;
+    
+    geode::async::TaskHolder<> m_fetchGauntletsTask;
+    geode::async::TaskHolder<> m_fetchUserDataTask;
+    geode::async::TaskHolder<> m_syncAccountTask;
+    geode::async::TaskHolder<> m_completeGauntletTask;
 };

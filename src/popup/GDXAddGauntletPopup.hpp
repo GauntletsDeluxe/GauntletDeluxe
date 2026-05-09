@@ -68,4 +68,5 @@ private:
     int m_editIndex = -1;
     matjson::Value m_editGauntlet;
     cocos2d::CCMenu* m_settingsMenu = nullptr;
+    geode::async::TaskHolder<> m_addGauntletTask;
 };

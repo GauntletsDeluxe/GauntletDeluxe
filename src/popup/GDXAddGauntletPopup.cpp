@@ -705,7 +705,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         body["levels"].push(std::move(levelObj));
     }
 
-    async::spawn([this, upoup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_addGauntletTask.spawn([this, upoup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             geode::queueInMainThread([upoup] {
@@ -741,5 +741,6 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         }
 
         co_return;
-    });
+    }, []() {});
 }
+

@@ -86,6 +86,10 @@ namespace {
 }
 
 class $modify(GDXEndLevelLayer, EndLevelLayer) {
+    struct Fields {
+        geode::async::TaskHolder<> m_requestTask;
+    };
+
     void customSetup() override {
         EndLevelLayer::customSetup();
         log::debug("{} completed", m_playLayer->m_level->m_levelID);
@@ -100,7 +104,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             body["argonToken"] = "";
             body["levelId"] = static_cast<int>(levelId);
 
-            async::spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
+            m_fields->m_requestTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
                     co_return;
@@ -191,7 +195,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     m_listLayer->addChild(circleWave);
                 });
                 co_return;
-            });
+            }, [](){});
         }
     }
 };

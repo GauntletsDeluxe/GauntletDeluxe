@@ -28,4 +28,7 @@ private:
     geode::Scrollbar* m_scrollbar = nullptr;
     matjson::Value m_gauntlets;
     cocos2d::CCMenu* m_menu = nullptr;
+    geode::async::TaskHolder<> m_manageAssetsTask;
+    geode::async::TaskHolder<> m_fetchGauntletsTask;
+    geode::async::TaskHolder<> m_deleteGauntletTask;
 };

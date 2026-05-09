@@ -24,4 +24,5 @@ private:
     int m_type = 1;
     TabButton* m_levelPointsTabSprite = nullptr;
     TabButton* m_gauntletPointsTabSprite = nullptr;
+    geode::async::TaskHolder<> m_leaderboardTask;
 };

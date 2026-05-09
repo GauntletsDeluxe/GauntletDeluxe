@@ -145,7 +145,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     body["argonToken"] = "";
     body["type"] = m_type;
 
-    async::spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_leaderboardTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_return;
@@ -291,5 +291,5 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
             }
         });
         co_return;
-    });
+    }, []() {});
 }
