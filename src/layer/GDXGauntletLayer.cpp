@@ -990,10 +990,12 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
 
     if (m_prevPageBtn != nullptr) {
         m_prevPageBtn->removeFromParent();
+        m_prevPageBtn = nullptr;
     }
 
     if (m_nextPageBtn != nullptr) {
         m_nextPageBtn->removeFromParent();
+        m_nextPageBtn = nullptr;
     }
 
     const auto winSize = CCDirector::sharedDirector()->getWinSize();
