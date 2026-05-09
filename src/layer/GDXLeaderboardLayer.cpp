@@ -44,12 +44,14 @@ bool GDXLeaderboardLayer::init() {
     if (m_list) {
         m_list->setPosition({winSize.width / 2.f, winSize.height / 2.f - 5.f});
         m_list->setCellHeight(50.f);
-        m_list->getScrollLayer()->m_contentLayer->setLayout(
-            ColumnLayout::create()
-                ->setGap(0.f)
-                ->setAxisReverse(true)
-                ->setAxisAlignment(AxisAlignment::End)
-                ->setAutoGrowAxis(listSize.height));
+        auto contentLayer = m_list->getScrollLayer()->m_contentLayer;
+        if (contentLayer) {
+            auto layout = ColumnLayout::create();
+            layout->setGap(0.f);
+            layout->setAutoGrowAxis(0.f);
+            layout->setAxisReverse(true);
+            contentLayer->setLayout(layout);
+        }
         this->addChild(m_list);
 
         m_loadingSpinner = LoadingSpinner::create(60.f);
@@ -254,17 +256,17 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
 
                 // top 3 gradient
                 if (i == 0) {
-                    auto goldGradient = CCLayerGradient::create({255, 215, 0, 100}, {255, 215, 0, 0}, {1.f, 0.f});
+                    auto goldGradient = CCLayerGradient::create({255, 215, 0, 255}, {255, 215, 0, 0}, {1.f, 0.f});
                     goldGradient->setContentSize(cell->getContentSize());
                     goldGradient->setPosition({0, 0});
                     cell->addChild(goldGradient, -1);
                 } else if (i == 1) {
-                    auto silverGradient = CCLayerGradient::create({192, 192, 192, 100}, {192, 192, 192, 0}, {1.f, 0.f});
+                    auto silverGradient = CCLayerGradient::create({192, 192, 192, 255}, {192, 192, 192, 0}, {1.f, 0.f});
                     silverGradient->setContentSize(cell->getContentSize());
                     silverGradient->setPosition({0, 0});
                     cell->addChild(silverGradient, -1);
                 } else if (i == 2) {
-                    auto bronzeGradient = CCLayerGradient::create({205, 127, 50, 100}, {205, 127, 50, 0}, {1.f, 0.f});
+                    auto bronzeGradient = CCLayerGradient::create({205, 127, 50, 255}, {205, 127, 50, 0}, {1.f, 0.f});
                     bronzeGradient->setContentSize(cell->getContentSize());
                     bronzeGradient->setPosition({0, 0});
                     cell->addChild(bronzeGradient, -1);
@@ -272,7 +274,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
 
                 // current user
                 if (accountId == argon::getGameAccountData().accountId) {
-                    auto glow = CCLayerGradient::create({0, 255, 0, 100}, {0, 255, 0, 0}, {0.f, 0.f});
+                    auto glow = CCLayerGradient::create({0, 255, 0, 100}, {0, 255, 0, 0}, {-1.f, 0.f});
                     glow->setContentSize(cell->getContentSize());
                     glow->setPosition({0, 0});
                     cell->addChild(glow, -1);
@@ -281,9 +283,9 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 m_list->addCell(cell);
             }
 
-            if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
-                m_list->getScrollLayer()->m_contentLayer->updateLayout(true);
-            }
+            m_list->updateLayout();
+            m_list->scrollToTop();
+
             if (m_loadingSpinner) {
                 m_loadingSpinner->setVisible(false);
             }
