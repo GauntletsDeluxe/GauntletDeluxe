@@ -1051,6 +1051,11 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
     auto pages = CCArray::create();
     pages->retain();
 
+    if (!gauntlets.isArray()) {
+        pages->release();
+        return;
+    }
+
     CCLayer* page = nullptr;
     CCMenu* pageMenu = nullptr;
     for (auto i = 0u; i < gauntlets.size(); ++i) {
