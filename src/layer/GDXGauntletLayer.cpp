@@ -277,6 +277,7 @@ bool GDXGauntletLayer::init() {
 
 void GDXGauntletLayer::onEnter() {
     CCLayer::onEnter();
+    this->scheduleUpdate();
     fetchUserData();
 }
 
