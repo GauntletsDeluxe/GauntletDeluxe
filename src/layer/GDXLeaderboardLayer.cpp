@@ -158,7 +158,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([this]() {
+            co_await geode::async::waitForMainThread([this]() {
                 if (m_loadingSpinner) {
                     m_loadingSpinner->setVisible(false);
                 }
@@ -168,7 +168,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            geode::queueInMainThread([this]() {
+            co_await geode::async::waitForMainThread([this]() {
                 if (m_loadingSpinner) {
                     m_loadingSpinner->setVisible(false);
                 }
@@ -177,7 +177,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
         }
 
         auto leaderboard = std::move(jsonResult).unwrap();
-        geode::queueInMainThread([this, leaderboard = std::move(leaderboard)]() mutable {
+        co_await geode::async::waitForMainThread([this, leaderboard = std::move(leaderboard)]() mutable {
             if (!m_list) {
                 return;
             }

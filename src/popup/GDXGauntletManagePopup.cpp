@@ -77,7 +77,7 @@ void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
             std::string(gdx::BASE_API_URL),
             accountData.accountId,
             token);
-        geode::queueInMainThread([url = std::move(url)]() {
+        co_await geode::async::waitForMainThread([url = std::move(url)]() {
             utils::web::openLinkInBrowser(url);
         });
         co_return;
@@ -135,7 +135,7 @@ void GDXGauntletManagePopup::fetchGauntlets() {
         }
 
         auto gauntlets = std::move(jsonResult).unwrap();
-        geode::queueInMainThread([this, gauntlets = std::move(gauntlets)]() mutable {
+        co_await geode::async::waitForMainThread([this, gauntlets = std::move(gauntlets)]() mutable {
             createGauntletList(gauntlets);
         });
         co_return;
@@ -255,6 +255,11 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
         gauntletImage->setPosition(gauntletSpritePosition);
+        gauntletImage->setLoadCallback([fallbackSprite](geode::Result<> const& result) {
+            if (result && fallbackSprite) {
+                fallbackSprite->removeFromParent();
+            }
+        });
         gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
         cell->addChild(gauntletImage, 3);
     }
@@ -364,7 +369,7 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
     m_deleteGauntletTask.spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -379,13 +384,13 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([response, upopup] {
+            co_await geode::async::waitForMainThread([response, upopup] {
                 upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to delete gauntlet."));
             });
             co_return;
         }
 
-        geode::queueInMainThread([this, upopup] {
+        co_await geode::async::waitForMainThread([this, upopup] {
             this->refreshList();
             upopup->showSuccessMessage("Gauntlet deleted successfully.");
         });

@@ -137,9 +137,9 @@ static void removeLoadedGauntletFallbacks(CCMenu* menu) {
     }
 }
 
-GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color) {
+GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex) {
     auto ret = new GDXGauntletLevelsLayer();
-    if (ret && ret->init(levels, title, color)) {
+    if (ret && ret->init(levels, title, color, gauntletIndex)) {
         ret->autorelease();
         return ret;
     }
@@ -147,9 +147,10 @@ GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const st
     return nullptr;
 }
 
-bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color) {
+bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex) {
     m_gauntletTitle = title;
     m_backgroundColor = color;
+    m_gauntletIndex = gauntletIndex;
     if (!CCLayer::init()) {
         return false;
     }
@@ -221,9 +222,16 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             continue;
         }
 
+        auto rowNode = CCNodeRGBA::create();
+        rowNode->setContentSize({90.f, 90.f});
+        rowNode->setScale(0.8f);
+        rowNode->setCascadeOpacityEnabled(true);
+
         const float iconScale = 0.75f;
         gauntletSprite->setScale(iconScale);
         gauntletSprite->setID("gauntlet-image");
+        gauntletSprite->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
+        rowNode->addChild(gauntletSprite);
 
         auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
         auto fallbackShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
@@ -234,18 +242,34 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             fallbackShadow->setScaleY(1.1f);
             fallbackShadow->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f - 5.f});
             fallbackShadow->setID("gauntlet-fallback-shadow");
-            gauntletSprite->addChild(fallbackShadow, -1);
+            rowNode->addChild(fallbackShadow, -1);
         }
         if (fallbackSprite) {
             fallbackSprite->setID("gauntlet-fallback");
             fallbackSprite->setScale(1.f);
             fallbackSprite->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
-            gauntletSprite->addChild(fallbackSprite, 0);
+            rowNode->addChild(fallbackSprite, 0);
         }
 
-        auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(entry.levelId) + ".png";
+        auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(m_gauntletIndex) + ".png";
         gauntletSprite->setAutoResize(true);
-        gauntletSprite->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+
+        auto gauntletSpriteShadow = LazySprite::create({90.f, 90.f}, false);
+        if (gauntletSpriteShadow) {
+            gauntletSpriteShadow->setVisible(false);
+            gauntletSpriteShadow->setAutoResize(true);
+            gauntletSpriteShadow->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f - 5.f});
+            gauntletSpriteShadow->setLoadCallback([gauntletSpriteShadow](geode::Result<> const& result) {
+                if (result && gauntletSpriteShadow) {
+                    gauntletSpriteShadow->setVisible(true);
+                    gauntletSpriteShadow->setColor({0, 0, 0});
+                    gauntletSpriteShadow->setOpacity(120);
+                }
+            });
+            gauntletSpriteShadow->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+            rowNode->addChild(gauntletSpriteShadow, -2);
+        }
+
         gauntletSprite->setLoadCallback([fallbackSprite, fallbackShadow](geode::Result<> const& result) {
             if (result) {
                 if (fallbackSprite) {
@@ -256,6 +280,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                 }
             }
         });
+        gauntletSprite->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
 
         if (completedLevels.contains(entry.levelId)) {
             auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
@@ -263,7 +288,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                 completedIcon->setID("completed-icon");
                 completedIcon->setScale(1.5f);
                 completedIcon->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height / 2.f});
-                gauntletSprite->addChild(completedIcon, 4);
+                rowNode->addChild(completedIcon, 4);
             }
         }
 
@@ -272,7 +297,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         nameLabel->setAnchorPoint({0.5f, 0.f});
         nameLabel->setPosition({gauntletSprite->getContentSize().width / 2.f, gauntletSprite->getContentSize().height + 16.f});
         nameLabel->setScale(0.5f);
-        gauntletSprite->addChild(nameLabel, 2);
+        rowNode->addChild(nameLabel, 2);
 
         auto nameLabelShadow = CCLabelBMFont::create(entry.levelName.c_str(), "bigFont.fnt");
         nameLabelShadow->setAlignment(kCCTextAlignmentCenter);
@@ -281,14 +306,14 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         nameLabelShadow->setColor({0, 0, 0});
         nameLabelShadow->setOpacity(120);
         nameLabelShadow->setScale(0.5f);
-        gauntletSprite->addChild(nameLabelShadow, 1);
+        rowNode->addChild(nameLabelShadow, 1);
 
         auto creatorLabel = CCLabelBMFont::create(("By " + entry.creatorName).c_str(), "goldFont.fnt");
         creatorLabel->setAlignment(kCCTextAlignmentCenter);
         creatorLabel->setAnchorPoint({0.5f, 1.f});
         creatorLabel->setPosition({gauntletSprite->getContentSize().width / 2.f, nameLabel->getPositionY()});
         creatorLabel->limitLabelWidth(120.f, 0.5f, 0.35f);
-        gauntletSprite->addChild(creatorLabel, 2);
+        rowNode->addChild(creatorLabel, 2);
 
         auto creatorLabelShadow = CCLabelBMFont::create(("By " + entry.creatorName).c_str(), "goldFont.fnt");
         creatorLabelShadow->setAlignment(kCCTextAlignmentCenter);
@@ -297,11 +322,11 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         creatorLabelShadow->setColor({0, 0, 0});
         creatorLabelShadow->setOpacity(120);
         creatorLabelShadow->limitLabelWidth(120.f, 0.5f, 0.35f);
-        gauntletSprite->addChild(creatorLabelShadow, 1);
+        rowNode->addChild(creatorLabelShadow, 1);
 
         auto rewardNode = CCNode::create();
         rewardNode->setPosition({gauntletSprite->getContentSize().width / 2.f, -10});
-        gauntletSprite->addChild(rewardNode, 2);
+        rowNode->addChild(rewardNode, 2);
 
         auto rewardLabel = CCLabelBMFont::create((numToString(entry.reward)).c_str(), "bigFont.fnt");
         rewardLabel->setAlignment(kCCTextAlignmentCenter);
@@ -339,7 +364,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             rewardNode->addChild(levelPointShadow, 1);
         }
 
-        auto rowButton = CCMenuItemSpriteExtra::create(gauntletSprite, this, menu_selector(GDXGauntletLevelsLayer::onLevelClicked));
+        auto rowButton = CCMenuItemSpriteExtra::create(rowNode, this, menu_selector(GDXGauntletLevelsLayer::onLevelClicked));
         rowButton->setTag(entry.levelId);
         float yOffset = ((i + 1) % 2 == 1) ? -60.f : 60.f;
         rowButton->setPosition({leftMargin + stepX * static_cast<float>(i), buttonY + yOffset});

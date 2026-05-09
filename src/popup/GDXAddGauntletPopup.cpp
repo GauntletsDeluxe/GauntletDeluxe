@@ -406,17 +406,13 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
 
     if (pendingIndex == SIZE_MAX) {
         if (!levels || levels->count() == 0) {
-            geode::queueInMainThread([this] {
-                Notification::create("No online level was found for that ID.", NotificationIcon::Error)->show();
-            });
+            Notification::create("No online level was found for that ID.", NotificationIcon::Error)->show();
             return;
         }
 
         auto level = static_cast<GJGameLevel*>(levels->objectAtIndex(0));
         if (!level) {
-            geode::queueInMainThread([this] {
-                Notification::create("Search returned an invalid result.", NotificationIcon::Error)->show();
-            });
+            Notification::create("Search returned an invalid result.", NotificationIcon::Error)->show();
             return;
         }
 
@@ -437,9 +433,7 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
     m_pendingLevelFetches.erase(m_pendingLevelFetches.begin() + pendingIndex);
     if (pending.index == SIZE_MAX) {
         if (!levels || levels->count() == 0) {
-            geode::queueInMainThread([this] {
-                Notification::create("No online levels were found.", NotificationIcon::Error)->show();
-            });
+            Notification::create("No online levels were found.", NotificationIcon::Error)->show();
             return;
         }
 
@@ -472,18 +466,14 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
     }
 
     if (!levels || levels->count() == 0) {
-        geode::queueInMainThread([this, pending] {
-            Notification::create(fmt::format("Could not fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
-        });
+        Notification::create(fmt::format("Could not fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
         loadNextPendingLevel();
         return;
     }
 
     auto level = static_cast<GJGameLevel*>(levels->objectAtIndex(0));
     if (!level) {
-        geode::queueInMainThread([this] {
-            Notification::create("Search returned an invalid result.", NotificationIcon::Error)->show();
-        });
+        Notification::create("Search returned an invalid result.", NotificationIcon::Error)->show();
         loadNextPendingLevel();
         return;
     }
@@ -550,21 +540,17 @@ void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
     }
 
     if (pendingIndex == SIZE_MAX) {
-        geode::queueInMainThread([this] {
-            Notification::create("Failed to fetch the online level", NotificationIcon::Error)->show();
-        });
+        Notification::create("Failed to fetch the online level", NotificationIcon::Error)->show();
         return;
     }
 
     auto pending = m_pendingLevelFetches[pendingIndex];
     m_pendingLevelFetches.erase(m_pendingLevelFetches.begin() + pendingIndex);
-    geode::queueInMainThread([this, pending] {
-        if (pending.index == SIZE_MAX) {
-            Notification::create("Failed to fetch online levels for this gauntlet.", NotificationIcon::Error)->show();
-        } else {
-            Notification::create(fmt::format("Failed to fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
-        }
-    });
+    if (pending.index == SIZE_MAX) {
+        Notification::create("Failed to fetch online levels for this gauntlet.", NotificationIcon::Error)->show();
+    } else {
+        Notification::create(fmt::format("Failed to fetch level {}.", pending.levelId), NotificationIcon::Error)->show();
+    }
 
     loadNextPendingLevel();
 }
@@ -708,7 +694,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     m_addGauntletTask.spawn([this, upoup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            geode::queueInMainThread([upoup] {
+            co_await geode::async::waitForMainThread([upoup] {
                 upoup->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -723,14 +709,14 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([upoup, response] {
+            co_await geode::async::waitForMainThread([upoup, response] {
                 upoup->showFailMessage(gdx::getResponseMessage(response, "Failed to add gauntlet."));
             });
             co_return;
         }
 
         if (response.ok()) {
-            geode::queueInMainThread([this, upoup] {
+            co_await geode::async::waitForMainThread([this, upoup] {
                 if (m_owner) {
                     m_owner->refreshList();
                 }

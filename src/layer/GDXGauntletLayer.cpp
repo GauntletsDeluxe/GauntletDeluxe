@@ -325,7 +325,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     m_syncAccountTask.spawn([upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -339,7 +339,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([upopup, response] {
+            co_await geode::async::waitForMainThread([upopup, response] {
                 upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to get access."));
             });
             co_return;
@@ -347,7 +347,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Failed to get access.");
             });
             co_return;
@@ -356,7 +356,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         auto result = std::move(jsonResult).unwrap();
         bool success = result["success"].asBool().unwrapOr(false);
         if (!result.isObject() || !success) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Failed to get access.");
             });
             co_return;
@@ -370,21 +370,20 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         Mod::get()->setSavedValue("isManager", isManager);
 
         if (!isManager && !isMod) {
-            geode::queueInMainThread([upopup, response] {
+            co_await geode::async::waitForMainThread([upopup, response] {
                 upopup->showFailMessage(gdx::getResponseMessage(response, "Permissions Denied"));
             });
             co_return;
         }
 
         if (gdx::isManager() || gdx::isMod()) {
-            geode::queueInMainThread([upopup]() {
+            co_await geode::async::waitForMainThread([upopup]() {
                 upopup->onClose(nullptr);
                 GDXGauntletManagePopup::create()->show();
             });
         }
 
-        co_return;
-    }, [](){});
+        co_return; }, []() {});
 }
 
 void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
@@ -401,7 +400,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     m_syncAccountTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -415,7 +414,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([upopup, response] {
+            co_await geode::async::waitForMainThread([upopup, response] {
                 upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to sync account."));
             });
             co_return;
@@ -423,7 +422,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Failed to sync account.");
             });
             co_return;
@@ -432,7 +431,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         auto result = std::move(jsonResult).unwrap();
         bool success = result["success"].asBool().unwrapOr(false);
         if (!success) {
-            geode::queueInMainThread([upopup] {
+            co_await geode::async::waitForMainThread([upopup] {
                 upopup->showFailMessage("Failed to sync account.");
             });
             co_return;
@@ -477,7 +476,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         auto levelsSaved = saveCompletedGauntletLevels(completedLevels);
         auto gauntletsSaved = saveCompletedGauntlets(completedGauntlets);
 
-        geode::queueInMainThread([self, upopup, levelsSaved, gauntletsSaved]() {
+        co_await geode::async::waitForMainThread([self, upopup, levelsSaved, gauntletsSaved]() {
             if (levelsSaved && gauntletsSaved) {
                 upopup->showSuccessMessage("Account synced successfully.");
                 self->m_completedGauntletLevels = loadCompletedGauntletLevels();
@@ -488,8 +487,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
             }
         });
 
-        co_return;
-    }, [](){});
+        co_return; }, []() {});
 }
 
 void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
@@ -534,7 +532,7 @@ void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
         static_cast<GLubyte>(gauntlet["g"].asInt().unwrapOr(255)),
         static_cast<GLubyte>(gauntlet["b"].asInt().unwrapOr(255)),
     };
-    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color));
+    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color, gauntlet["index"].asInt().unwrapOr(idx)));
     CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 }
 
@@ -550,7 +548,7 @@ void GDXGauntletLayer::fetchGauntlets() {
                             .get(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([self]() {
+            co_await geode::async::waitForMainThread([self]() {
                 if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -560,7 +558,7 @@ void GDXGauntletLayer::fetchGauntlets() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            geode::queueInMainThread([self]() {
+            co_await geode::async::waitForMainThread([self]() {
                 if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -569,15 +567,14 @@ void GDXGauntletLayer::fetchGauntlets() {
         }
 
         auto gauntlets = std::move(jsonResult).unwrap();
-        geode::queueInMainThread([self, gauntlets = std::move(gauntlets)]() mutable {
+        co_await geode::async::waitForMainThread([self, gauntlets = std::move(gauntlets)]() mutable {
             if (self->m_loadingSpinner) {
                 self->m_loadingSpinner->setVisible(false);
             }
             self->createGauntletPages(gauntlets);
         });
 
-        co_return;
-    }, [](){});
+        co_return; }, []() {});
 }
 
 void GDXGauntletLayer::fetchUserData() {
@@ -616,7 +613,7 @@ void GDXGauntletLayer::fetchUserData() {
             co_return;
         }
 
-        geode::queueInMainThread([self, userData = std::move(userData)]() mutable {
+        co_await geode::async::waitForMainThread([self, userData = std::move(userData)]() mutable {
             self->m_userAccountId = userData["accountId"].asInt().unwrapOr(0);
             self->m_username = userData["username"].asString().unwrapOr(" ");
             self->m_gauntletPoints = userData["gauntletPoints"].asInt().unwrapOr(0);
@@ -637,8 +634,7 @@ void GDXGauntletLayer::fetchUserData() {
                 self->m_levelPoints);
         });
 
-        co_return;
-    }, [](){});
+        co_return; }, []() {});
 }
 
 GDXGauntletNode GDXGauntletNode::fromJson(const matjson::Value& gauntlet) {
@@ -714,9 +710,35 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     auto const imageCenter = ccp(gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10);
     auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png";
     auto gauntletImage = LazySprite::create({90.f, 90.f}, false);
+    auto gauntletImageShadow = LazySprite::create({90.f, 90.f}, false);
+    if (gauntletImageShadow) {
+        gauntletImageShadow->setVisible(false);
+        gauntletImageShadow->setAutoResize(true);
+        gauntletImageShadow->setPosition({imageCenter.x, imageCenter.y - 6});
+        gauntletImageShadow->setLoadCallback([gauntletImageShadow, imageCenter](geode::Result<> const& result) {
+            if (result && gauntletImageShadow) {
+                gauntletImageShadow->setVisible(true);
+                gauntletImageShadow->setColor({0, 0, 0});
+                gauntletImageShadow->setOpacity(50);
+            }
+        });
+        gauntletImageShadow->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+        gauntletBg->addChild(gauntletImageShadow, 1);
+    }
+
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
         gauntletImage->setPosition(imageCenter);
+        gauntletImage->setLoadCallback([fallbackSprite, fallbackSpriteShadow](geode::Result<> const& result) {
+            if (result) {
+                if (fallbackSprite) {
+                    fallbackSprite->removeFromParent();
+                }
+                if (fallbackSpriteShadow) {
+                    fallbackSpriteShadow->removeFromParent();
+                }
+            }
+        });
         gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
     }
 
@@ -748,14 +770,14 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         if (completedIconShadow) {
             completedIconShadow->setColor({0, 0, 0});
             completedIconShadow->setOpacity(80);
-            completedIconShadow->setScale(1.5f);
+            completedIconShadow->setScale(1.1f);
             completedIconShadow->setPosition({gauntletBg->getContentSize().width / 2.f + 2.f, 48.f});
             gauntletBg->addChild(completedIconShadow, 3);
         }
 
         auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
         if (completedIcon) {
-            completedIcon->setScale(1.5f);
+            completedIcon->setScale(1.1f);
             completedIcon->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
             gauntletBg->addChild(completedIcon, 4);
         }
@@ -876,7 +898,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
     m_completeGauntletTask.spawn([self = std::move(self), button, buttonPos, rewardSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), gauntletIndex]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            geode::queueInMainThread([self, button, buttonPos, rewardSpinner]() {
+            co_await geode::async::waitForMainThread([self, button, buttonPos, rewardSpinner]() {
                 if (button) {
                     button->setVisible(true);
                 }
@@ -896,7 +918,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            geode::queueInMainThread([self, button, buttonPos, rewardSpinner, response]() {
+            co_await geode::async::waitForMainThread([self, button, buttonPos, rewardSpinner, response]() {
                 if (button) {
                     button->setVisible(true);
                 }
@@ -910,7 +932,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            geode::queueInMainThread([self, button, buttonPos, rewardSpinner, response]() {
+            co_await geode::async::waitForMainThread([self, button, buttonPos, rewardSpinner, response]() {
                 if (button) {
                     button->setVisible(true);
                 }
@@ -926,7 +948,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
         bool success = result["success"].asBool().unwrapOr(false);
         auto newGauntletPoints = result["gauntletPoints"].asInt().unwrapOr(self->m_gauntletPoints);
 
-        geode::queueInMainThread([self, button, buttonPos, rewardSpinner, success, newGauntletPoints, response, gauntletIndex]() mutable {
+        co_await geode::async::waitForMainThread([self, button, buttonPos, rewardSpinner, success, newGauntletPoints, response, gauntletIndex]() mutable {
             if (rewardSpinner) {
                 rewardSpinner->removeFromParent();
             }
@@ -974,8 +996,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
             button->getParent()->addChild(circleWave, 3);
         });
 
-        co_return;
-    }, [](){});
+        co_return; }, []() {});
 }
 
 void GDXGauntletLayer::onGauntletInfo(CCObject* sender) {

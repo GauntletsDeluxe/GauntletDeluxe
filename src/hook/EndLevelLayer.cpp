@@ -132,7 +132,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
                 auto rewardValue = result["reward"].asInt().unwrapOr(0);
                 auto levelPointsValue = result["levelPoints"].asInt().unwrapOr(0);
-                geode::queueInMainThread([this, rewardValue, levelPointsValue, levelId] {
+                co_await geode::async::waitForMainThread([this, rewardValue, levelPointsValue, levelId] {
                     auto completedLevels = loadCompletedGauntletLevels();
                     bool hasLevel = false;
                     for (auto existingLevelId : completedLevels) {
