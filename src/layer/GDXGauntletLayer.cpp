@@ -414,8 +414,9 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([upopup, response] {
-                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to sync account."));
+            auto errMsg = gdx::getResponseMessage(response, "Failed to sync account.");
+            co_await geode::async::waitForMainThread([upopup, errMsg = std::move(errMsg)] {
+                upopup->showFailMessage(errMsg);
             });
             co_return;
         }
@@ -475,13 +476,14 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
 
         auto levelsSaved = saveCompletedGauntletLevels(completedLevels);
         auto gauntletsSaved = saveCompletedGauntlets(completedGauntlets);
+        auto gauntletsCopy = self->m_gauntlets;
 
-        co_await geode::async::waitForMainThread([self, upopup, levelsSaved, gauntletsSaved]() {
+        co_await geode::async::waitForMainThread([self, upopup, levelsSaved, gauntletsSaved, gauntletsCopy = std::move(gauntletsCopy)]() mutable {
             if (levelsSaved && gauntletsSaved) {
                 upopup->showSuccessMessage("Account synced successfully.");
                 self->m_completedGauntletLevels = loadCompletedGauntletLevels();
                 self->m_claimedGauntlets = loadCompletedGauntlets();
-                self->createGauntletPages(self->m_gauntlets);
+                self->createGauntletPages(gauntletsCopy);
             } else {
                 upopup->showFailMessage("Failed to save sync data.");
             }
