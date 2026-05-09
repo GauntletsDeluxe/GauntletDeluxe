@@ -1046,19 +1046,21 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
     }
 
     const auto winSize = CCDirector::sharedDirector()->getWinSize();
-    const float cardWidth = 110.f;
-
-    auto pages = CCArray::create();
-    pages->retain();
 
     if (!gauntlets.isArray()) {
-        pages->release();
         return;
     }
 
+    const auto gauntletCount = gauntlets.size();
+    if (gauntletCount == 0) {
+        return;
+    }
+
+    auto pages = CCArray::create();
+
     CCLayer* page = nullptr;
     CCMenu* pageMenu = nullptr;
-    for (auto i = 0u; i < gauntlets.size(); ++i) {
+    for (auto i = 0u; i < gauntletCount; ++i) {
         if (i % 3 == 0) {
             page = CCLayer::create();
             page->setContentSize(winSize);
@@ -1070,16 +1072,27 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
         }
 
         auto gauntletButton = createGauntletButton(gauntlets[i], i);
-        auto slotIndex = i % 3;
         if (pageMenu && gauntletButton) {
             pageMenu->addChild(gauntletButton);
+        }
+
+        if (pageMenu && ((i % 3 == 2) || (i + 1 == gauntletCount))) {
             pageMenu->updateLayout();
         }
     }
 
+    if (pages->count() == 0) {
+        return;
+    }
+
     m_scrollLayer = BoomScrollLayer::create(pages, 0, false);
+    if (!m_scrollLayer) {
+        return;
+    }
+
     m_scrollLayer->setPosition({0, -45});
     this->addChild(m_scrollLayer);
+    m_currentPage = 0;
 
     auto pageCount = pages->count();
     if (pageCount > 1) {
@@ -1119,8 +1132,6 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
 
         updatePageButtons();
     }
-
-    pages->release();
 }
 
 void GDXGauntletLayer::update(float dt) {
