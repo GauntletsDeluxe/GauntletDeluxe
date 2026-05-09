@@ -675,6 +675,9 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     std::string gauntletName = node.name;
 
     auto gauntletBg = NineSlice::create("GJ_squareB_01.png");
+    if (!gauntletBg) {
+        return nullptr;
+    }
     gauntletBg->setContentSize({110, 240});
 
     std::string formattedName = gauntletName;
@@ -815,6 +818,9 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     }
 
     auto button = CCMenuItemSpriteExtra::create(gauntletBg, this, menu_selector(GDXGauntletLayer::onGauntletButtonClick));
+    if (!button) {
+        return nullptr;
+    }
     button->setTag(static_cast<int>(index));
     m_gauntletButtons.push_back(button);
     button->m_scaleMultiplier = 1.05f;
@@ -1019,7 +1025,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
 
         auto gauntletButton = createGauntletButton(gauntlets[i], i);
         auto slotIndex = i % 3;
-        if (pageMenu) {
+        if (pageMenu && gauntletButton) {
             pageMenu->addChild(gauntletButton);
             pageMenu->updateLayout();
         }
@@ -1054,14 +1060,16 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
         }
 
         auto navMenu = CCMenu::create();
-        navMenu->setPosition({0, 0});
-        if (m_prevPageBtn) {
-            navMenu->addChild(m_prevPageBtn);
+        if (navMenu) {
+            navMenu->setPosition({0, 0});
+            if (m_prevPageBtn) {
+                navMenu->addChild(m_prevPageBtn);
+            }
+            if (m_nextPageBtn) {
+                navMenu->addChild(m_nextPageBtn);
+            }
+            this->addChild(navMenu, 2);
         }
-        if (m_nextPageBtn) {
-            navMenu->addChild(m_nextPageBtn);
-        }
-        this->addChild(navMenu, 2);
 
         updatePageButtons();
     }
