@@ -8,7 +8,7 @@
 
 **Gauntlets Deluxe** adds <cg>custom gauntlets</c> to the game picked with <cl>support with the community</c>. This mod contains <co>fan-made gauntlets</c> based on its theme.
 
-##### <co>You can find a new cool button on the official gauntlets menu at the top right corner!</c>
+##### <cy>You can find a new cool button on the official gauntlets menu at the top right corner!</c>
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### <cr>Gauntlet Points</c>
 
-#### Gauntlet Points are measured in the following criteria:=
+#### Gauntlet Points are measured in the following criteria:
 
 - **Auto - Hard Level Mix**: 3 <cr>Gauntlet Points</c>
 - **Hard - Insane Level Mix**: 5 <cr>Gauntlet Points</c>

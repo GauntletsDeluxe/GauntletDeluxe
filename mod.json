@@ -10,7 +10,7 @@
 	"name": "Gauntlets Deluxe",
 	"version": "v1.0.0",
 	"developer": "ArcticWoof",
-	"description": "A fan-made gauntlet levels to try on.",
+	"description": "Community-run, fan-made Custom Gauntlets",
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3"
 	},
