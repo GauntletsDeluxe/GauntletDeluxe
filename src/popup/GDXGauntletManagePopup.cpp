@@ -293,7 +293,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     cell->addChild(nameLabel);
 
     if (!description.empty()) {
-        auto descriptionLabel = RichTextArea::create(
+        auto descriptionLabel = SimpleTextArea::create(
             description,
             "chatFont.fnt",
             .5f,
