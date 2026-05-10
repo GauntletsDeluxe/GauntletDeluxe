@@ -64,4 +64,12 @@ namespace gdx {
         texture->retain();
         cache[url] = texture;
     }
+
+    inline void onManagerBadge() {
+        FLAlertLayer::create("Gauntlet Manager", "This user have the ability to <cg>create gauntlets</c> and <co>manage the leaderboard</c>.", "OK")->show();
+    }
+
+    inline void onContributorBadge() {
+        FLAlertLayer::create("Gauntlet Contributor", "This user have the ability to <cl>edit created gauntlets</c> and are the ones <cg>in charge of looking over gauntlet ideas</c> from <cy>other users</c>.", "OK")->show();
+    }
 }

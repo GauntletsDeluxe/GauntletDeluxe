@@ -21,7 +21,7 @@ GDXUserPanelPopup* GDXUserPanelPopup::create() {
 }
 
 bool GDXUserPanelPopup::init() {
-    if (!Popup::init(340.f, 200.f, "GJ_square02.png")) {
+    if (!Popup::init(360.f, 200.f, "GJ_square02.png")) {
         return false;
     }
 
@@ -93,6 +93,30 @@ void GDXUserPanelPopup::updateExcludeButton() {
     m_manageMenu->addChild(m_excludeBtn);
 }
 
+void GDXUserPanelPopup::updatePromoteButton() {
+    if (m_promoteBtn) {
+        auto offSprite = ButtonSprite::create("Promote to Contributor", "goldFont.fnt", "GJ_button_05.png");
+        auto onSprite = ButtonSprite::create("Demote from Contributor", "goldFont.fnt", "GJ_button_02.png");
+        if (m_promoteBtn->m_offButton) {
+            m_promoteBtn->m_offButton->setSprite(offSprite);
+            m_promoteBtn->m_offButton->updateSprite();
+        }
+        if (m_promoteBtn->m_onButton) {
+            m_promoteBtn->m_onButton->setSprite(onSprite);
+            m_promoteBtn->m_onButton->updateSprite();
+        }
+        m_promoteBtn->toggle(m_isMod);
+        return;
+    }
+
+    auto offNode = ButtonSprite::create("Promote to Contributor", "goldFont.fnt", "GJ_button_05.png");
+    auto onNode = ButtonSprite::create("Demote from Contributor", "goldFont.fnt", "GJ_button_02.png");
+    m_promoteBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onPromote));
+    m_promoteBtn->setVisible(false);
+    m_promoteBtn->toggle(m_isMod);
+    m_manageMenu->addChild(m_promoteBtn);
+}
+
 void GDXUserPanelPopup::onExclude(CCObject* sender) {
     auto accountIdStr = m_accountIdInput->getString();
     if (accountIdStr.empty()) {
@@ -113,7 +137,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
     body["isExcluded"] = !m_isExcluded;  // Toggle the state
-    body["argonToken"] = std::string(accountData.gjp2);
+    body["argonToken"] = "";             // Will be set later after fetching the token
 
     auto self = geode::Ref<GDXUserPanelPopup>(this);
     m_excludeTask.spawn([upopup, self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
@@ -187,7 +211,7 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
-    body["argonToken"] = std::string(accountData.gjp2);
+    body["argonToken"] = "";  // Will be set later after fetching the token
 
     auto self = geode::Ref<GDXUserPanelPopup>(this);
     m_findAccountTask.spawn([self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
@@ -230,14 +254,93 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
         bool isExcluded = userData["isExcluded"].asBool().unwrapOr(false);
         std::string username = userData["username"].asString().unwrapOr("Unknown");
 
-        co_await geode::async::waitForMainThread([self, isExcluded, username = std::move(username)]() {
+        co_await geode::async::waitForMainThread([self, isExcluded, username = std::move(username), isMod = userData["isMod"].asBool().unwrapOr(false)]() {
             self->m_isExcluded = isExcluded;
             self->updateExcludeButton();
             self->m_excludeBtn->setVisible(true);
+            self->m_isMod = isMod;
+            self->updatePromoteButton();
+            if (self->m_promoteBtn) {
+                self->m_promoteBtn->setVisible(gdx::isManager());
+            }
             self->m_manageMenu->updateLayout();
             self->m_usernameLabel->setString(username.c_str());
-            self->m_usernameBackground->setContentSize(self->m_usernameLabel->getContentSize() + CCSizeMake(10.f, 10.f));\
+            self->m_usernameBackground->setContentSize(self->m_usernameLabel->getContentSize() + CCSizeMake(10.f, 10.f));
             self->m_manageMenu->setVisible(true);
+            self->m_loadingSpinner->setVisible(false);
+        });
+
+        co_return; }, []() {});
+}
+
+void GDXUserPanelPopup::onPromote(CCObject* sender) {
+    auto accountIdStr = m_accountIdInput->getString();
+    if (accountIdStr.empty()) {
+        Notification::create("Please enter an account ID")->show();
+        return;
+    }
+
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setVisible(true);
+    }
+
+    auto upopup = UploadActionPopup::create(nullptr, "Updating user...");
+    upopup->show();
+
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::BASE_API_URL) + "/setUser";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
+    body["isMod"] = !m_isMod;  // toggle
+    body["argonToken"] = "";   // Will be set later after fetching the token
+
+    auto self = geode::Ref<GDXUserPanelPopup>(this);
+    m_promoteTask.spawn([upopup, self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            co_await geode::async::waitForMainThread([upopup, self]() {
+                upopup->showFailMessage("Failed to get access.");
+            });
+            co_return;
+        }
+
+        body["argonToken"] = std::move(token);
+
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            co_await geode::async::waitForMainThread([upopup, self, response]() {
+                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to update contributor status"));
+            });
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        if (!jsonResult) {
+            co_await geode::async::waitForMainThread([upopup, self]() {
+                upopup->showFailMessage("Invalid response");
+            });
+            co_return;
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (!data.isObject() || !data["success"].asBool().unwrapOr(false)) {
+            co_await geode::async::waitForMainThread([upopup, self, response]() {
+                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to update user"));
+            });
+            co_return;
+        }
+
+        co_await geode::async::waitForMainThread([upopup, self]() {
+            self->m_isMod = !self->m_isMod;
+            self->updatePromoteButton();
+            std::string message = self->m_isMod ? "User promoted to contributor" : "User demoted from contributor";
+            upopup->showSuccessMessage(message);
             self->m_loadingSpinner->setVisible(false);
         });
 

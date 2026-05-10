@@ -332,6 +332,13 @@ bool GDXGauntletLayer::init() {
     manageBtn->setPosition({0.f, -35.f});
     bottomMenu->addChild(manageBtn);
 
+    // discord button
+    auto discordIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_discord.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    discordIconSpr->setScale(0.7f);
+    auto discordIconBtn = CCMenuItemSpriteExtra::create(discordIconSpr, this, menu_selector(GDXGauntletLayer::onDiscord));
+    discordIconBtn->setPosition({0.f, -70.f});
+    bottomMenu->addChild(discordIconBtn);
+
     bottomMenu->updateLayout();
 
     // refresh gauntlet
@@ -420,18 +427,39 @@ void GDXGauntletLayer::keyBackClicked() {
         0.5f, PopTransition::kPopTransitionFade);
 }
 
+void GDXGauntletLayer::onDiscord(CCObject* sender) {
+    utils::web::openLinkInBrowser("https://discord.gg/JBVDVcQN6R");
+}
+
 void GDXGauntletLayer::onInfo(CCObject* sender) {
     MDPopup::create(
-        "Gauntlet Deluxe",
-        "**Gauntlet Deluxe** is a <cl>community-run mod</c> that adds a <cg>custom gauntlet to Geometry Dash</c>, featuring fan-made <co>gauntlets based on various themes</c>.\n"
-        "Players can earn points by completing <cp>levels</c> and <cr>gauntlets</c>, and <cl>compete on the leaderboard</c>.\n"
-        "The mod also allows for <cl>community-hosted creator contests</c>, where players can submit their own gauntlet levels to be featured in the mod.\n"
+        "About Gauntlet Deluxe",
+        "**Gauntlet Deluxe** is a <cl>community-run mod</c> that adds a <cg>custom gauntlet to Geometry Dash</c>, featuring fan-made <co>gauntlets based on various themes</c>.\n\n"
+        "Players can earn points by completing <cp>levels</c> and <cr>gauntlets</c>, and <cl>compete on the leaderboard</c>.\n\n"
+        "The mod also allows for <cl>community-hosted creator contests</c>, where players can submit their own gauntlet levels to be featured in the mod.\n\n"
         "\n---\n"
         "### Points System\n"
-        "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>**Level Points**</c>: Earned by completing levels in a gauntlet.\n"
+        "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>**Level Points**</c>: Earned by completing levels in a gauntlet.\n\n"
         "Each level awards a different amount of points based on its difficulty and other factors.\n\n"
-        "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>**Gauntlet Points**</c>: Earned by completing entire gauntlets.\n"
-        "Each gauntlet awards a different amount of points based on the number of levels it contains, their difficulties, and other factors.\n",
+        "##### <cy>*If you have already beaten the level before using this mod, you still need to rebeat them to earn Level Points.*</c>\n\n"
+        "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>**Gauntlet Points**</c>: Earn points by completing any of these fan-made gauntlets.\n\n"
+        "Gauntlet points are based on the amount of levels and their difficulty.\n"
+        "\n---\n"
+        "### <cp>Level Points</c>\n"
+        "#### Level Points are measured in the following criteria:\n"
+        "- **Auto - Easy**: 1 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c> \n"
+        "- **Normal**: 2 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
+        "- **Hard** _(4-5 stars)_: 3 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
+        "- **Harder** _(6-7 stars)_ - **Insane** _(8-9 stars)_: 4 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
+        "- **Easy-Medium Demon**: 5 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
+        "- **Hard-Extreme Demon**: 7 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
+        "\n---\n"
+        "### <cr>Gauntlet Points</c>\n"
+        "#### Gauntlet Points are measured in the following criteria:\n"
+        "- **Auto - Hard Level Mix**: 3 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c> \n"
+        "- **Hard - Insane Level Mix**: 5 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c>\n"
+        "- **Easy Demon - Medium Demon Mix**: 10 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c>\n"
+        "- **Medium - Extreme Demon Mix**: 15 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c>\n",
         "OK")
         ->show();
 }
@@ -522,7 +550,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     auto url = std::string(gdx::BASE_API_URL) + "/syncUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
-    body["argonToken"] = std::string(accountData.gjp2);
+    body["argonToken"] = "";
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
     m_syncAccountTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
@@ -710,7 +738,7 @@ void GDXGauntletLayer::fetchUserData() {
     auto url = std::string(gdx::BASE_API_URL) + "/getUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
-    body["argonToken"] = std::string(accountData.gjp2);
+    body["argonToken"] = "";
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
     m_fetchUserDataTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {

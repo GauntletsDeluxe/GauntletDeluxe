@@ -1,13 +1,16 @@
 
 #include <Geode/Geode.hpp>
 #include "../include/GDXConstant.hpp"
+#include "Geode/cocos/sprite_nodes/CCSprite.h"
+#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <argon/argon.hpp>
 #include <Geode/modify/ProfilePage.hpp>
 #include <Geode/modify/CommentCell.hpp>
+#include <Geode/ui/Button.hpp>
 
 using namespace geode::prelude;
 
-class $modify(ProfilePage) {
+class $modify(GDXHookProfilePage, ProfilePage) {
     void loadPageFromUserInfo(GJUserScore* a2) {
         ProfilePage::loadPageFromUserInfo(a2);
         auto layer = m_mainLayer;
@@ -47,23 +50,32 @@ class $modify(ProfilePage) {
 
             co_await geode::async::waitForMainThread([menuRef, isManager, isMod]() {
                 if (isManager) {
-                    auto badge = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
+                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
+                    auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
                     badge->setID("GDX-manager-badge:101"_spr);
                     menuRef->addChild(badge);
                 }
                 if (isMod) {
-                    auto badge = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
-                    badge->setID("GDX-contributor-badge:101"_spr);
-                    menuRef->addChild(badge);
+                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
+                    auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
+                    badgeBtn->setID("GDX-contributor-badge:101"_spr);
+                    menuRef->addChild(badgeBtn);
                 }
                 menuRef->updateLayout();
             });
 
             co_return; });
     }
+
+    void onContributorBadge(CCObject* sender) {
+        gdx::onContributorBadge();
+    }
+    void onManagerBadge(CCObject* sender) {
+        gdx::onManagerBadge();
+    }
 };
 
-class $modify(CommentCell) {
+class $modify(GDXHookCommentCell, CommentCell) {
     void loadFromComment(GJComment* p0) {
         CommentCell::loadFromComment(p0);
         auto layer = m_mainLayer;
@@ -104,20 +116,29 @@ class $modify(CommentCell) {
 
             co_await geode::async::waitForMainThread([menuRef, isManager, isMod]() {
                 if (isManager) {
-                    auto badge = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
-                    badge->setScale(0.7f);
+                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
+                    badgeSpr->setScale(0.7f);
+                    auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
                     badge->setID("GDX-manager-badge:101"_spr);
                     menuRef->addChild(badge);
                 }
                 if (isMod) {
-                    auto badge = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
-                    badge->setScale(0.7f);
-                    badge->setID("GDX-contributor-badge:101"_spr);
-                    menuRef->addChild(badge);
+                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
+                    badgeSpr->setScale(0.7f);
+                    auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
+                    badgeBtn->setID("GDX-contributor-badge:101"_spr);
+                    menuRef->addChild(badgeBtn);
                 }
                 menuRef->updateLayout();
             });
 
             co_return; });
+    }
+
+    void onContributorBadge(CCObject* sender) {
+        gdx::onContributorBadge();
+    }
+    void onManagerBadge(CCObject* sender) {
+        gdx::onManagerBadge();
     }
 };

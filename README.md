@@ -14,7 +14,7 @@
 
 ### Features
 
-- <cp>**Levels Points**</c>: Earn points by completing these additional gauntlets.
+- <cp>**Levels Points**</c>: Earned by completing levels in a gauntlet.
 - <cr>**Gauntlet Points**</c>: Earn points by completing any of these fan-made gauntlets. Gauntlet points are based on the amount of levels and their difficulty.
 - <cy>**Gauntlet Leaderboard**</c>: Compete with other users for the top spot on the leaderboard!
 - <cf>**Fan-Made Creator Contest Gauntlets**</c>: Participate in any upcoming Gauntlet Creator Contests!
@@ -32,6 +32,8 @@
 - **Harder** _(6-7 stars)_ - **Insane** _(8-9 stars)_: 4 <cp>Level Points</c>
 - **Easy-Medium Demon**: 5 <cp>Level Points</c>
 - **Hard-Extreme Demon**: 7 <cp>Level Points</c>
+
+<cy>*If you have already beaten the level before using this mod, you still need to rebeat them to earn Level Points.*</c>
 
 ---
 

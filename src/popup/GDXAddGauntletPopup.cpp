@@ -675,7 +675,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     auto url = std::string(gdx::BASE_API_URL) + (m_editMode ? "/editGauntlet" : "/addGauntlet");
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
-    body["argonToken"] = std::string(accountData.gjp2);
+    body["argonToken"] = "";
     body["name"] = std::string(name);
     body["description"] = std::string(description);
     body["reward"] = reward;

@@ -15,11 +15,16 @@ private:
     geode::NineSlice* m_usernameBackground = nullptr;
     CCLabelBMFont* m_usernameLabel = nullptr;
     CCMenuItemToggler* m_excludeBtn = nullptr;
+    CCMenuItemToggler* m_promoteBtn = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
     bool m_isExcluded = false;
+    bool m_isMod = false;
     geode::async::TaskHolder<> m_findAccountTask;
     geode::async::TaskHolder<> m_excludeTask;
+    geode::async::TaskHolder<> m_promoteTask;
     void onExclude(CCObject* sender);
+    void onPromote(CCObject* sender);
     void onFindAccountID(CCObject* sender);
     void updateExcludeButton();
+    void updatePromoteButton();
 };

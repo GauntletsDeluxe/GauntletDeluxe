@@ -41,6 +41,7 @@ private:
     void onManageGauntlets(CCObject* sender);
     void onSyncAccount(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
+    void onDiscord(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
     void onCompleteGauntlet(CCObject* sender);
@@ -51,7 +52,6 @@ private:
     void createGauntletPages(const matjson::Value& gauntlets);
     void updatePageButtons();
     void onEnter() override;
-    
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index);
     BoomScrollLayer* m_scrollLayer = nullptr;
@@ -70,7 +70,7 @@ private:
     int m_gauntletPoints = Mod::get()->getSavedValue<int>("gauntletPoints", 0);
     int m_levelPoints = Mod::get()->getSavedValue<int>("levelPoints", 0);
     int m_currentPage = -1;
-    
+
     geode::async::TaskHolder<> m_fetchGauntletsTask;
     geode::async::TaskHolder<> m_fetchUserDataTask;
     geode::async::TaskHolder<> m_syncAccountTask;
