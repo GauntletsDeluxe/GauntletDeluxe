@@ -325,19 +325,19 @@ bool GDXGauntletLayer::init() {
     auto leaderboardIconBtn = CCMenuItemSpriteExtra::create(leaderboardIconSpr, this, menu_selector(GDXGauntletLayer::onLeaderboard));
     bottomMenu->addChild(leaderboardIconBtn);
 
-    // @geode-ignore(unknown-resource)
-    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    manageLabel->setScale(0.7f);
-    auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
-    manageBtn->setPosition({0.f, -35.f});
-    bottomMenu->addChild(manageBtn);
-
     // discord button
     auto discordIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_discord.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     discordIconSpr->setScale(0.7f);
     auto discordIconBtn = CCMenuItemSpriteExtra::create(discordIconSpr, this, menu_selector(GDXGauntletLayer::onDiscord));
-    discordIconBtn->setPosition({0.f, -70.f});
+    discordIconBtn->setPosition({0.f, -35.f});
     bottomMenu->addChild(discordIconBtn);
+
+    // @geode-ignore(unknown-resource)
+    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    manageLabel->setScale(0.7f);
+    auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
+    manageBtn->setPosition({0.f, -70.f});
+    bottomMenu->addChild(manageBtn);
 
     bottomMenu->updateLayout();
 

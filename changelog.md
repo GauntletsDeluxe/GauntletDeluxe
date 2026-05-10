@@ -5,6 +5,7 @@
 - Added **Promote User** for Gauntlet Managers
 - Improved the **Gauntlet Info Popup** with more information about the mod and its features
 - Fixed the **Gauntlet Role Badge** scaling on comment cells
+- Completed Mark on the Gauntlet Levels is applied when you finish a level.
 
 ## v1.0.1
 

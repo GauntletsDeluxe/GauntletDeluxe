@@ -284,8 +284,8 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
         auto imageTarget = imageContainer ? imageContainer : rowNode;
         auto imagePosition = imageContainer
-            ? ccp(imageTarget->getContentSize().width / 2.f, imageTarget->getContentSize().height / 2.f)
-            : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
+                                 ? ccp(imageTarget->getContentSize().width / 2.f, imageTarget->getContentSize().height / 2.f)
+                                 : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
         auto gauntletSprite = createRemoteSprite(imageTarget, imageUrl, imagePosition, iconSize);
         if (!gauntletSprite) {
             continue;
@@ -477,6 +477,27 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
         }
         if (!gauntletContainer) {
             continue;
+        }
+
+        // Find existing completed icon
+        CCNode* existingIcon = gauntletContainer->getChildByID("completed-icon");
+
+        if (isCompleted) {
+            // add icon if it doesn't exist
+            if (!existingIcon) {
+                auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
+                if (completedIcon) {
+                    completedIcon->setID("completed-icon");
+                    completedIcon->setScale(1.5f);
+                    completedIcon->setPosition({gauntletContainer->getContentSize().width / 2.f, gauntletContainer->getContentSize().height / 2.f});
+                    gauntletContainer->addChild(completedIcon, 4);
+                }
+            }
+        } else {
+            // remove icon if it exists
+            if (existingIcon) {
+                existingIcon->removeFromParent();
+            }
         }
     }
 }
