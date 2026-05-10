@@ -155,6 +155,55 @@ namespace {
         gauntlets.insert(gauntletId);
         return saveCompletedGauntlets(gauntlets);
     }
+
+    static LazySprite* createLazySpriteWithFallback(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
+        auto sprite = LazySprite::create(size, false);
+        if (!sprite) {
+            return nullptr;
+        }
+
+        sprite->setID("gauntlet-image");
+        sprite->setAutoResize(true);
+        sprite->setPosition(position);
+
+        auto fallbackShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        if (fallbackShadow) {
+            fallbackShadow->setColor({0, 0, 0});
+            fallbackShadow->setOpacity(120);
+            fallbackShadow->setScaleX(1.f);
+            fallbackShadow->setScaleY(1.1f);
+            fallbackShadow->setPosition(position);
+            if (parent) {
+                parent->addChild(fallbackShadow, zOrder - 2);
+            }
+        }
+
+        auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        if (fallbackSprite) {
+            fallbackSprite->setPosition(position);
+            if (parent) {
+                parent->addChild(fallbackSprite, zOrder - 1);
+            }
+        }
+
+        sprite->setLoadCallback([fallbackSprite, fallbackShadow](geode::Result<> const& result) {
+            if (!result) {
+                return;
+            }
+            if (fallbackSprite) {
+                fallbackSprite->removeFromParent();
+            }
+            if (fallbackShadow) {
+                fallbackShadow->removeFromParent();
+            }
+        });
+        sprite->loadFromUrl(url, CCImage::kFmtPng, true);
+
+        if (parent) {
+            parent->addChild(sprite, zOrder);
+        }
+        return sprite;
+    }
 }
 
 GDXGauntletLayer* GDXGauntletLayer::create() {
@@ -699,23 +748,16 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
 
     gauntletBg->setColor({static_cast<GLubyte>(node.r), static_cast<GLubyte>(node.g), static_cast<GLubyte>(node.b)});
 
-    auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
-    auto fallbackSpriteShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
-    if (fallbackSpriteShadow) {
-        fallbackSpriteShadow->setColor({0, 0, 0});
-        fallbackSpriteShadow->setOpacity(50);
-        fallbackSpriteShadow->setScaleY(1.2f);
-    }
-
     auto const imageCenter = ccp(gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10);
     auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png";
-    auto gauntletImage = LazySprite::create({90.f, 90.f}, false);
+    auto gauntletImage = createLazySpriteWithFallback(gauntletBg, imageUrl, imageCenter, {90.f, 90.f}, 3);
+
     auto gauntletImageShadow = LazySprite::create({90.f, 90.f}, false);
     if (gauntletImageShadow) {
         gauntletImageShadow->setVisible(false);
         gauntletImageShadow->setAutoResize(true);
         gauntletImageShadow->setPosition({imageCenter.x, imageCenter.y - 6});
-        gauntletImageShadow->setLoadCallback([gauntletImageShadow, imageCenter](geode::Result<> const& result) {
+        gauntletImageShadow->setLoadCallback([gauntletImageShadow](geode::Result<> const& result) {
             if (result && gauntletImageShadow) {
                 gauntletImageShadow->setVisible(true);
                 gauntletImageShadow->setColor({0, 0, 0});
@@ -724,34 +766,6 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         });
         gauntletImageShadow->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
         gauntletBg->addChild(gauntletImageShadow, 1);
-    }
-
-    if (gauntletImage) {
-        gauntletImage->setAutoResize(true);
-        gauntletImage->setPosition(imageCenter);
-        gauntletImage->setLoadCallback([fallbackSprite, fallbackSpriteShadow](geode::Result<> const& result) {
-            if (result) {
-                if (fallbackSprite) {
-                    fallbackSprite->removeFromParent();
-                }
-                if (fallbackSpriteShadow) {
-                    fallbackSpriteShadow->removeFromParent();
-                }
-            }
-        });
-        gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
-    }
-
-    if (fallbackSprite) {
-        fallbackSprite->setPosition(imageCenter);
-        gauntletBg->addChild(fallbackSprite, 2);
-        if (fallbackSpriteShadow) {
-            fallbackSpriteShadow->setPosition({imageCenter.x, imageCenter.y - 6});
-            gauntletBg->addChild(fallbackSpriteShadow, 1);
-        }
-    }
-    if (gauntletImage) {
-        gauntletBg->addChild(gauntletImage, 3);
     }
 
     auto completedCount = 0;
