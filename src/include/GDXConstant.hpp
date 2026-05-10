@@ -2,6 +2,7 @@
 
 #include <argon/argon.hpp>
 #include <arc/runtime/Runtime.hpp>
+#include <unordered_map>
 
 using namespace geode::prelude;
 
@@ -31,5 +32,36 @@ namespace gdx {
 
     inline bool isMod() {
         return Mod::get()->getSavedValue<bool>("isMod");
+    }
+
+    inline std::unordered_map<std::string, CCTexture2D*>& gauntletTextureCache() {
+        static std::unordered_map<std::string, CCTexture2D*> cache;
+        return cache;
+    }
+
+    inline CCTexture2D* findGauntletTexture(std::string const& url) {
+        auto& cache = gauntletTextureCache();
+        auto it = cache.find(url);
+        return it == cache.end() ? nullptr : it->second;
+    }
+
+    inline void cacheGauntletTexture(std::string const& url, CCTexture2D* texture) {
+        if (!texture) {
+            return;
+        }
+
+        auto& cache = gauntletTextureCache();
+        auto it = cache.find(url);
+        if (it != cache.end()) {
+            if (it->second == texture) {
+                return;
+            }
+            if (it->second) {
+                it->second->release();
+            }
+        }
+
+        texture->retain();
+        cache[url] = texture;
     }
 }

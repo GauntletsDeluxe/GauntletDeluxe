@@ -1,6 +1,7 @@
 #include "GDXGauntletManagePopup.hpp"
 #include "GDXAddGauntletPopup.hpp"
 #include "../include/GDXConstant.hpp"
+#include "GDXUserPanelPopup.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/utils/general.hpp"
 #include <Geode/binding/ButtonSprite.hpp>
@@ -30,7 +31,9 @@ bool GDXGauntletManagePopup::init() {
         return false;
     }
 
-    setTitle("Manage Gauntlets");
+    setTitle("Manage Gauntlets Deluxe");
+    addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
+    addSideArt(m_mainLayer, SideArt::TopRight, SideArtStyle::PopupGold, false);
 
     auto listSize = CCSizeMake(356.f, 200.f);
     m_list = cue::ListNode::create(listSize);
@@ -45,23 +48,44 @@ bool GDXGauntletManagePopup::init() {
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
     this->scheduleUpdate();
 
+    CCMenu* bottomMenu = CCMenu::create();
+    bottomMenu->setLayout(RowLayout::create()->setGap(10.f)->setAxisAlignment(AxisAlignment::Center));
+    bottomMenu->setContentWidth(m_mainLayer->getContentWidth() - 10.f);
+    m_mainLayer->addChildAtPosition(bottomMenu, Anchor::Bottom, {0.f, 25.f}, false);
+
+    // manager only
     if (gdx::isManager()) {
         auto addBtn = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onAdd));
-        m_buttonMenu->addChildAtPosition(addBtn, Anchor::BottomRight, {-110, 25}, false);
+        bottomMenu->addChild(addBtn);
 
         auto openManageBtn = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("Asset Manager", "goldFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onManageAssets));
-        m_buttonMenu->addChildAtPosition(openManageBtn, Anchor::BottomLeft, {115, 25}, false);
+        bottomMenu->addChild(openManageBtn);
     }
+
+    // manager and mod
+    if (gdx::isManager() || gdx::isMod()) {
+        auto userBtn = CCMenuItemSpriteExtra::create(
+            ButtonSprite::create("User Panel", "goldFont.fnt", "GJ_button_05.png"),
+            this,
+            menu_selector(GDXGauntletManagePopup::onUserPanel));
+        bottomMenu->addChild(userBtn);
+    }
+
+    bottomMenu->updateLayout();
 
     refreshListItems();
     fetchGauntlets();
     return true;
+}
+
+void GDXGauntletManagePopup::onUserPanel(CCObject* sender) {
+    GDXUserPanelPopup::create()->show();
 }
 
 void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
@@ -80,8 +104,7 @@ void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
         co_await geode::async::waitForMainThread([url = std::move(url)]() {
             utils::web::openLinkInBrowser(url);
         });
-        co_return;
-    }, []() {});
+        co_return; }, []() {});
 }
 
 void GDXGauntletManagePopup::onAdd(CCObject* sender) {
@@ -138,8 +161,7 @@ void GDXGauntletManagePopup::fetchGauntlets() {
         co_await geode::async::waitForMainThread([this, gauntlets = std::move(gauntlets)]() mutable {
             createGauntletList(gauntlets);
         });
-        co_return;
-    }, []() {});
+        co_return; }, []() {});
 }
 
 void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets) {
@@ -271,17 +293,15 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     cell->addChild(nameLabel);
 
     if (!description.empty()) {
-        auto descriptionLabel = MultilineBitmapFont::createWithFont(
-            "chatFont.fnt",
+        auto descriptionLabel = RichTextArea::create(
             description,
-            0.55f,
-            200.f,
-            {0.f, 1.f},
-            10,
-            false);
+            "chatFont.fnt",
+            .5f,
+            200.f);
         if (descriptionLabel) {
             descriptionLabel->setAnchorPoint({0.f, 1.f});
             descriptionLabel->setPosition({85.f, cell->getContentSize().height - 30.f});
+            descriptionLabel->setMaxLines(4);
             cell->addChild(descriptionLabel, 1);
         }
         auto descriptionBg = NineSlice::create("square02_small.png");
@@ -394,6 +414,5 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
             this->refreshList();
             upopup->showSuccessMessage("Gauntlet deleted successfully.");
         });
-        co_return;
-    }, []() {});
+        co_return; }, []() {});
 }

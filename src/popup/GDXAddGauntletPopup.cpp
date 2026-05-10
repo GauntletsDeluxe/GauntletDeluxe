@@ -188,6 +188,8 @@ bool GDXAddGauntletPopup::init() {
     }
 
     this->setTitle("Add New Gauntlet");
+    addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
+    addSideArt(m_mainLayer, SideArt::BottomLeft, SideArtStyle::PopupGold, false);
 
     m_nameInput = TextInput::create(80.f, "Gauntlet Name", "chatFont.fnt");
     m_nameInput->setLabel("Gauntlet Name");
@@ -726,7 +728,5 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
             });
         }
 
-        co_return;
-    }, []() {});
+        co_return; }, []() {});
 }
-

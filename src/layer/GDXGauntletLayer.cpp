@@ -169,10 +169,16 @@ namespace {
         auto fallbackShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
         if (fallbackShadow) {
             fallbackShadow->setColor({0, 0, 0});
-            fallbackShadow->setOpacity(120);
-            fallbackShadow->setScaleX(1.f);
-            fallbackShadow->setScaleY(1.1f);
+            fallbackShadow->setOpacity(50);
+            if (fallbackShadow->getContentSize().width > 0 && fallbackShadow->getContentSize().height > 0) {
+                const float fitScale = std::min(
+                    size.width / fallbackShadow->getContentSize().width,
+                    size.height / fallbackShadow->getContentSize().height);
+                fallbackShadow->setScale(fitScale * 1.05f);
+                fallbackShadow->setScaleY(fitScale + 0.1f);
+            }
             fallbackShadow->setPosition(position);
+            fallbackShadow->setPositionY(position.y - 10.f);
             if (parent) {
                 parent->addChild(fallbackShadow, zOrder - 2);
             }
@@ -180,13 +186,19 @@ namespace {
 
         auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
         if (fallbackSprite) {
+            if (fallbackSprite->getContentSize().width > 0 && fallbackSprite->getContentSize().height > 0) {
+                const float fitScale = std::min(
+                    size.width / fallbackSprite->getContentSize().width,
+                    size.height / fallbackSprite->getContentSize().height);
+                fallbackSprite->setScale(fitScale);
+            }
             fallbackSprite->setPosition(position);
             if (parent) {
                 parent->addChild(fallbackSprite, zOrder - 1);
             }
         }
 
-        sprite->setLoadCallback([fallbackSprite, fallbackShadow](geode::Result<> const& result) {
+        sprite->setLoadCallback([fallbackSprite, fallbackShadow, url, sprite, position, size, parent, zOrder](geode::Result<> const& result) {
             if (!result) {
                 return;
             }
@@ -196,6 +208,32 @@ namespace {
             if (fallbackShadow) {
                 fallbackShadow->removeFromParent();
             }
+            if (auto texture = sprite->getTexture()) {
+                gdx::cacheGauntletTexture(url, texture);
+                if (sprite->getContentSize().width > 0 && sprite->getContentSize().height > 0) {
+                    const float fitScale = std::min(
+                        size.width / sprite->getContentSize().width,
+                        size.height / sprite->getContentSize().height);
+                    sprite->setScale(fitScale);
+                }
+                auto shadow = CCSprite::createWithTexture(texture);
+                if (shadow) {
+                    if (shadow->getContentSize().width > 0 && shadow->getContentSize().height > 0) {
+                        const float fitScale = std::min(
+                            size.width / shadow->getContentSize().width,
+                            size.height / shadow->getContentSize().height);
+                        shadow->setScale(fitScale);
+                        shadow->setScaleY(fitScale + 0.1f);
+                    }
+                    shadow->setPosition(position);
+                    shadow->setPositionY(position.y - 10.f);
+                    shadow->setColor({0, 0, 0});
+                    shadow->setOpacity(50);
+                    if (parent) {
+                        parent->addChild(shadow, zOrder - 2);
+                    }
+                }
+            }
         });
         sprite->loadFromUrl(url, CCImage::kFmtPng, true);
 
@@ -203,6 +241,47 @@ namespace {
             parent->addChild(sprite, zOrder);
         }
         return sprite;
+    }
+
+    static CCSprite* createRemoteSprite(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
+        if (auto texture = gdx::findGauntletTexture(url)) {
+            if (texture->getName() != 0) {
+                auto sprite = CCSprite::createWithTexture(texture);
+                if (sprite) {
+                    if (sprite->getContentSize().width > 0 && sprite->getContentSize().height > 0) {
+                        const float scale = std::min(
+                            size.width / sprite->getContentSize().width,
+                            size.height / sprite->getContentSize().height);
+                        sprite->setScale(scale);
+                    }
+                    sprite->setPosition(position);
+                    if (parent) {
+                        parent->addChild(sprite, zOrder);
+                    }
+
+                    auto shadow = CCSprite::createWithTexture(texture);
+                    if (shadow) {
+                        if (shadow->getContentSize().width > 0 && shadow->getContentSize().height > 0) {
+                            const float scale = std::min(
+                                size.width / shadow->getContentSize().width,
+                                size.height / shadow->getContentSize().height);
+                            shadow->setScale(scale);
+                            shadow->setScaleY(scale + 0.1f);
+                        }
+                        shadow->setPosition(position);
+                        shadow->setPositionY(position.y - 10.f);
+                        shadow->setColor({0, 0, 0});
+                        shadow->setOpacity(50);
+                        if (parent) {
+                            parent->addChild(shadow, zOrder - 2);
+                        }
+                    }
+
+                    return sprite;
+                }
+            }
+        }
+        return createLazySpriteWithFallback(parent, url, position, size, zOrder);
     }
 }
 
@@ -531,6 +610,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
                 upopup->showSuccessMessage("Account synced successfully.");
                 self->m_completedGauntletLevels = loadCompletedGauntletLevels();
                 self->m_claimedGauntlets = loadCompletedGauntlets();
+                self->onRefreshGauntlets(nullptr);
             } else {
                 upopup->showFailMessage("Failed to save sync data.");
             }
@@ -740,7 +820,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     nameLabelShadow->setPosition({nameLabel->getPositionX() + 2, nameLabel->getPositionY() - 2});
     nameLabelShadow->setAnchorPoint({0.5f, 1.0f});
     nameLabelShadow->setColor({0, 0, 0});
-    nameLabelShadow->setOpacity(60);
+    nameLabelShadow->setOpacity(50);
     nameLabelShadow->limitLabelWidth(gauntletBg->getContentSize().width - 30.f, 0.5f, 0.3f);
 
     gauntletBg->addChild(nameLabel, 3);
@@ -750,23 +830,19 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
 
     auto const imageCenter = ccp(gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10);
     auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png";
-    auto gauntletImage = createLazySpriteWithFallback(gauntletBg, imageUrl, imageCenter, {90.f, 90.f}, 3);
 
-    auto gauntletImageShadow = LazySprite::create({90.f, 90.f}, false);
-    if (gauntletImageShadow) {
-        gauntletImageShadow->setVisible(false);
-        gauntletImageShadow->setAutoResize(true);
-        gauntletImageShadow->setPosition({imageCenter.x, imageCenter.y - 6});
-        gauntletImageShadow->setLoadCallback([gauntletImageShadow](geode::Result<> const& result) {
-            if (result && gauntletImageShadow) {
-                gauntletImageShadow->setVisible(true);
-                gauntletImageShadow->setColor({0, 0, 0});
-                gauntletImageShadow->setOpacity(50);
-            }
-        });
-        gauntletImageShadow->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
-        gauntletBg->addChild(gauntletImageShadow, 1);
+    auto imageContainer = CCNodeRGBA::create();
+    if (imageContainer) {
+        imageContainer->setContentSize({65.f, 90.f});
+        imageContainer->setAnchorPoint({0.5f, 0.5f});
+        imageContainer->setPosition(imageCenter);
+        gauntletBg->addChild(imageContainer, 3);
     }
+
+    auto imageTarget = imageContainer ? imageContainer : gauntletBg;
+    auto imageSize = imageContainer ? imageContainer->getContentSize() : CCSize{90.f, 140.f};
+    auto imagePosition = imageContainer ? ccp(imageSize.width / 2.f, imageSize.height / 2.f) : imageCenter;
+    auto gauntletImage = createRemoteSprite(imageTarget, imageUrl, imagePosition, imageSize, 0);
 
     auto completedCount = 0;
     for (auto const& level : node.levelIds) {
@@ -783,7 +859,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         auto completedIconShadow = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
         if (completedIconShadow) {
             completedIconShadow->setColor({0, 0, 0});
-            completedIconShadow->setOpacity(80);
+            completedIconShadow->setOpacity(50);
             completedIconShadow->setScale(1.1f);
             completedIconShadow->setPosition({gauntletBg->getContentSize().width / 2.f + 2.f, 48.f});
             gauntletBg->addChild(completedIconShadow, 3);
@@ -822,7 +898,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         rewardLabelShadow->limitLabelWidth(50.f, 0.5f, 0.35f);
         rewardLabelShadow->setPosition({rewardLabel->getPositionX() + 2.f, rewardLabel->getPositionY() - 2.f});
         rewardLabelShadow->setColor({0, 0, 0});
-        rewardLabelShadow->setOpacity(60);
+        rewardLabelShadow->setOpacity(50);
         gauntletBg->addChild(rewardLabelShadow, 2);
 
         auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
@@ -836,7 +912,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         auto rewardIconShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
         if (rewardIconShadow) {
             rewardIconShadow->setColor({0, 0, 0});
-            rewardIconShadow->setOpacity(60);
+            rewardIconShadow->setOpacity(50);
             rewardIconShadow->setScale(0.3f);
             rewardIconShadow->setAnchorPoint({0.f, 0.5f});
             rewardIconShadow->setPosition({rewardLabel->getPositionX() + 5, 48.f});
@@ -849,7 +925,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     completionLabelShadow->setAnchorPoint({0.5f, 0.5f});
     completionLabelShadow->setPosition({imageCenter.x + 2.f, imageCenter.y - 42.f});
     completionLabelShadow->setColor({0, 0, 0});
-    completionLabelShadow->setOpacity(60);
+    completionLabelShadow->setOpacity(50);
     gauntletBg->addChild(completionLabelShadow, 2);
 
     auto completionLabel = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
@@ -987,15 +1063,15 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
                 auto completedIconShadow = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
                 if (completedIconShadow) {
                     completedIconShadow->setColor({0, 0, 0});
-                    completedIconShadow->setOpacity(80);
-                    completedIconShadow->setScale(1.5f);
+                    completedIconShadow->setOpacity(50);
+                    completedIconShadow->setScale(1.1f);
                     completedIconShadow->setPosition({buttonPos.x + 2.f, buttonPos.y - 2.f});
                     button->getParent()->addChild(completedIconShadow, 3);
                 }
 
                 auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
                 if (completedIcon) {
-                    completedIcon->setScale(1.5f);
+                    completedIcon->setScale(1.1f);
                     completedIcon->setPosition(buttonPos);
                     button->getParent()->addChild(completedIcon, 4);
                 }

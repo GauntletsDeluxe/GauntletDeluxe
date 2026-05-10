@@ -16,6 +16,7 @@ private:
     bool init() override;
     void update(float dt) override;
     void onManageAssets(CCObject* sender);
+    void onUserPanel(CCObject* sender);
     void onAdd(CCObject* sender);
     void onDelete(CCObject* sender);
     void onEdit(CCObject* sender);
