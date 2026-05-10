@@ -610,7 +610,6 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
                 upopup->showSuccessMessage("Account synced successfully.");
                 self->m_completedGauntletLevels = loadCompletedGauntletLevels();
                 self->m_claimedGauntlets = loadCompletedGauntlets();
-                self->onRefreshGauntlets(nullptr);
             } else {
                 upopup->showFailMessage("Failed to save sync data.");
             }
