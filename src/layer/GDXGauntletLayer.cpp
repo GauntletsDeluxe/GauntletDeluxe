@@ -433,8 +433,8 @@ void GDXGauntletLayer::onDiscord(CCObject* sender) {
 
 void GDXGauntletLayer::onInfo(CCObject* sender) {
     MDPopup::create(
-        "About Gauntlet Deluxe",
-        "**Gauntlet Deluxe** is a <cl>community-run mod</c> that adds a <cg>custom gauntlet to Geometry Dash</c>, featuring fan-made <co>gauntlets based on various themes</c>.\n\n"
+        "About Gauntlets Deluxe",
+        "**Gauntlets Deluxe** is a <cl>community-run mod</c> that adds a <cg>custom gauntlet to Geometry Dash</c>, featuring fan-made <co>gauntlets based on various themes</c>.\n\n"
         "Players can earn points by completing <cp>levels</c> and <cr>gauntlets</c>, and <cl>compete on the leaderboard</c>.\n\n"
         "The mod also allows for <cl>community-hosted creator contests</c>, where players can submit their own gauntlet levels to be featured in the mod.\n\n"
         "\n---\n"

@@ -202,6 +202,7 @@ bool GDXAddGauntletPopup::init() {
 
     m_descriptionInput = TextInput::create(105.f, "Gauntlet Description", "chatFont.fnt");
     m_descriptionInput->setLabel("Gauntlet Description");
+    m_descriptionInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_descriptionInput, Anchor::Left, {75, 30});
 
     m_levelInput = TextInput::create(80.f, "Level ID", "chatFont.fnt");

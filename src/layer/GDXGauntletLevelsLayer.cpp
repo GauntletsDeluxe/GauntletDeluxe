@@ -273,12 +273,14 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     auto winSize = CCDirector::sharedDirector()->getWinSize();
     auto titleLabel = CCLabelBMFont::create(m_gauntletTitle.c_str(), "goldFont.fnt");
     titleLabel->setScale(0.9f);
+    titleLabel->setZOrder(10);
     titleLabel->setAnchorPoint({0.5f, 0.5f});
 
     auto titleShadow = CCLabelBMFont::create(m_gauntletTitle.c_str(), "goldFont.fnt");
     titleShadow->setScale(0.9f);
     titleShadow->setColor({0, 0, 0});
     titleShadow->setOpacity(50);
+    titleShadow->setZOrder(10);
     titleShadow->setAnchorPoint({0.5f, 0.5f});
 
     this->addChildAtPosition(titleShadow, Anchor::Top, {4, -24}, false);

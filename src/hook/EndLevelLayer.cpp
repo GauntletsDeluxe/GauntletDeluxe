@@ -93,7 +93,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
     void customSetup() override {
         EndLevelLayer::customSetup();
         log::debug("{} completed", m_playLayer->m_level->m_levelID);
-        if (m_playLayer->m_level->m_normalPercent != 100) return;
+        // if (m_playLayer->m_level->m_normalPercent != 100) return;
         // get the summaryContainer
         if (this->m_listLayer) {
             auto accountData = argon::getGameAccountData();
