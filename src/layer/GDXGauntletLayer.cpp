@@ -982,7 +982,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     gauntletBg->addChild(infoMenu, 4);
 
     auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-    infoIconSpr->setScale(0.65f);
+    infoIconSpr->setScale(0.8f);
     if (infoIconSpr) {
         auto infoBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onGauntletInfo));
         infoBtn->setTag(static_cast<int>(index));
