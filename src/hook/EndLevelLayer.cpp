@@ -110,6 +110,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             m_fields->m_requestTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
+                    log::warn("Failed to get argon token for completing level");
                     co_return;
                 }
 
@@ -120,16 +121,19 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                                     .bodyJSON(body)
                                     .post(url);
                 if (response.error() || response.cancelled() || !response.ok()) {
+                    log::warn("Failed to complete level: {}", gdx::getResponseMessage(response, "Unknown error"));
                     co_return;
                 }
 
                 auto jsonResult = response.json();
                 if (!jsonResult) {
+                    log::warn("Failed to parse complete level response JSON");
                     co_return;
                 }
 
                 auto result = std::move(jsonResult).unwrap();
                 if (!result["success"].asBool().unwrapOr(false)) {
+                    log::warn("Complete level request was not successful");
                     co_return;
                 }
 
