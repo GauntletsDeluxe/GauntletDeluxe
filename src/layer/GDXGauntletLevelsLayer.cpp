@@ -61,6 +61,47 @@ namespace {
     }
 }
 
+static CCNode* findChildByIDRecursive(CCNode* node, const std::string& id) {
+    if (!node) {
+        return nullptr;
+    }
+    if (node->getID() == id) {
+        return node;
+    }
+    auto children = node->getChildren();
+    if (!children) {
+        return nullptr;
+    }
+    for (auto i = 0u; i < children->count(); ++i) {
+        auto child = static_cast<CCNode*>(children->objectAtIndex(i));
+        if (!child) {
+            continue;
+        }
+        if (auto found = findChildByIDRecursive(child, id)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+static bool isLevelUnlocked(std::size_t index, std::vector<GDXGauntletLevelEntry> const& levels, std::unordered_set<int> const& completedLevels) {
+    if (index >= levels.size()) {
+        return false;
+    }
+    if (completedLevels.contains(levels[index].levelId)) {
+        return true;
+    }
+    if (index == 0) {
+        return true;
+    }
+    for (std::size_t j = 0; j < index; ++j) {
+        if (!completedLevels.contains(levels[j].levelId)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static std::string getStringFromDict(CCDictionary* dict, const char* key) {
     if (!dict) {
         return "";
@@ -148,6 +189,7 @@ static CCSprite* createRemoteSprite(CCNode* parent, const std::string& url, cons
         if (texture->getName() != 0) {
             auto sprite = CCSprite::createWithTexture(texture);
             if (sprite) {
+                sprite->setID("gauntlet-image");
                 if (sprite->getContentSize().width > 0 && sprite->getContentSize().height > 0) {
                     const float fitScale = std::min(
                         size.width / sprite->getContentSize().width,
@@ -264,6 +306,9 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     auto completedLevels = loadCompletedGauntletLevels();
     for (auto i = 0u; i < m_levels.size(); ++i) {
         const auto& entry = m_levels[i];
+        bool isCompleted = completedLevels.contains(entry.levelId);
+        bool isUnlocked = isLevelUnlocked(i, m_levels, completedLevels);
+
         auto rowNode = CCNodeRGBA::create();
         rowNode->setContentSize({90.f, 90.f});
         rowNode->setScale(0.8f);
@@ -291,6 +336,18 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             continue;
         }
 
+        if (!isUnlocked) {
+            gauntletSprite->setColor({120, 120, 120});
+            gauntletSprite->setOpacity(200);
+            auto lockIcon = CCSprite::createWithSpriteFrameName("GJ_lockGray_001.png");
+            if (lockIcon) {
+                lockIcon->setID("lock-icon");
+                lockIcon->setScale(0.8f);
+                lockIcon->setPosition({imageTarget->getContentSize().width / 2.f, imageTarget->getContentSize().height / 2.f});
+                imageTarget->addChild(lockIcon, 5);
+            }
+        }
+
         auto containerSize = imageTarget->getContentSize();
         auto containerCenter = imageContainer ? imageContainer->getPosition() : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
         auto labelCenterX = containerCenter.x;
@@ -307,39 +364,49 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         }
 
         auto nameLabel = CCLabelBMFont::create(entry.levelName.c_str(), "bigFont.fnt");
+        nameLabel->setID("gauntlet-name");
         nameLabel->setAlignment(kCCTextAlignmentCenter);
         nameLabel->setAnchorPoint({0.5f, 0.f});
         nameLabel->setPosition({labelCenterX, nameY});
         nameLabel->setScale(0.5f);
+        nameLabel->setVisible(isUnlocked);
         rowNode->addChild(nameLabel, 2);
 
         auto nameLabelShadow = CCLabelBMFont::create(entry.levelName.c_str(), "bigFont.fnt");
+        nameLabelShadow->setID("gauntlet-name-shadow");
         nameLabelShadow->setAlignment(kCCTextAlignmentCenter);
         nameLabelShadow->setAnchorPoint({0.5f, 0.f});
         nameLabelShadow->setPosition({nameLabel->getPositionX() + 2.f, nameLabel->getPositionY() - 2.f});
         nameLabelShadow->setColor({0, 0, 0});
         nameLabelShadow->setOpacity(50);
         nameLabelShadow->setScale(0.5f);
+        nameLabelShadow->setVisible(isUnlocked);
         rowNode->addChild(nameLabelShadow, 1);
 
         auto creatorLabel = CCLabelBMFont::create(("By " + entry.creatorName).c_str(), "goldFont.fnt");
+        creatorLabel->setID("gauntlet-creator");
         creatorLabel->setAlignment(kCCTextAlignmentCenter);
         creatorLabel->setAnchorPoint({0.5f, 1.f});
         creatorLabel->setPosition({labelCenterX, nameLabel->getPositionY()});
         creatorLabel->limitLabelWidth(120.f, 0.5f, 0.35f);
+        creatorLabel->setVisible(isUnlocked);
         rowNode->addChild(creatorLabel, 2);
 
         auto creatorLabelShadow = CCLabelBMFont::create(("By " + entry.creatorName).c_str(), "goldFont.fnt");
+        creatorLabelShadow->setID("gauntlet-creator-shadow");
         creatorLabelShadow->setAlignment(kCCTextAlignmentCenter);
         creatorLabelShadow->setAnchorPoint({0.5f, 1.f});
         creatorLabelShadow->setPosition({creatorLabel->getPositionX() + 2.f, creatorLabel->getPositionY() - 2.f});
         creatorLabelShadow->setColor({0, 0, 0});
         creatorLabelShadow->setOpacity(50);
         creatorLabelShadow->limitLabelWidth(120.f, 0.5f, 0.35f);
+        creatorLabelShadow->setVisible(isUnlocked);
         rowNode->addChild(creatorLabelShadow, 1);
 
         auto rewardNode = CCNode::create();
+        rewardNode->setID("gauntlet-reward-node");
         rewardNode->setPosition({labelCenterX, containerCenter.y - containerSize.height / 2.f - 10.f});
+        rewardNode->setVisible(isUnlocked);
         rowNode->addChild(rewardNode, 2);
 
         auto rewardLabel = CCLabelBMFont::create((numToString(entry.reward)).c_str(), "bigFont.fnt");
@@ -380,6 +447,10 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
         auto rowButton = CCMenuItemSpriteExtra::create(rowNode, this, menu_selector(GDXGauntletLevelsLayer::onLevelClicked));
         rowButton->setTag(entry.levelId);
+        if (!isUnlocked) {
+            rowButton->setEnabled(false);
+            rowButton->setOpacity(180);
+        }
         float yOffset = ((i + 1) % 2 == 1) ? -60.f : 60.f;
         rowButton->setPosition({leftMargin + stepX * static_cast<float>(i), buttonY + yOffset});
         if (m_levelsMenu) {
@@ -424,7 +495,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                     continue;
                 }
                 dot->setPosition({x, y});
-                this->addChild(dot, 0);
+                m_levelsMenu->addChild(dot, -3);
             }
         }
     }
@@ -455,7 +526,15 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
         }
 
         auto levelId = button->getTag();
+        auto it = std::find_if(m_levels.begin(), m_levels.end(), [levelId](auto const& entry) {
+            return entry.levelId == levelId;
+        });
+        if (it == m_levels.end()) {
+            continue;
+        }
+        auto levelIndex = static_cast<std::size_t>(std::distance(m_levels.begin(), it));
         bool isCompleted = completedLevels.contains(levelId);
+        bool isUnlocked = isLevelUnlocked(levelIndex, m_levels, completedLevels);
 
         CCNode* gauntletContainer = nullptr;
         auto buttonChildren = button->getChildren();
@@ -479,11 +558,56 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
             continue;
         }
 
+        auto iconNode = findChildByIDRecursive(gauntletContainer, "gauntlet-image");
+        if (auto iconSprite = typeinfo_cast<CCSprite*>(iconNode)) {
+            iconSprite->setColor(isUnlocked ? ccColor3B{255, 255, 255} : ccColor3B{120, 120, 120});
+            iconSprite->setOpacity(isUnlocked ? 255 : 200);
+        } else if (auto lazySprite = typeinfo_cast<LazySprite*>(iconNode)) {
+            lazySprite->setColor(isUnlocked ? ccColor3B{255, 255, 255} : ccColor3B{120, 120, 120});
+            lazySprite->setOpacity(isUnlocked ? 255 : 200);
+        }
+
+        auto lockIcon = findChildByIDRecursive(button, "lock-icon");
+        if (!isUnlocked) {
+            if (!lockIcon) {
+                auto lockSprite = CCSprite::createWithSpriteFrameName("GJ_lockGray_001.png");
+                if (lockSprite) {
+                    lockSprite->setID("lock-icon");
+                    lockSprite->setScale(0.8f);
+                    lockSprite->setPosition({gauntletContainer->getContentSize().width / 2.f, gauntletContainer->getContentSize().height / 2.f});
+                    gauntletContainer->addChild(lockSprite, 5);
+                }
+            }
+            button->setEnabled(false);
+            button->setOpacity(180);
+        } else {
+            if (lockIcon) {
+                lockIcon->removeFromParent();
+            }
+            button->setEnabled(true);
+            button->setOpacity(255);
+        }
+
+        if (auto nameLabel = findChildByIDRecursive(button, "gauntlet-name")) {
+            nameLabel->setVisible(isUnlocked);
+        }
+        if (auto nameLabelShadow = findChildByIDRecursive(button, "gauntlet-name-shadow")) {
+            nameLabelShadow->setVisible(isUnlocked);
+        }
+        if (auto creatorLabel = findChildByIDRecursive(button, "gauntlet-creator")) {
+            creatorLabel->setVisible(isUnlocked);
+        }
+        if (auto creatorLabelShadow = findChildByIDRecursive(button, "gauntlet-creator-shadow")) {
+            creatorLabelShadow->setVisible(isUnlocked);
+        }
+        if (auto rewardNode = findChildByIDRecursive(button, "gauntlet-reward-node")) {
+            rewardNode->setVisible(isUnlocked);
+        }
+
         // Find existing completed icon
         CCNode* existingIcon = gauntletContainer->getChildByID("completed-icon");
 
         if (isCompleted) {
-            // add icon if it doesn't exist
             if (!existingIcon) {
                 auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
                 if (completedIcon) {
@@ -493,11 +617,8 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
                     gauntletContainer->addChild(completedIcon, 4);
                 }
             }
-        } else {
-            // remove icon if it exists
-            if (existingIcon) {
-                existingIcon->removeFromParent();
-            }
+        } else if (existingIcon) {
+            existingIcon->removeFromParent();
         }
     }
 }
@@ -556,7 +677,7 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
         spinner->setPosition(button->getPosition());
         spinner->setVisible(true);
         if (m_levelsMenu) {
-            m_levelsMenu->addChild(spinner);
+            m_levelsMenu->addChild(spinner, 10);
         }
         m_pendingSpinner = spinner;
     }

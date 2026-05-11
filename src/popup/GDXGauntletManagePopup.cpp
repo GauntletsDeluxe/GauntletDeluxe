@@ -60,16 +60,16 @@ bool GDXGauntletManagePopup::init() {
             this,
             menu_selector(GDXGauntletManagePopup::onAdd));
         bottomMenu->addChild(addBtn);
+    }
 
+    // manager and mod
+    if (gdx::isManager() || gdx::isMod()) {
         auto openManageBtn = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("Asset Manager", "goldFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onManageAssets));
         bottomMenu->addChild(openManageBtn);
-    }
-
-    // manager and mod
-    if (gdx::isManager() || gdx::isMod()) {
+        
         auto userBtn = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("User Panel", "goldFont.fnt", "GJ_button_05.png"),
             this,

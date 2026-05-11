@@ -103,6 +103,9 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             body["accountId"] = accountData.accountId;
             body["argonToken"] = "";
             body["levelId"] = static_cast<int>(levelId);
+            body["attempts"] = static_cast<int>(this->m_playLayer->m_level->m_attempts);
+            body["time"] = static_cast<int>(this->m_playLayer->m_level->m_attemptTime);
+            body["jumps"] = static_cast<int>(this->m_playLayer->m_level->m_jumps);
 
             m_fields->m_requestTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
@@ -194,8 +197,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     circleWave->m_color = ccColor3B({191, 3, 226});
                     m_listLayer->addChild(circleWave);
                 });
-                co_return;
-            }, [](){});
+                co_return; }, []() {});
         }
     }
 };

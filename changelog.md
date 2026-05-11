@@ -1,3 +1,8 @@
+## v1.0.3
+
+- Gauntlets are locked until you complete the previous one. This is to prevent skipping levels and to encourage players to complete the gauntlets in order.
+- Improved the **Anti-Cheat** system
+
 ## v1.0.2
 
 - Added **Discord Button** on the main menu

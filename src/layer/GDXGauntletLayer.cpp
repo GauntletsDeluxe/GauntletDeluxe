@@ -945,6 +945,22 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
             rewardIconShadow->setPosition({rewardLabel->getPositionX() + 5, 48.f});
             gauntletBg->addChild(rewardIconShadow, 2);
         }
+
+        auto rewardTextLabel = CCLabelBMFont::create("Reward", "goldFont.fnt");
+        rewardTextLabel->setAlignment(kCCTextAlignmentCenter);
+        rewardTextLabel->setAnchorPoint({0.5f, 0.5f});
+        rewardTextLabel->setPosition({gauntletBg->getContentSize().width / 2.f, 70.f});
+        rewardTextLabel->setScale(0.4f);
+        gauntletBg->addChild(rewardTextLabel, 3);
+
+        auto rewardTextLabelShadow = CCLabelBMFont::create("Reward", "goldFont.fnt");
+        rewardTextLabelShadow->setAlignment(kCCTextAlignmentCenter);
+        rewardTextLabelShadow->setAnchorPoint({0.5f, 0.5f});
+        rewardTextLabelShadow->setPosition({rewardTextLabel->getPositionX() + 2.f, rewardTextLabel->getPositionY() - 2.f});
+        rewardTextLabelShadow->setColor({0, 0, 0});
+        rewardTextLabelShadow->setOpacity(50);
+        rewardTextLabelShadow->setScale(0.4f);
+        gauntletBg->addChild(rewardTextLabelShadow, 2);
     }
 
     auto completionLabelShadow = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
