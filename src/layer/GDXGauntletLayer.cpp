@@ -856,7 +856,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     gauntletBg->setColor({static_cast<GLubyte>(node.r), static_cast<GLubyte>(node.g), static_cast<GLubyte>(node.b)});
 
     auto const imageCenter = ccp(gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10);
-    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png";
+    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png?v2=true";
 
     auto imageContainer = CCNodeRGBA::create();
     if (imageContainer) {

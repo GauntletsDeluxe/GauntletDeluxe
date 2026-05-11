@@ -2,6 +2,7 @@
 
 - Gauntlets are locked until you complete the previous one. This is to prevent skipping levels and to encourage players to complete the gauntlets in order.
 - Improved the **Anti-Cheat** system
+- Fixed bug where it still shows an outdated gauntlet sprite
 
 ## v1.0.2
 

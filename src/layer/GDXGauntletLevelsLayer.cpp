@@ -325,7 +325,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
         const CCSize iconSize = {70.f, 90.f};
         const CCPoint iconCenter = {iconSize.width / 2.f, iconSize.height / 2.f};
-        auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(m_gauntletIndex) + ".png";
+        auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(m_gauntletIndex) + ".png?v2=true";
 
         auto imageTarget = imageContainer ? imageContainer : rowNode;
         auto imagePosition = imageContainer

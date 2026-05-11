@@ -69,7 +69,7 @@ bool GDXGauntletManagePopup::init() {
             this,
             menu_selector(GDXGauntletManagePopup::onManageAssets));
         bottomMenu->addChild(openManageBtn);
-        
+
         auto userBtn = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("User Panel", "goldFont.fnt", "GJ_button_05.png"),
             this,
@@ -272,7 +272,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         cell->addChild(fallbackSprite, 2);
     }
 
-    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png";
+    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
     auto gauntletImage = LazySprite::create({72.f, 72.f}, false);
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
