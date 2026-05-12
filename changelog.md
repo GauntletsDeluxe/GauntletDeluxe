@@ -1,3 +1,7 @@
+# v1.0.5
+
+- Fixed a massive bug regarding with the safeguards. Completing a gauntlet level would not give rewards when you beaten the next gauntlet level.
+
 ## v1.0.4
 
 - Added **Featured Gauntlet**, you can identify it by the glowing particle effect.

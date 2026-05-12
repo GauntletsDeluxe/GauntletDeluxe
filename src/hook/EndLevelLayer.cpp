@@ -204,7 +204,6 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     circleWave->setPosition(gauntletRewardNode->getPosition() + ccp(0.f, 10.f));
                     circleWave->m_color = ccColor3B({191, 3, 226});
                     m_listLayer->addChild(circleWave);
-                    gdx::setPlayingGauntletLevel(false);
                 });
                 co_return; }, []() {});
             }
