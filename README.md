@@ -55,4 +55,4 @@
 - <cg>**Graphic Design and Logo**</c>: [DaRealSkellyGuy](user:29960249)
 - <cg>**Gauntlet Managers/Maintainers**</c>: [DaRealSkellyGuy](user:29960249) & [Niki2025](user:26209086)
 
-![King Clawthorne](resources/king.png)
+![King Clawthorne](king.png)
