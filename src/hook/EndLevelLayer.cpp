@@ -92,8 +92,12 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
     void customSetup() override {
         EndLevelLayer::customSetup();
+        if (!gdx::isPlayingGauntletLevel()) {
+            log::debug("Not a gauntlet level, skipping completion check");
+            return;
+        }
         if (m_playLayer->m_level->m_normalPercent >= 100) {
-            log::debug("{} completed", m_playLayer->m_level->m_levelID);
+            log::debug("gautnlet level {} completed", m_playLayer->m_level->m_levelID);
             // get the summaryContainer
             if (this->m_listLayer) {
                 auto accountData = argon::getGameAccountData();
@@ -200,6 +204,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     circleWave->setPosition(gauntletRewardNode->getPosition() + ccp(0.f, 10.f));
                     circleWave->m_color = ccColor3B({191, 3, 226});
                     m_listLayer->addChild(circleWave);
+                    gdx::setPlayingGauntletLevel(false);
                 });
                 co_return; }, []() {});
             }

@@ -413,6 +413,7 @@ bool GDXGauntletLayer::init() {
 
 void GDXGauntletLayer::onEnter() {
     CCLayer::onEnter();
+    gdx::setPlayingGauntletLevel(false);
     this->scheduleUpdate();
     fetchUserData();
 }

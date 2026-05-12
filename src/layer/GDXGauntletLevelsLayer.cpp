@@ -659,6 +659,7 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
     if (stored && stored->count() > 0) {
         auto level = static_cast<GJGameLevel*>(stored->objectAtIndex(0));
         if (level && level->m_levelID == entry.levelId) {
+            gdx::setPlayingGauntletLevel(true);
             auto scene = LevelInfoLayer::scene(level, false);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
             return;
@@ -702,6 +703,7 @@ void GDXGauntletLevelsLayer::update(float dt) {
     if (stored && stored->count() > 0) {
         auto level = static_cast<GJGameLevel*>(stored->objectAtIndex(0));
         if (level && level->m_levelID == m_pendingLevelId) {
+            gdx::setPlayingGauntletLevel(true);
             auto scene = LevelInfoLayer::scene(level, false);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 

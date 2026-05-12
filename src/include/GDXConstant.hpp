@@ -34,6 +34,17 @@ namespace gdx {
         return Mod::get()->getSavedValue<bool>("isMod");
     }
 
+    inline bool g_isPlayingGauntletLevel = false;
+
+    inline void setPlayingGauntletLevel(bool playing) {
+        log::debug("Setting playing gauntlet level to {}", playing);
+        g_isPlayingGauntletLevel = playing;
+    }
+
+    inline bool isPlayingGauntletLevel() {
+        return g_isPlayingGauntletLevel;
+    }
+
     inline std::unordered_map<std::string, CCTexture2D*>& gauntletTextureCache() {
         static std::unordered_map<std::string, CCTexture2D*> cache;
         return cache;

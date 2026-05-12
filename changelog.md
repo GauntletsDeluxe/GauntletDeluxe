@@ -1,5 +1,6 @@
 ## v1.0.4
 
+- Added additional safeguards to prevent players from getting rewards outside the gauntlet levels
 - Fixed the description input field for Gauntlet Manager not typing correctly
 - Fixed the level completion not registering properly
 - Fixed the badges duplicating on the profile page
