@@ -1,6 +1,7 @@
 ## v1.0.4
 
 - Added **Featured Gauntlet**, you can identify it by the glowing particle effect.
+- Added **Recent Gauntlet** toggler
 - Tweaked the Add/Edit Gauntlet Popup UI
 - Added a new **Gauntlet Credits** section on the Gauntlet Levels Selection
 - Added Custom Background Gauntlet in the Levels Selection
