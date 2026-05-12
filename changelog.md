@@ -1,3 +1,10 @@
+## v1.0.4
+
+- Fixed the description input field for Gauntlet Manager not typing correctly
+- Fixed the level completion not registering properly
+- Fixed the badges duplicating on the profile page
+- Fixed typos
+
 ## v1.0.3
 
 - Gauntlets are locked until you complete the previous one. This is to prevent skipping levels and to encourage players to complete the gauntlets in order.

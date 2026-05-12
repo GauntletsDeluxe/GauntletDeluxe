@@ -49,13 +49,13 @@ class $modify(GDXHookProfilePage, ProfilePage) {
             bool isMod = userData["isMod"].asBool().unwrapOr(false);
 
             co_await geode::async::waitForMainThread([menuRef, isManager, isMod]() {
-                if (isManager) {
+                if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
                     auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
                     badge->setID("GDX-manager-badge:101"_spr);
                     menuRef->addChild(badge);
                 }
-                if (isMod) {
+                if (isMod && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
                     auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
                     badgeBtn->setID("GDX-contributor-badge:101"_spr);
@@ -115,14 +115,14 @@ class $modify(GDXHookCommentCell, CommentCell) {
             bool isMod = userData["isMod"].asBool().unwrapOr(false);
 
             co_await geode::async::waitForMainThread([menuRef, isManager, isMod]() {
-                if (isManager) {
+                if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
                     badgeSpr->setScale(0.7f);
                     auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
                     badge->setID("GDX-manager-badge:101"_spr);
                     menuRef->addChild(badge);
                 }
-                if (isMod) {
+                if (isMod && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
                     badgeSpr->setScale(0.7f);
                     auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));

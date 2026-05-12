@@ -92,22 +92,22 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
     void customSetup() override {
         EndLevelLayer::customSetup();
-        log::debug("{} completed", m_playLayer->m_level->m_levelID);
-        // if (m_playLayer->m_level->m_normalPercent != 100) return;
-        // get the summaryContainer
-        if (this->m_listLayer) {
-            auto accountData = argon::getGameAccountData();
-            int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
-            auto url = std::string(gdx::BASE_API_URL) + "/completeLevel";
-            matjson::Value body = matjson::Value::object();
-            body["accountId"] = accountData.accountId;
-            body["argonToken"] = "";
-            body["levelId"] = static_cast<int>(levelId);
-            body["attempts"] = static_cast<int>(this->m_playLayer->m_level->m_attempts);
-            body["time"] = static_cast<int>(this->m_playLayer->m_level->m_attemptTime);
-            body["jumps"] = static_cast<int>(this->m_playLayer->m_level->m_jumps);
+        if (m_playLayer->m_level->m_normalPercent >= 100) {
+            log::debug("{} completed", m_playLayer->m_level->m_levelID);
+            // get the summaryContainer
+            if (this->m_listLayer) {
+                auto accountData = argon::getGameAccountData();
+                int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
+                auto url = std::string(gdx::BASE_API_URL) + "/completeLevel";
+                matjson::Value body = matjson::Value::object();
+                body["accountId"] = accountData.accountId;
+                body["argonToken"] = "";
+                body["levelId"] = static_cast<int>(levelId);
+                body["attempts"] = static_cast<int>(this->m_playLayer->m_level->m_attempts);
+                body["time"] = static_cast<int>(this->m_playLayer->m_level->m_attemptTime);
+                body["jumps"] = static_cast<int>(this->m_playLayer->m_level->m_jumps);
 
-            m_fields->m_requestTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
+                m_fields->m_requestTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
                     log::warn("Failed to get argon token for completing level");
@@ -202,6 +202,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     m_listLayer->addChild(circleWave);
                 });
                 co_return; }, []() {});
+            }
         }
     }
 };
