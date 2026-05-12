@@ -297,7 +297,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         featuredLabel->setAnchorPoint({0.f, .5f});
         featuredLabel->setScale(0.35f);
         featuredLabel->setColor({255, 215, 0});
-        featuredLabel->setPosition({80.f, cell->getContentSize().height - 28.f});
+        featuredLabel->setPosition({5.f, 5.f});
         cell->addChild(featuredLabel, 2);
     }
 
