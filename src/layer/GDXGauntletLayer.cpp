@@ -528,20 +528,20 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         }
 
         // get those roles lol
-        bool isMod = result["isMod"].asBool().unwrapOr(false);
+        bool isContributor = result["isContributor"].asBool().unwrapOr(false);
         bool isManager = result["isManager"].asBool().unwrapOr(false);
 
-        Mod::get()->setSavedValue("isMod", isMod);
+        Mod::get()->setSavedValue("isContributor", isContributor);
         Mod::get()->setSavedValue("isManager", isManager);
 
-        if (!isManager && !isMod) {
+        if (!isManager && !isContributor) {
             co_await geode::async::waitForMainThread([upopup, response] {
                 upopup->showFailMessage(gdx::getResponseMessage(response, "Permissions Denied"));
             });
             co_return;
         }
 
-        if (gdx::isManager() || gdx::isMod()) {
+        if (gdx::isManager() || gdx::isContributor()) {
             co_await geode::async::waitForMainThread([upopup]() {
                 upopup->onClose(nullptr);
                 GDXGauntletManagePopup::create()->show();

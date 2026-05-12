@@ -46,16 +46,16 @@ class $modify(GDXHookProfilePage, ProfilePage) {
             if (!userData.isObject()) co_return;
 
             bool isManager = userData["isManager"].asBool().unwrapOr(false);
-            bool isMod = userData["isMod"].asBool().unwrapOr(false);
+            bool isContributor = userData["isContributor"].asBool().unwrapOr(false);
 
-            co_await geode::async::waitForMainThread([menuRef, isManager, isMod]() {
+            co_await geode::async::waitForMainThread([menuRef, isManager, isContributor]() {
                 if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
                     auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
                     badge->setID("GDX-manager-badge:101"_spr);
                     menuRef->addChild(badge);
                 }
-                if (isMod && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
+                if (isContributor && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
                     auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
                     badgeBtn->setID("GDX-contributor-badge:101"_spr);
@@ -112,9 +112,9 @@ class $modify(GDXHookCommentCell, CommentCell) {
             if (!userData.isObject()) co_return;
 
             bool isManager = userData["isManager"].asBool().unwrapOr(false);
-            bool isMod = userData["isMod"].asBool().unwrapOr(false);
+            bool isContributor = userData["isContributor"].asBool().unwrapOr(false);
 
-            co_await geode::async::waitForMainThread([menuRef, isManager, isMod]() {
+            co_await geode::async::waitForMainThread([menuRef, isManager, isContributor]() {
                 if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
                     badgeSpr->setScale(0.7f);
@@ -122,7 +122,7 @@ class $modify(GDXHookCommentCell, CommentCell) {
                     badge->setID("GDX-manager-badge:101"_spr);
                     menuRef->addChild(badge);
                 }
-                if (isMod && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
+                if (isContributor && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
                     badgeSpr->setScale(0.7f);
                     auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));

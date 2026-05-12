@@ -1,9 +1,14 @@
 ## v1.0.4
 
+- Added **Featured Gauntlet**, you can identify it by the glowing particle effect.
+- Tweaked the Add/Edit Gauntlet Popup UI
+- Added a new **Gauntlet Credits** section on the Gauntlet Levels Selection
+- Added Custom Background Gauntlet in the Levels Selection
 - Added additional safeguards to prevent players from getting rewards outside the gauntlet levels
 - Fixed the description input field for Gauntlet Manager not typing correctly
 - Fixed the level completion not registering properly
 - Fixed the badges duplicating on the profile page
+- Fixed backend relating to contributor status
 - Fixed typos
 
 ## v1.0.3

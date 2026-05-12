@@ -62,8 +62,8 @@ bool GDXGauntletManagePopup::init() {
         bottomMenu->addChild(addBtn);
     }
 
-    // manager and mod
-    if (gdx::isManager() || gdx::isMod()) {
+    // manager and contributor
+    if (gdx::isManager() || gdx::isContributor()) {
         auto openManageBtn = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("Asset Manager", "goldFont.fnt", "GJ_button_05.png"),
             this,
@@ -253,7 +253,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     }
 
     // edit gauntlet
-    if (gdx::isManager() || gdx::isMod()) {
+    if (gdx::isManager() || gdx::isContributor()) {
         auto editSpr = CCSprite::createWithSpriteFrameName("GJ_editBtn_001.png");
         editSpr->setScale(0.4f);
         auto editBtn = CCMenuItemSpriteExtra::create(editSpr, this, menu_selector(GDXGauntletManagePopup::onEdit));

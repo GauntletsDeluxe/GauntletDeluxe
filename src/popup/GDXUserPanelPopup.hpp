@@ -18,7 +18,7 @@ private:
     CCMenuItemToggler* m_promoteBtn = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
     bool m_isExcluded = false;
-    bool m_isMod = false;
+    bool m_isContributor = false;
     geode::async::TaskHolder<> m_findAccountTask;
     geode::async::TaskHolder<> m_excludeTask;
     geode::async::TaskHolder<> m_promoteTask;
