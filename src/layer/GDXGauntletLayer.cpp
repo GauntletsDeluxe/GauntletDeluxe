@@ -1,6 +1,7 @@
 #include "GDXGauntletLayer.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 #include "GDXLeaderboardLayer.hpp"
+#include "../popup/GDXGauntletCreditsPopup.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
@@ -309,37 +310,35 @@ bool GDXGauntletLayer::init() {
     this->addChild(bg, -5);
 
     // info button
-    auto bottomMenu = CCMenu::create();
-    bottomMenu->setPosition({30, 70});
-    bottomMenu->setContentHeight(100);
-    bottomMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
-    this->addChild(bottomMenu, 2);
+    auto bottomLeftMenu = CCMenu::create();
+    bottomLeftMenu->setPosition({30, 70});
+    bottomLeftMenu->setContentHeight(100);
+    bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+    this->addChild(bottomLeftMenu, 2);
 
     auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
     auto infoIconBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onInfo));
-    bottomMenu->addChild(infoIconBtn);
+    bottomLeftMenu->addChild(infoIconBtn);
 
     // leaderboard button
     auto leaderboardIconSpr = CCSprite::createWithSpriteFrameName("GJ_levelLeaderboardBtn_001.png");
     leaderboardIconSpr->setScale(0.6f);
     auto leaderboardIconBtn = CCMenuItemSpriteExtra::create(leaderboardIconSpr, this, menu_selector(GDXGauntletLayer::onLeaderboard));
-    bottomMenu->addChild(leaderboardIconBtn);
+    bottomLeftMenu->addChild(leaderboardIconBtn);
 
     // discord button
     auto discordIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_discord.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     discordIconSpr->setScale(0.7f);
     auto discordIconBtn = CCMenuItemSpriteExtra::create(discordIconSpr, this, menu_selector(GDXGauntletLayer::onDiscord));
-    discordIconBtn->setPosition({0.f, -35.f});
-    bottomMenu->addChild(discordIconBtn);
+    bottomLeftMenu->addChild(discordIconBtn);
 
     // @geode-ignore(unknown-resource)
     auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     manageLabel->setScale(0.7f);
     auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
-    manageBtn->setPosition({0.f, -70.f});
-    bottomMenu->addChild(manageBtn);
+    bottomLeftMenu->addChild(manageBtn);
 
-    bottomMenu->updateLayout();
+    bottomLeftMenu->updateLayout();
 
     // refresh gauntlet
     auto refreshSpr = CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png");
@@ -353,15 +352,24 @@ bool GDXGauntletLayer::init() {
     // @geode-ignore(unknown-resource)
     auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("geode.loader/update.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     auto syncBtn = CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXGauntletLayer::onSyncAccount));
-    auto refreshMenu = CCMenu::create(refreshBtn, syncBtn, nullptr);
-    if (refreshMenu) {
-        refreshMenu->setPosition({winSize.width - 30, 70});
-        refreshMenu->setContentHeight(100);
-        refreshMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
-        this->addChild(refreshMenu, 2);
+
+    // recent toggle
+    auto recentOff = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Cyan, CircleBaseSize::Small);
+    auto recentOn = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Gray, CircleBaseSize::Small);
+    m_recentToggle = CCMenuItemToggler::create(recentOff, recentOn, this, menu_selector(GDXGauntletLayer::onToggleRecent));
+    if (m_recentToggle) {
+        m_recentToggle->toggle(!m_recentFilter);
     }
 
-    refreshMenu->updateLayout();
+    auto bottomRightMenu = CCMenu::create(refreshBtn, syncBtn, m_recentToggle, nullptr);
+    if (bottomRightMenu) {
+        bottomRightMenu->setPosition({winSize.width - 30, 70});
+        bottomRightMenu->setContentHeight(100);
+        bottomRightMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+        this->addChild(bottomRightMenu, 2);
+    }
+
+    bottomRightMenu->updateLayout();
 
     // title styling
     auto title = CCSprite::createWithSpriteFrameName("GDX_title.png"_spr);
@@ -653,6 +661,16 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
     fetchGauntlets();
 }
 
+void GDXGauntletLayer::onToggleRecent(CCObject* sender) {
+    m_recentFilter = !m_recentFilter;
+    if (m_recentToggle) {
+        m_recentToggle->toggle(m_recentFilter);
+    }
+    m_gauntlets = matjson::Value::array();
+    createGauntletPages(m_gauntlets);
+    fetchGauntlets();
+}
+
 void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
     auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
     if (!button || !m_gauntlets.isArray()) {
@@ -680,6 +698,7 @@ void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
         dict->setObject(CCString::create(levelValue["songName"].asString().unwrapOr("-").c_str()), "songName");
         dict->setObject(CCInteger::create(levelValue["songId"].asInt().unwrapOr(0)), "songId");
         dict->setObject(CCInteger::create(levelValue["reward"].asInt().unwrapOr(0)), "reward");
+        dict->setObject(CCInteger::create(levelValue["isFeatured"].asBool().unwrapOr(false) ? 1 : 0), "featured");
         levels->addObject(dict);
     }
 
@@ -689,7 +708,7 @@ void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
         static_cast<GLubyte>(gauntlet["g"].asInt().unwrapOr(255)),
         static_cast<GLubyte>(gauntlet["b"].asInt().unwrapOr(255)),
     };
-    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color, gauntlet["index"].asInt().unwrapOr(idx)));
+    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color, gauntlet["index"].asInt().unwrapOr(idx), gauntlet));
     CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 }
 
@@ -699,6 +718,9 @@ void GDXGauntletLayer::fetchGauntlets() {
     }
 
     auto url = std::string(gdx::BASE_API_URL) + "/getGauntlets";
+    if (m_recentFilter) {
+        url += "?recent=true";
+    }
     auto self = geode::Ref<GDXGauntletLayer>(this);
     m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
@@ -833,6 +855,44 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         return nullptr;
     }
     gauntletBg->setContentSize({110, 240});
+
+    if (gauntlet["isFeatured"].asBool().unwrapOr(false)) {
+        auto glow = NineSlice::createWithSpriteFrameName("GDX_featuredGlow.png"_spr);
+        if (glow) {
+            glow->setPosition({gauntletBg->getContentSize().width / 2.f, gauntletBg->getContentSize().height / 2.f});
+            glow->setContentSize(gauntletBg->getContentSize() + CCSize{10.f, 10.f});
+            glow->setColor({255, 215, 0});
+            glow->setScale(1.0f);
+            glow->setOpacity(255);
+
+            auto tintToWhite = CCTintTo::create(1.2f, 255, 255, 255);
+            auto tintToGold = CCTintTo::create(1.2f, 255, 215, 0);
+            auto fadeToDim = CCFadeTo::create(1.2f, 100);
+            auto fadeToBright = CCFadeTo::create(1.2f, 255);
+            auto pulseUp = CCSpawn::create(tintToWhite, fadeToDim, nullptr);
+            auto pulseDown = CCSpawn::create(tintToGold, fadeToBright, nullptr);
+            auto pulseSequence = CCSequence::create(pulseUp, pulseDown, nullptr);
+            glow->runAction(CCRepeatForever::create(pulseSequence));
+
+            gauntletBg->addChild(glow, -2);
+
+            // if (auto blendNode = typeinfo_cast<CCBlendProtocol*>(glow)) {
+            //     blendNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE});
+            // }
+
+            // particle system
+            const std::string& pString = gdx::featuredParticle;
+            ParticleStruct pStruct;
+            GameToolbox::particleStringToStruct(pString, pStruct);
+            CCParticleSystemQuad* particle = GameToolbox::particleFromStruct(pStruct, nullptr, false);
+            if (particle) {
+                gauntletBg->addChildAtPosition(particle, Anchor::Center, {0, 0}, false);
+                particle->setZOrder(5);
+                particle->resetSystem();
+                particle->update(0.15f);
+            }
+        }
+    }
 
     std::string formattedName = gauntletName;
     std::replace(formattedName.begin(), formattedName.end(), ' ', '\n');
@@ -978,19 +1038,6 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     completionLabel->setPosition({imageCenter.x, imageCenter.y - 40.f});
     gauntletBg->addChild(completionLabel, 3);
 
-    auto infoMenu = CCMenu::create();
-    infoMenu->setPosition({0.f, 0.f});
-    gauntletBg->addChild(infoMenu, 4);
-
-    auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-    infoIconSpr->setScale(0.8f);
-    if (infoIconSpr) {
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onGauntletInfo));
-        infoBtn->setTag(static_cast<int>(index));
-        infoBtn->setPosition({gauntletBg->getContentSize().width - 5.f, gauntletBg->getContentSize().height - 5.f});
-        infoMenu->addChild(infoBtn);
-    }
-
     auto button = CCMenuItemSpriteExtra::create(gauntletBg, this, menu_selector(GDXGauntletLayer::onGauntletButtonClick));
     if (!button) {
         return nullptr;
@@ -1131,24 +1178,6 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
         });
 
         co_return; }, []() {});
-}
-
-void GDXGauntletLayer::onGauntletInfo(CCObject* sender) {
-    auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
-    if (!button || !m_gauntlets.isArray()) {
-        return;
-    }
-
-    auto idx = button->getTag();
-    if (idx < 0 || idx >= static_cast<int>(m_gauntlets.size())) {
-        return;
-    }
-
-    auto gauntlet = m_gauntlets[idx];
-    auto title = gauntlet["name"].asString().unwrapOr("Gauntlet");
-    auto description = gauntlet["description"].asString().unwrapOr("No description available.");
-
-    MDPopup::create(title.c_str(), description.c_str(), "OK")->show();
 }
 
 void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {

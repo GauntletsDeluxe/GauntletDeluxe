@@ -8,6 +8,7 @@
 #include <asp/fs.hpp>
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/LazySprite.hpp"
+#include "../popup/GDXGauntletCreditsPopup.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 
 using namespace geode::prelude;
@@ -226,9 +227,9 @@ static CCSprite* createRemoteSprite(CCNode* parent, const std::string& url, cons
     return createLazySpriteWithFallback(parent, url, position, size, zOrder);
 }
 
-GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex) {
+GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData) {
     auto ret = new GDXGauntletLevelsLayer();
-    if (ret && ret->init(levels, title, color, gauntletIndex)) {
+    if (ret && ret->init(levels, title, color, gauntletIndex, gauntletData)) {
         ret->autorelease();
         return ret;
     }
@@ -236,10 +237,11 @@ GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const st
     return nullptr;
 }
 
-bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex) {
+bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData) {
     m_gauntletTitle = title;
     m_backgroundColor = color;
     m_gauntletIndex = gauntletIndex;
+    m_gauntletData = gauntletData;
     if (!CCLayer::init()) {
         return false;
     }
@@ -285,6 +287,19 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
     this->addChildAtPosition(titleShadow, Anchor::Top, {4, -24}, false);
     this->addChildAtPosition(titleLabel, Anchor::Top, {0, -20}, false);
+
+    auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+    if (infoIconSpr) {
+        auto infoBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLevelsLayer::onGauntletInfo));
+        auto bottomRightMenu = CCMenu::create(infoBtn, nullptr);
+        if (bottomRightMenu) {
+            bottomRightMenu->setPosition({winSize.width - 30, 70});
+            bottomRightMenu->setContentHeight(100);
+            bottomRightMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+            this->addChild(bottomRightMenu, 2);
+            bottomRightMenu->updateLayout();
+        }
+    }
 
     if (m_levels.empty()) {
         auto emptyLabel = CCLabelBMFont::create("No levels found.", "goldFont.fnt");
@@ -687,6 +702,13 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
 
     button->setEnabled(false);
     glm->getOnlineLevels(searchObj);
+}
+
+void GDXGauntletLevelsLayer::onGauntletInfo(CCObject* sender) {
+    if (!m_gauntletData.isObject()) {
+        return;
+    }
+    GDXGauntletCreditsPopup::create(m_gauntletData)->show();
 }
 
 void GDXGauntletLevelsLayer::update(float dt) {

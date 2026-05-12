@@ -292,6 +292,15 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     nameLabel->limitLabelWidth(200.f, 0.8f, 0.35f);
     cell->addChild(nameLabel);
 
+    if (gauntlet["isFeatured"].asBool().unwrapOr(false)) {
+        auto featuredLabel = CCLabelBMFont::create("Featured", "goldFont.fnt");
+        featuredLabel->setAnchorPoint({0.f, .5f});
+        featuredLabel->setScale(0.35f);
+        featuredLabel->setColor({255, 215, 0});
+        featuredLabel->setPosition({80.f, cell->getContentSize().height - 28.f});
+        cell->addChild(featuredLabel, 2);
+    }
+
     if (!description.empty()) {
         auto descriptionLabel = SimpleTextArea::create(
             description,

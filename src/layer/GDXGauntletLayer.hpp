@@ -41,12 +41,12 @@ private:
     void onManageGauntlets(CCObject* sender);
     void onSyncAccount(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
+    void onToggleRecent(CCObject* sender);
     void onDiscord(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
     void onCompleteGauntlet(CCObject* sender);
     void onGauntletButtonClick(CCObject* sender);
-    void onGauntletInfo(CCObject* sender);
     void fetchGauntlets();
     void fetchUserData();
     void createGauntletPages(const matjson::Value& gauntlets);
@@ -58,6 +58,8 @@ private:
     CCMenu* m_gauntletsMenu = nullptr;
     CCMenuItemSpriteExtra* m_prevPageBtn = nullptr;
     CCMenuItemSpriteExtra* m_nextPageBtn = nullptr;
+    CCMenuItemToggler* m_recentToggle = nullptr;
+    bool m_recentFilter = false;
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
     LoadingSpinner* m_loadingSpinner = nullptr;
     CCCounterLabel* m_levelPointsCounter = nullptr;

@@ -205,15 +205,30 @@ bool GDXAddGauntletPopup::init() {
     m_descriptionInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_descriptionInput, Anchor::Left, {75, 30});
 
-    m_levelInput = TextInput::create(80.f, "Level ID", "chatFont.fnt");
-    m_levelInput->setCommonFilter(CommonFilter::Int);
-    m_levelInput->setLabel("Level ID");
-    m_mainLayer->addChildAtPosition(m_levelInput, Anchor::Left, {65, -20});
+    m_suggestedByInput = TextInput::create(80.f, "Suggested By", "chatFont.fnt");
+    m_suggestedByInput->setLabel("Suggested By");
+    m_suggestedByInput->setCommonFilter(CommonFilter::Int);
+    m_mainLayer->addChildAtPosition(m_suggestedByInput, Anchor::Left, {65, -20});
 
-    m_levelRewardInput = TextInput::create(80.f, "Level Reward", "chatFont.fnt");
+    m_spriteByInput = TextInput::create(80.f, "Sprite By", "chatFont.fnt");
+    m_spriteByInput->setLabel("Sprite By");
+    m_spriteByInput->setCommonFilter(CommonFilter::Int);
+    m_mainLayer->addChildAtPosition(m_spriteByInput, Anchor::Left, {155, -20});
+
+    m_bgIndexInput = TextInput::create(80.f, "Background Index", "chatFont.fnt");
+    m_bgIndexInput->setCommonFilter(CommonFilter::Int);
+    m_bgIndexInput->setString("14");
+    m_mainLayer->addChildAtPosition(m_bgIndexInput, Anchor::TopRight, {-130.f, -23.f}, false);
+
+    m_levelInput = TextInput::create(120.f, "Level ID", "chatFont.fnt");
+    m_levelInput->setCommonFilter(CommonFilter::Int);
+    m_levelInput->setZOrder(2);
+    m_mainLayer->addChildAtPosition(m_levelInput, Anchor::Bottom, {10, 22});
+
+    m_levelRewardInput = TextInput::create(120.f, "Level Reward", "chatFont.fnt");
     m_levelRewardInput->setCommonFilter(CommonFilter::Int);
-    m_levelRewardInput->setLabel("Reward");
-    m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Left, {155, -20});
+    m_levelRewardInput->setZOrder(2);
+    m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 22});
 
     auto colorSpr = CCSprite::create("GJ_squareB_01.png");
     colorSpr->setScale(0.4f);
@@ -233,7 +248,21 @@ bool GDXAddGauntletPopup::init() {
     colorLabel->setScale(0.4);
     colorBtn->addChildAtPosition(colorLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
 
-    auto listSize = CCSizeMake(356.f, 280.f);
+    // featured toggle
+    auto offFeaturedNode = CCSprite::createWithSpriteFrameName("GDX_emptyBox.png"_spr);
+    auto onFeaturedNode = CCSprite::createWithSpriteFrameName("GDX_checkBox.png"_spr);
+    offFeaturedNode->setScale(0.6f);
+    onFeaturedNode->setScale(0.6f);
+    m_featureToggle = CCMenuItemToggler::create(offFeaturedNode, onFeaturedNode, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
+    m_featureToggle->toggle(m_isFeatured);
+    m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
+    auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
+    featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
+    featuredLabel->setAnchorPoint({1.f, 0.5f});
+    featuredLabel->setScale(0.3f);
+    m_featureToggle->addChildAtPosition(featuredLabel, Anchor::Left, {-5.f, 0.f}, false);
+
+    auto listSize = CCSizeMake(356.f, 250.f);
     m_levelList = cue::ListNode::create(listSize);
     m_levelList->setScale(0.8f);
     m_levelList->setCellHeight(50.f);
@@ -243,7 +272,7 @@ bool GDXAddGauntletPopup::init() {
             ->setAxisReverse(true)
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(listSize.height));
-    m_mainLayer->addChildAtPosition(m_levelList, Anchor::Right, {-180.f, -10.f});
+    m_mainLayer->addChildAtPosition(m_levelList, Anchor::Right, {-180.f, 0.f});
     refreshLevelList();
 
     auto addLevelBtn = CCMenuItemSpriteExtra::create(
@@ -276,6 +305,15 @@ void GDXAddGauntletPopup::applyEditMode() {
     this->setTitle("Edit Gauntlet");
     m_nameInput->setString(m_editGauntlet["name"].asString().unwrapOr(""));
     m_descriptionInput->setString(m_editGauntlet["description"].asString().unwrapOr(""));
+    if (m_suggestedByInput) {
+        m_suggestedByInput->setString(numToString(m_editGauntlet["suggestedBy"]["accountId"].asInt().unwrapOr(0)).c_str());
+    }
+    if (m_spriteByInput) {
+        m_spriteByInput->setString(numToString(m_editGauntlet["spriteBy"]["accountId"].asInt().unwrapOr(0)).c_str());
+    }
+    if (m_bgIndexInput) {
+        m_bgIndexInput->setString(numToString(m_editGauntlet["bgIndex"].asInt().unwrapOr(14)).c_str());
+    }
     m_gauntletReward->setString(numToString(m_editGauntlet["reward"].asInt().unwrapOr(0)).c_str());
     m_selectedColor.r = static_cast<GLubyte>(m_editGauntlet["r"].asInt().unwrapOr(255));
     m_selectedColor.g = static_cast<GLubyte>(m_editGauntlet["g"].asInt().unwrapOr(255));
@@ -287,6 +325,10 @@ void GDXAddGauntletPopup::applyEditMode() {
     m_levels.clear();
     m_levelCells.clear();
     m_pendingLevelFetches.clear();
+    m_isFeatured = m_editGauntlet["isFeatured"].asBool().unwrapOr(false);
+    if (m_featureToggle) {
+        m_featureToggle->toggle(m_isFeatured);
+    }
 
     std::string levelIds;
     for (auto i = 0u; i < m_editGauntlet["levelIds"].size(); ++i) {
@@ -383,6 +425,10 @@ void GDXAddGauntletPopup::onPickColor(CCObject* sender) {
         });
         m_colorPopup->show();
     }
+}
+
+void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
+    m_isFeatured = !m_isFeatured;
 }
 
 void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
@@ -643,7 +689,7 @@ void GDXAddGauntletPopup::onMoveLevelDown(CCObject* sender) {
 }
 
 void GDXAddGauntletPopup::onSave(CCObject* sender) {
-    if (!m_owner || !m_nameInput || !m_descriptionInput) {
+    if (!m_owner || !m_nameInput || !m_descriptionInput || !m_suggestedByInput || !m_spriteByInput || !m_bgIndexInput) {
         return;
     }
 
@@ -683,6 +729,10 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     body["r"] = color.r;
     body["g"] = color.g;
     body["b"] = color.b;
+    body["isFeatured"] = m_isFeatured;
+    body["suggestedBy"] = numFromString<int>(m_suggestedByInput->getString()).unwrapOr(0);
+    body["spriteBy"] = numFromString<int>(m_spriteByInput->getString()).unwrapOr(0);
+    body["bgIndex"] = numFromString<int>(m_bgIndexInput->getString()).unwrapOr(14);
     if (m_editMode) {
         body["index"] = m_editIndex;
     }

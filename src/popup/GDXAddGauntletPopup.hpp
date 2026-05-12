@@ -37,6 +37,7 @@ private:
     void onDeleteLevel(CCObject* sender);
     void onMoveLevelUp(CCObject* sender);
     void onMoveLevelDown(CCObject* sender);
+    void onToggleFeatured(CCObject* sender);
     void refreshLevelList();
     void applyEditMode();
     void loadNextPendingLevel();
@@ -55,12 +56,17 @@ private:
     geode::TextInput* m_nameInput = nullptr;
     geode::TextInput* m_gauntletReward = nullptr;
     geode::TextInput* m_descriptionInput = nullptr;
+    geode::TextInput* m_suggestedByInput = nullptr;
+    geode::TextInput* m_spriteByInput = nullptr;
+    geode::TextInput* m_bgIndexInput = nullptr;
     geode::TextInput* m_levelInput = nullptr;
     geode::TextInput* m_levelRewardInput = nullptr;
     cue::ListNode* m_levelList = nullptr;
     cocos2d::ccColor3B m_selectedColor = {255, 255, 255};
     cocos2d::CCSprite* m_colorSpr = nullptr;
     geode::ColorPickPopup* m_colorPopup = nullptr;
+    CCMenuItemToggler* m_featureToggle = nullptr;
+    bool m_isFeatured = false;
     std::vector<LevelRewardEntry> m_levels;
     std::vector<LevelCell*> m_levelCells;
     std::vector<PendingLevelFetch> m_pendingLevelFetches;

@@ -14,20 +14,22 @@ struct GDXGauntletLevelEntry {
 
 class GDXGauntletLevelsLayer : public CCLayer {
 public:
-    static GDXGauntletLevelsLayer* create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex);
+    static GDXGauntletLevelsLayer* create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData);
 
 private:
-    bool init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex);
+    bool init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData);
     void onEnter() override;
     void keyBackClicked() override;
     void update(float dt) override;
     void onLevelClicked(CCObject* sender);
+    void onGauntletInfo(CCObject* sender);
     void refreshCompletionIcons();
 
     std::vector<GDXGauntletLevelEntry> m_levels;
     std::string m_gauntletTitle;
     cocos2d::ccColor3B m_backgroundColor;
     int m_gauntletIndex = -1;
+    matjson::Value m_gauntletData;
 
     CCMenu* m_levelsMenu = nullptr;
     LoadingSpinner* m_pendingSpinner = nullptr;
