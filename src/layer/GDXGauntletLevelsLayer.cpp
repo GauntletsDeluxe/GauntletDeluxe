@@ -119,6 +119,11 @@ static int getIntFromDict(CCDictionary* dict, const char* key) {
     return value ? value->getValue() : 0;
 }
 
+static std::string formatBackgroundName(int bgIndex) {
+    int index = std::clamp(bgIndex, 1, 59);
+    return fmt::format("game_bg_{:02d}_001.png", index);
+}
+
 static LazySprite* createLazySpriteWithFallback(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
     auto sprite = LazySprite::create(size, false);
     if (!sprite) {
@@ -267,7 +272,9 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
     addBackButton(this, BackButtonStyle::Green);
 
-    auto bg = cue::RepeatingBackground::create("game_bg_14_001.png", 1.0f, cue::RepeatMode::X, CCDirector::sharedDirector()->getWinSize());
+    auto bgIndex = m_gauntletData.isObject() ? m_gauntletData["bgIndex"].asInt().unwrapOr(14) : 14;
+    auto bgName = formatBackgroundName(bgIndex);
+    auto bg = cue::RepeatingBackground::create(bgName.c_str(), 1.0f, cue::RepeatMode::X, CCDirector::sharedDirector()->getWinSize());
     bg->setColor({static_cast<GLubyte>(m_backgroundColor.r), static_cast<GLubyte>(m_backgroundColor.g), static_cast<GLubyte>(m_backgroundColor.b)});
     bg->setSpeed(0.0f);
     this->addChild(bg, -5);

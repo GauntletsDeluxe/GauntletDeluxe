@@ -217,6 +217,7 @@ bool GDXAddGauntletPopup::init() {
 
     m_bgIndexInput = TextInput::create(80.f, "Background Index", "chatFont.fnt");
     m_bgIndexInput->setCommonFilter(CommonFilter::Int);
+    m_bgIndexInput->setZOrder(2);
     m_bgIndexInput->setString("14");
     m_mainLayer->addChildAtPosition(m_bgIndexInput, Anchor::TopRight, {-130.f, -23.f}, false);
 
