@@ -2,6 +2,7 @@
 #include "GDXGauntletLevelsLayer.hpp"
 #include "GDXLeaderboardLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
+#include "../popup/GDXTagsFiltersPopup.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <algorithm>
@@ -493,12 +494,15 @@ bool GDXGauntletLayer::init() {
         CircleBaseSize::Small);
     m_searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GDXGauntletLayer::onSearchGauntlets));
 
+    auto tagFilterSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_searchTags.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_tagFilterBtn = CCMenuItemSpriteExtra::create(tagFilterSpr, this, menu_selector(GDXGauntletLayer::onFilterByTag));
+
     // top left menu
-    auto topLeftMenu = CCMenu::create(m_searchBtn, nullptr);
+    auto topLeftMenu = CCMenu::create(m_searchBtn, m_tagFilterBtn, nullptr);
     topLeftMenu->setPosition({10, winSize.height - 50});
-    topLeftMenu->setContentHeight(100);
+    topLeftMenu->setContentHeight(70);
     topLeftMenu->setAnchorPoint({0.f, 1.f});
-    topLeftMenu->setLayout(RowLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true));
+    topLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::End)->setAxisReverse(true));
     this->addChild(topLeftMenu, 2);
 
     // info button
@@ -944,6 +948,30 @@ void GDXGauntletLayer::setTextPopupClosed(SetTextPopup* popup, gd::string text) 
     fetchGauntlets();
 }
 
+void GDXGauntletLayer::onFilterByTag(CCObject* sender) {
+    auto popup = GDXTagsFiltersPopup::create(
+        [self = geode::Ref<GDXGauntletLayer>(this)](std::string const& tag) {
+            if (self) {
+                self->applyTagFilter(tag);
+            }
+        },
+        m_tagFilter);
+    if (popup) {
+        popup->show();
+    }
+}
+
+void GDXGauntletLayer::applyTagFilter(std::string const& tag) {
+    if (tag == m_tagFilter) {
+        return;
+    }
+    m_tagFilter = tag;
+    updateSearchButtonState();
+    m_gauntlets = matjson::Value::array();
+    createGauntletPages(m_gauntlets);
+    fetchGauntlets();
+}
+
 void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     m_localMode = !m_localMode;
     m_searchQuery.clear();
@@ -1073,8 +1101,13 @@ void GDXGauntletLayer::fetchGauntlets() {
 
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
     bool hasQuery = false;
+    if (!m_tagFilter.empty()) {
+        url += "?tag=" + m_tagFilter;
+        hasQuery = true;
+    }
     if (m_recentFilter) {
-        url += "?recent=true";
+        url += hasQuery ? "&" : "?";
+        url += "recent=true";
         hasQuery = true;
     }
     if (!m_searchQuery.empty()) {
@@ -1109,6 +1142,9 @@ void GDXGauntletLayer::fetchGauntlets() {
         co_await geode::async::waitForMainThread([self, gauntlets = std::move(gauntlets)]() mutable {
             if (self->m_loadingSpinner) {
                 self->m_loadingSpinner->setVisible(false);
+            }
+            if (gauntlets.isArray() && gauntlets.size() == 0) {
+                Notification::create("No gauntlets were found.", NotificationIcon::Info)->show();
             }
             self->m_onlineGauntlets = gauntlets;
             self->createGauntletPages(self->m_onlineGauntlets, false);
@@ -1844,21 +1880,34 @@ void GDXGauntletLayer::updateLocalToggleState() {
     if (m_gauntletPointsCounter) {
         m_gauntletPointsCounter->setVisible(!m_localMode);
     }
+    if (m_tagFilterBtn) {
+        m_tagFilterBtn->setVisible(!m_localMode);
+    }
 }
 
 void GDXGauntletLayer::updateSearchButtonState() {
-    if (!m_searchBtn) {
-        return;
+    if (m_searchBtn) {
+        auto sprite = CircleButtonSprite::createWithSpriteFrameName(
+            "GDX_searchIcon.png"_spr,
+            1.f,
+            m_searchQuery.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
+            CircleBaseSize::Small);
+        if (sprite) {
+            m_searchBtn->setSprite(sprite);
+            m_searchBtn->updateSprite();
+        }
     }
 
-    auto sprite = CircleButtonSprite::createWithSpriteFrameName(
-        "GDX_searchIcon.png"_spr,
-        1.f,
-        m_searchQuery.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
-        CircleBaseSize::Small);
-    if (sprite) {
-        m_searchBtn->setSprite(sprite);
-        m_searchBtn->updateSprite();
+    if (m_tagFilterBtn) {
+        auto tagSprite = CircleButtonSprite::createWithSpriteFrameName(
+            "GDX_searchTags.png"_spr,
+            1.f,
+            m_tagFilter.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
+            CircleBaseSize::Small);
+        if (tagSprite) {
+            m_tagFilterBtn->setSprite(tagSprite);
+            m_tagFilterBtn->updateSprite();
+        }
     }
 }
 

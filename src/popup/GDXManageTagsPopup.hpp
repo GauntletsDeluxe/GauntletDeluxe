@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
+#include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/TextInput.hpp>
@@ -34,6 +35,7 @@ private:
     matjson::Value m_tags;
     matjson::Value m_allTags;
     std::string m_searchFilter;
+    geode::LoadingSpinner* m_loadingSpinner = nullptr;
     geode::async::TaskHolder<> m_fetchTagsTask;
     geode::async::TaskHolder<> m_deleteTagTask;
 };

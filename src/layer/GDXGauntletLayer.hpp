@@ -58,6 +58,8 @@ private:
     void updateSearchButtonState();
     void onEnter() override;
     void onSearchGauntlets(CCObject* sender);
+    void onFilterByTag(CCObject* sender);
+    void applyTagFilter(std::string const& tag);
     void setTextPopupClosed(SetTextPopup* popup, gd::string text) override;
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local = false);
@@ -74,11 +76,13 @@ private:
     CCMenuItemSpriteExtra* m_leaderboardBtn = nullptr;
     CCMenuItemSpriteExtra* m_discordBtn = nullptr;
     CCMenuItemSpriteExtra* m_syncBtn = nullptr;
+    CCMenuItemSpriteExtra* m_tagFilterBtn = nullptr;
     CCMenuItemSpriteExtra* m_searchBtn = nullptr;
     CCMenuItemSpriteExtra* m_recentToggle = nullptr;
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
     bool m_recentFilter = false;
     bool m_localMode = false;
+    std::string m_tagFilter;
     matjson::Value m_onlineGauntlets;
     matjson::Value m_localGauntlets;
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;

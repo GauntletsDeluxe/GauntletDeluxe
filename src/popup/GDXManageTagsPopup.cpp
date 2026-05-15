@@ -71,6 +71,14 @@ bool GDXManageTagsPopup::init() {
     }
 
     bottomMenu->updateLayout();
+
+    m_loadingSpinner = LoadingSpinner::create(60.f);
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setAnchorPoint({0.5f, 0.5f});
+        m_mainLayer->addChildAtPosition(m_loadingSpinner, Anchor::Center, {0.f, 0.f});
+        m_loadingSpinner->setVisible(false);
+    }
+
     refreshListItems();
     fetchTags();
     scheduleUpdate();
@@ -119,15 +127,12 @@ void GDXManageTagsPopup::refreshListItems() {
     }
 
     clearListContent();
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setVisible(true);
+    }
+
     auto cell = CCLayer::create();
     cell->setContentSize(m_list->getListSize());
-
-    auto spinner = LoadingSpinner::create(60.f);
-    if (spinner) {
-        spinner->setAnchorPoint({0.5f, 0.5f});
-        spinner->setPosition({cell->getContentSize().width / 2.f, cell->getContentSize().height / 2.f});
-        cell->addChild(spinner);
-    }
 
     m_list->addCell(cell);
     if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
@@ -137,20 +142,37 @@ void GDXManageTagsPopup::refreshListItems() {
 }
 
 void GDXManageTagsPopup::fetchTags() {
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setVisible(true);
+    }
+
     auto url = std::string(gdx::baseApiUrl()) + "/getTags";
     m_fetchTagsTask.spawn([this, url = std::move(url)]() -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest().get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
+            co_await geode::async::waitForMainThread([this] {
+                if (m_loadingSpinner) {
+                    m_loadingSpinner->setVisible(false);
+                }
+            });
             co_return;
         }
 
         auto jsonResult = response.json();
         if (!jsonResult) {
+            co_await geode::async::waitForMainThread([this] {
+                if (m_loadingSpinner) {
+                    m_loadingSpinner->setVisible(false);
+                }
+            });
             co_return;
         }
 
         auto tags = std::move(jsonResult).unwrap();
         co_await geode::async::waitForMainThread([this, tags = std::move(tags)]() mutable {
+            if (m_loadingSpinner) {
+                m_loadingSpinner->setVisible(false);
+            }
             createTagList(tags);
         });
         co_return; }, []() {});
@@ -286,7 +308,6 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
     auto descriptionLabel = CCLabelBMFont::create(description.c_str(), "chatFont.fnt");
     if (descriptionLabel) {
         descriptionLabel->setPosition({60.f, 45.f});
-        descriptionLabel->setScale(0.4f);
         descriptionLabel->limitLabelWidth(260.f, 0.5f, 0.3f);
 
         auto descriptionBg = NineSlice::create("square02_small.png");
