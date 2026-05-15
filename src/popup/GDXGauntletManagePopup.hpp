@@ -20,6 +20,8 @@ private:
     void onManageAssets(CCObject* sender);
     void onUserPanel(CCObject* sender);
     void onAdd(CCObject* sender);
+    void onShowTags(CCObject* sender);
+    void onManageTags(CCObject* sender);
     void onDelete(CCObject* sender);
     void onEdit(CCObject* sender);
     void refreshListItems();

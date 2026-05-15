@@ -1,5 +1,6 @@
 #include "GDXGauntletManagePopup.hpp"
 #include "GDXAddGauntletPopup.hpp"
+#include "GDXManageTagsPopup.hpp"
 #include "../include/GDXConstant.hpp"
 #include <asp/fs.hpp>
 #include "GDXUserPanelPopup.hpp"
@@ -8,6 +9,7 @@
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/MultilineBitmapFont.hpp>
+#include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/utils/web.hpp>
@@ -113,7 +115,7 @@ GDXGauntletManagePopup* GDXGauntletManagePopup::create(bool localMode) {
 }
 
 bool GDXGauntletManagePopup::init() {
-    if (!Popup::init(480.f, 290.f)) {
+    if (!Popup::init(530.f, 280.f)) {
         return false;
     }
 
@@ -121,7 +123,7 @@ bool GDXGauntletManagePopup::init() {
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
     addSideArt(m_mainLayer, SideArt::TopRight, SideArtStyle::PopupGold, false);
 
-    auto listSize = CCSizeMake(356.f, 150.f);
+    auto listSize = CCSizeMake(356.f, 190.f);
     m_list = cue::ListNode::create(listSize);
     m_list->getScrollLayer()->m_contentLayer->setLayout(
         ColumnLayout::create()
@@ -129,56 +131,62 @@ bool GDXGauntletManagePopup::init() {
             ->setAxisReverse(true)
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
-    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, -40.f});
+    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {60.f, -30.f});
     m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
 
     m_searchInput = geode::TextInput::create(320.f, "Search gauntlets", "chatFont.fnt");
     if (m_searchInput) {
         m_searchInput->setAnchorPoint({0.5f, 1.f});
-        m_mainLayer->addChildAtPosition(m_searchInput, Anchor::Top, {0.f, -30.f});
+        m_mainLayer->addChildAtPosition(m_searchInput, Anchor::Top, {60.f, -35.f});
     }
 
     this->scheduleUpdate();
 
-    CCMenu* bottomMenu = CCMenu::create();
-    bottomMenu->setLayout(RowLayout::create()->setGap(10.f)->setAxisAlignment(AxisAlignment::Center));
-    bottomMenu->setContentWidth(m_mainLayer->getContentWidth() - 10.f);
-    m_mainLayer->addChildAtPosition(bottomMenu, Anchor::Bottom, {0.f, 25.f}, false);
+    CCMenu* actionMenu = CCMenu::create();
+    actionMenu->setLayout(ColumnLayout::create()->setGap(10.f)->setAxisAlignment(AxisAlignment::Center)->setAxisReverse(true));
+    actionMenu->setContentSize({120.f, m_mainLayer->getContentSize().height - 10.f});
+    m_mainLayer->addChildAtPosition(actionMenu, Anchor::Left, {75.f, 0}, false);
 
     if (m_localMode) {
         auto addBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Add Local Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
+            ButtonSprite::create("Add Local Gauntlet", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onAdd));
-        bottomMenu->addChild(addBtn);
+        actionMenu->addChild(addBtn);
     } else {
         // manager only
         if (gdx::isManager()) {
             auto addBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("Add Gauntlet", "goldFont.fnt", "GJ_button_01.png"),
+                ButtonSprite::create("Add Gauntlet", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onAdd));
-            bottomMenu->addChild(addBtn);
+            actionMenu->addChild(addBtn);
         }
 
         // manager and contributor
         if (gdx::isManager() || gdx::isContributor()) {
+            auto showTagsBtn = CCMenuItemSpriteExtra::create(
+                ButtonSprite::create("View Tags", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+                this,
+                menu_selector(GDXGauntletManagePopup::onShowTags));
+            actionMenu->addChild(showTagsBtn);
+
             auto openManageBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("Asset Manager", "goldFont.fnt", "GJ_button_05.png"),
+                ButtonSprite::create("Asset Manager", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onManageAssets));
-            bottomMenu->addChild(openManageBtn);
+            actionMenu->addChild(openManageBtn);
 
             auto userBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("User Panel", "goldFont.fnt", "GJ_button_05.png"),
+                ButtonSprite::create("User Panel", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onUserPanel));
-            bottomMenu->addChild(userBtn);
+            actionMenu->addChild(userBtn);
         }
     }
 
-    bottomMenu->updateLayout();
+    actionMenu->updateLayout();
 
     refreshListItems();
     fetchGauntlets();
@@ -208,8 +216,31 @@ void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
         co_return; }, []() {});
 }
 
+void GDXGauntletManagePopup::onManageTags(CCObject* sender) {
+    auto accountData = argon::getGameAccountData();
+    m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            co_return;
+        }
+
+        auto url = fmt::format(
+            "{}/gauntletTagsManage?accountId={}&argonToken={}",
+            std::string(gdx::baseApiUrl()),
+            accountData.accountId,
+            token);
+        co_await geode::async::waitForMainThread([url = std::move(url)]() {
+            utils::web::openLinkInBrowser(url);
+        });
+        co_return; }, []() {});
+}
+
 void GDXGauntletManagePopup::onAdd(CCObject* sender) {
     GDXAddGauntletPopup::create(this, m_localMode)->show();
+}
+
+void GDXGauntletManagePopup::onShowTags(CCObject* sender) {
+    GDXManageTagsPopup::create()->show();
 }
 
 void GDXGauntletManagePopup::refreshList() {
@@ -323,6 +354,9 @@ void GDXGauntletManagePopup::rebuildGauntletList() {
         if (cell) {
             m_list->addCell(cell);
         }
+    }
+    if (m_emptyLabel) {
+        m_emptyLabel->setVisible(false);
     }
     m_list->getScrollLayer()->m_contentLayer->updateLayout();
     m_list->scrollToTop();

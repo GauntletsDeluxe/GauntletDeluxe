@@ -45,6 +45,7 @@ private:
     void onMoveLevelDown(CCObject* sender);
     void onToggleFeatured(CCObject* sender);
     void onAddSprite(CCObject* sender);
+    void updateLocalSpriteNameLabel();
     void refreshLevelList();
     void applyEditMode();
     void updateBgIcon();
@@ -87,6 +88,7 @@ private:
     bool m_localMode = false;
     matjson::Value m_editGauntlet;
     std::string m_spritePath;
+    cocos2d::CCLabelBMFont* m_spriteNameLabel = nullptr;
     cocos2d::CCMenu* m_settingsMenu = nullptr;
     geode::async::TaskHolder<> m_addGauntletTask;
     geode::async::TaskHolder<> m_addSpriteTask;

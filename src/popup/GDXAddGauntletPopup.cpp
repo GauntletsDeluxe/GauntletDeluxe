@@ -255,7 +255,7 @@ bool GDXAddGauntletPopup::init() {
 
     this->setTitle(m_localMode ? "Add Local Gauntlet" : "Add New Gauntlet");
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
-    addSideArt(m_mainLayer, SideArt::BottomLeft, SideArtStyle::PopupGold, false);
+    addSideArt(m_mainLayer, SideArt::BottomRight, SideArtStyle::PopupGold, false);
 
     m_nameInput = TextInput::create(80.f, "Gauntlet Name", "chatFont.fnt");
     m_nameInput->setLabel("Gauntlet Name");
@@ -299,10 +299,15 @@ bool GDXAddGauntletPopup::init() {
         m_buttonMenu->addChildAtPosition(bgBtn, Anchor::BottomLeft, {25, 25}, false);
     }
 
-    m_levelInput = TextInput::create(120.f, "Level ID", "chatFont.fnt");
+    auto bgLabel = CCLabelBMFont::create("BG", "goldFont.fnt");
+    bgLabel->setScale(0.4);
+    m_bgIndexButton->addChildAtPosition(bgLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
+
+    m_levelInput = TextInput::create(static_cast<float>(m_localMode ? 80.f : 120.f), m_localMode ? "Enter a Level ID to add" : "Level ID", "chatFont.fnt");
     m_levelInput->setCommonFilter(CommonFilter::Int);
     m_levelInput->setZOrder(2);
-    m_mainLayer->addChildAtPosition(m_levelInput, Anchor::Bottom, {10, 22});
+    if (m_localMode) m_levelInput->setLabel("Level ID");
+    m_mainLayer->addChildAtPosition(m_levelInput, m_localMode ? Anchor::Left : Anchor::Bottom, {static_cast<float>(m_localMode ? 155 : 10), static_cast<float>(m_localMode ? 80 : 22)}, false);
 
     if (!m_localMode) {
         m_levelRewardInput = TextInput::create(120.f, "Level Reward", "chatFont.fnt");
@@ -330,17 +335,19 @@ bool GDXAddGauntletPopup::init() {
     colorBtn->addChildAtPosition(colorLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
 
     // featured toggle
-    auto featureSprite = CCSprite::createWithSpriteFrameName(m_isFeatured ? "GDX_checkBox.png"_spr : "GDX_emptyBox.png"_spr);
-    if (featureSprite) {
-        featureSprite->setScale(0.6f);
+    if (!m_localMode) {
+        auto featureSprite = CCSprite::createWithSpriteFrameName(m_isFeatured ? "GDX_checkBox.png"_spr : "GDX_emptyBox.png"_spr);
+        if (featureSprite) {
+            featureSprite->setScale(0.6f);
+        }
+        m_featureToggle = CCMenuItemSpriteExtra::create(featureSprite, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
+        m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
+        auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
+        featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
+        featuredLabel->setAnchorPoint({1.f, 0.5f});
+        featuredLabel->setScale(0.3f);
+        m_featureToggle->addChildAtPosition(featuredLabel, Anchor::Left, {-5.f, 0.f}, false);
     }
-    m_featureToggle = CCMenuItemSpriteExtra::create(featureSprite, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
-    m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
-    auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
-    featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
-    featuredLabel->setAnchorPoint({1.f, 0.5f});
-    featuredLabel->setScale(0.3f);
-    m_featureToggle->addChildAtPosition(featuredLabel, Anchor::Left, {-5.f, 0.f}, false);
 
     auto listSize = CCSizeMake(356.f, 250.f);
     m_levelList = cue::ListNode::create(listSize);
@@ -373,6 +380,15 @@ bool GDXAddGauntletPopup::init() {
             menu_selector(GDXAddGauntletPopup::onAddSprite));
         if (addSpriteBtn) {
             m_settingsMenu->addChild(addSpriteBtn);
+        }
+
+        m_spriteNameLabel = CCLabelBMFont::create("Sprite: none", "bigFont.fnt");
+        if (m_spriteNameLabel) {
+            m_spriteNameLabel->limitLabelWidth(100.f, 0.5f, 0.4f);
+            m_spriteNameLabel->setAlignment(kCCTextAlignmentCenter);
+            m_spriteNameLabel->setAnchorPoint({0.5f, 0.5f});
+            m_spriteNameLabel->setPosition({0.f, -20.f});
+            m_mainLayer->addChildAtPosition(m_spriteNameLabel, Anchor::BottomRight, {-180.f, 22.f}, false);
         }
     }
 
@@ -412,6 +428,9 @@ void GDXAddGauntletPopup::applyEditMode() {
     m_selectedColor.b = static_cast<GLubyte>(m_editGauntlet["b"].asInt().unwrapOr(255));
     if (m_colorSpr) {
         m_colorSpr->setColor(m_selectedColor);
+    }
+    if (m_localMode) {
+        updateLocalSpriteNameLabel();
     }
 
     m_levels.clear();
@@ -531,6 +550,19 @@ void GDXAddGauntletPopup::onPickColor(CCObject* sender) {
     }
 }
 
+void GDXAddGauntletPopup::updateLocalSpriteNameLabel() {
+    if (!m_spriteNameLabel) {
+        return;
+    }
+
+    auto spriteName = std::string("none");
+    if (!m_spritePath.empty()) {
+        auto pos = m_spritePath.find_last_of("/\\");
+        spriteName = pos == std::string::npos ? m_spritePath : m_spritePath.substr(pos + 1);
+    }
+    m_spriteNameLabel->setString(fmt::format("Sprite: {}", spriteName).c_str());
+}
+
 void GDXAddGauntletPopup::onPickBackground(CCObject* sender) {
     auto layer = SelectArtLayer::create(SelectArtType::Background, m_bgIndex);
     if (!layer) {
@@ -581,6 +613,9 @@ void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
             std::move(options));
 
         if (!result) {
+            co_await geode::async::waitForMainThread([]() {
+                Notification::create("Sprite selection failed.", NotificationIcon::Error)->show();
+            });
             co_return;
         }
 
@@ -591,15 +626,21 @@ void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
 
         auto path = std::move(maybeThisIsThePath).value();
         if (path.empty()) {
+            co_await geode::async::waitForMainThread([]() {
+                Notification::create("Sprite selection failed.", NotificationIcon::Error)->show();
+            });
             co_return;
         }
 
         auto pathString = geode::utils::string::pathToString(path);
         co_await geode::async::waitForMainThread([self, pathString = std::move(pathString)]() {
             self->m_spritePath = std::move(pathString);
+            if (self) {
+                self->updateLocalSpriteNameLabel();
+            }
+            Notification::create("Sprite selected successfully.", NotificationIcon::Success)->show();
         });
-        co_return;
-    }, []() {});
+        co_return; }, []() {});
 }
 
 void GDXAddGauntletPopup::updateFeatureToggleState() {
