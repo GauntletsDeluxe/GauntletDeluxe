@@ -232,9 +232,9 @@ static CCSprite* createRemoteSprite(CCNode* parent, const std::string& url, cons
     return createLazySpriteWithFallback(parent, url, position, size, zOrder);
 }
 
-GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData) {
+GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData, bool localMode) {
     auto ret = new GDXGauntletLevelsLayer();
-    if (ret && ret->init(levels, title, color, gauntletIndex, gauntletData)) {
+    if (ret && ret->init(levels, title, color, gauntletIndex, gauntletData, localMode)) {
         ret->autorelease();
         return ret;
     }
@@ -242,8 +242,9 @@ GDXGauntletLevelsLayer* GDXGauntletLevelsLayer::create(CCArray* levels, const st
     return nullptr;
 }
 
-bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData) {
+bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData, bool localMode) {
     m_gauntletTitle = title;
+    m_localMode = localMode;
     m_backgroundColor = color;
     m_gauntletIndex = gauntletIndex;
     m_gauntletData = gauntletData;
@@ -349,7 +350,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
         const CCSize iconSize = {70.f, 90.f};
         const CCPoint iconCenter = {iconSize.width / 2.f, iconSize.height / 2.f};
-        auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(m_gauntletIndex) + ".png?v2=true";
+        auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(m_gauntletIndex) + ".png?v2=true";
 
         auto imageTarget = imageContainer ? imageContainer : rowNode;
         auto imagePosition = imageContainer
@@ -430,7 +431,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         auto rewardNode = CCNode::create();
         rewardNode->setID("gauntlet-reward-node");
         rewardNode->setPosition({labelCenterX, containerCenter.y - containerSize.height / 2.f - 10.f});
-        rewardNode->setVisible(isUnlocked);
+        rewardNode->setVisible(!m_localMode && isUnlocked);
         rowNode->addChild(rewardNode, 2);
 
         auto rewardLabel = CCLabelBMFont::create((numToString(entry.reward)).c_str(), "bigFont.fnt");
@@ -625,7 +626,7 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
             creatorLabelShadow->setVisible(isUnlocked);
         }
         if (auto rewardNode = findChildByIDRecursive(button, "gauntlet-reward-node")) {
-            rewardNode->setVisible(isUnlocked);
+            rewardNode->setVisible(!m_localMode && isUnlocked);
         }
 
         // Find existing completed icon
@@ -681,7 +682,11 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
     if (stored && stored->count() > 0) {
         auto level = static_cast<GJGameLevel*>(stored->objectAtIndex(0));
         if (level && level->m_levelID == entry.levelId) {
-            gdx::setPlayingGauntletLevel(true);
+            if (m_localMode) {
+                gdx::setLocalPlayingGauntletLevel(true);
+            } else {
+                gdx::setPlayingGauntletLevel(true);
+            }
             auto scene = LevelInfoLayer::scene(level, false);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
             return;
@@ -732,7 +737,11 @@ void GDXGauntletLevelsLayer::update(float dt) {
     if (stored && stored->count() > 0) {
         auto level = static_cast<GJGameLevel*>(stored->objectAtIndex(0));
         if (level && level->m_levelID == m_pendingLevelId) {
-            gdx::setPlayingGauntletLevel(true);
+            if (m_localMode) {
+                gdx::setLocalPlayingGauntletLevel(true);
+            } else {
+                gdx::setPlayingGauntletLevel(true);
+            }
             auto scene = LevelInfoLayer::scene(level, false);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 
@@ -785,3 +794,4 @@ void GDXGauntletLevelsLayer::update(float dt) {
 void GDXGauntletLevelsLayer::keyBackClicked() {
     CCDirector::sharedDirector()->popSceneWithTransition(0.5f, PopTransition::kPopTransitionFade);
 }
+

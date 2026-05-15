@@ -139,7 +139,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     }
     m_list->clear();
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/getLeaderboard";
+    auto url = std::string(gdx::baseApiUrl()) + "/getLeaderboard";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["argonToken"] = "";
@@ -293,3 +293,4 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
         co_return;
     }, []() {});
 }
+

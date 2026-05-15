@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include "../include/GDXConstant.hpp"
+#include <Geode/Geode.hpp>
+#include <asp/fs.hpp>
 #include <arc/runtime/Runtime.hpp>
 #include <argon/argon.hpp>
 #include <cue/ListNode.hpp>
@@ -13,6 +15,59 @@
 
 using namespace geode;
 using namespace geode::prelude;
+
+namespace {
+    static asp::fs::path getLocalGauntletPath() {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
+        }
+        return dir / "local_gauntlets.json";
+    }
+
+    static matjson::Value loadLocalGauntlets() {
+        auto path = getLocalGauntletPath();
+        if (!asp::fs::isFile(path).unwrapOr(false)) {
+            return matjson::Value::array();
+        }
+
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read local gauntlet file: {}", content.unwrapErr());
+            return matjson::Value::array();
+        }
+
+        auto jsonResult = matjson::parse(content.unwrap());
+        if (!jsonResult) {
+            log::warn("Failed to parse local gauntlet JSON: {}", jsonResult.unwrapErr());
+            return matjson::Value::array();
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (data.isObject() && data["gauntlets"].isArray()) {
+            return data["gauntlets"];
+        }
+        if (data.isArray()) {
+            return data;
+        }
+        return matjson::Value::array();
+    }
+
+    static bool saveLocalGauntlets(matjson::Value const& gauntlets) {
+        auto path = getLocalGauntletPath();
+        matjson::Value data = matjson::Value::array();
+        if (gauntlets.isArray()) {
+            for (auto const& item : gauntlets) {
+                data.push(item);
+            }
+        }
+        auto result = asp::fs::write(path, data.dump().c_str(), data.dump().size());
+        if (!result) {
+            log::warn("Failed to save local gauntlets: {}", result.unwrapErr());
+        }
+        return static_cast<bool>(result);
+    }
+}
 
 static std::string getBgIconSpriteName(int index) {
     int bgIndex = std::clamp(index, 1, 59);
@@ -78,23 +133,25 @@ void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
     }
 
     if (cell->m_backgroundLayer) {
-        auto rewardInput = TextInput::create(60.f, numToString(reward).c_str(), "bigFont.fnt");
-        if (rewardInput) {
-            rewardInput->setCommonFilter(CommonFilter::Int);
-            rewardInput->setString(numToString(reward).c_str());
-            rewardInput->setAnchorPoint({1.f, 0.5f});
-            rewardInput->setScale(0.55f);
-            rewardInput->setPosition({cell->m_backgroundLayer->getContentSize().width - 30.f, 10.f});
-            rewardInput->setID("level-reward-input");
-            cell->m_mainLayer->addChild(rewardInput, 3);
-        }
+        if (!m_localMode) {
+            auto rewardInput = TextInput::create(60.f, numToString(reward).c_str(), "bigFont.fnt");
+            if (rewardInput) {
+                rewardInput->setCommonFilter(CommonFilter::Int);
+                rewardInput->setString(numToString(reward).c_str());
+                rewardInput->setAnchorPoint({1.f, 0.5f});
+                rewardInput->setScale(0.55f);
+                rewardInput->setPosition({cell->m_backgroundLayer->getContentSize().width - 30.f, 10.f});
+                rewardInput->setID("level-reward-input");
+                cell->m_mainLayer->addChild(rewardInput, 3);
+            }
 
-        auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
-        if (rewardIcon) {
-            rewardIcon->setScale(0.2f);
-            rewardIcon->setAnchorPoint({0.f, 0.5f});
-            rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
-            cell->m_mainLayer->addChild(rewardIcon);
+            auto rewardIcon = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
+            if (rewardIcon) {
+                rewardIcon->setScale(0.2f);
+                rewardIcon->setAnchorPoint({0.f, 0.5f});
+                rewardIcon->setPosition({cell->m_backgroundLayer->getContentSize().width - 25.f, 10.f});
+                cell->m_mainLayer->addChild(rewardIcon);
+            }
         }
     }
 
@@ -162,9 +219,10 @@ void GDXAddGauntletPopup::refreshLevelList() {
     m_levelList->updateLayout(true);
 }
 
-GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner) {
+GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner, bool localMode) {
     auto ret = new GDXAddGauntletPopup();
     ret->m_owner = owner;
+    ret->m_localMode = localMode;
     if (ret && ret->init()) {
         ret->autorelease();
         return ret;
@@ -173,11 +231,12 @@ GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner) 
     return nullptr;
 }
 
-GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index) {
+GDXAddGauntletPopup* GDXAddGauntletPopup::create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index, bool localMode) {
     auto ret = new GDXAddGauntletPopup();
     ret->m_owner = owner;
     ret->m_editMode = true;
     ret->m_editIndex = index;
+    ret->m_localMode = localMode;
     ret->m_editGauntlet = gauntlet;
     if (ret && ret->init()) {
         ret->applyEditMode();
@@ -193,7 +252,7 @@ bool GDXAddGauntletPopup::init() {
         return false;
     }
 
-    this->setTitle("Add New Gauntlet");
+    this->setTitle(m_localMode ? "Add Local Gauntlet" : "Add New Gauntlet");
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
     addSideArt(m_mainLayer, SideArt::BottomLeft, SideArtStyle::PopupGold, false);
 
@@ -225,13 +284,14 @@ bool GDXAddGauntletPopup::init() {
     m_bgIndex = 14;
     auto bgIcon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
     bgIcon->setAnchorPoint({0.5f, 0.5f});
-    bgIcon->setScale(0.7f);
     auto bgBtn = CCMenuItemSpriteExtra::create(
         bgIcon,
         this,
         menu_selector(GDXAddGauntletPopup::onPickBackground));
     if (bgBtn) {
         bgBtn->setAnchorPoint({0.5f, 0.5f});
+        bgBtn->setScale(0.7f);
+        bgBtn->m_scaleMultiplier = 1.05f;
         m_bgIndexButton = bgBtn;
         m_bgIconSpr = bgIcon;
         m_buttonMenu->addChildAtPosition(bgBtn, Anchor::TopRight, {-100.f, -15.f}, false);
@@ -325,7 +385,7 @@ void GDXAddGauntletPopup::applyEditMode() {
         return;
     }
 
-    this->setTitle("Edit Gauntlet");
+    this->setTitle(m_localMode ? "Edit Local Gauntlet" : "Edit Gauntlet");
     m_nameInput->setString(m_editGauntlet["name"].asString().unwrapOr(""));
     m_descriptionInput->setString(m_editGauntlet["description"].asString().unwrapOr(""));
     if (m_suggestedByInput) {
@@ -473,12 +533,13 @@ void GDXAddGauntletPopup::updateBgIcon() {
     }
 
     auto icon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
-    icon->setScale(0.7f);
+    icon->setAnchorPoint({0.5f, 0.5f});
     if (!icon) {
         return;
     }
     m_bgIconSpr = icon;
     m_bgIndexButton->setNormalImage(icon);
+    m_bgIndexButton->setScale(0.7f);
 }
 
 void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
@@ -773,7 +834,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
     auto levels = m_levels;
     auto color = m_selectedColor;
-    auto url = std::string(gdx::BASE_API_URL) + (m_editMode ? "/editGauntlet" : "/addGauntlet");
+    auto url = std::string(gdx::baseApiUrl()) + (m_editMode ? "/editGauntlet" : "/addGauntlet");
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["argonToken"] = "";
@@ -796,6 +857,38 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         levelObj["levelId"] = entry.levelId;
         levelObj["reward"] = entry.reward;
         body["levels"].push(std::move(levelObj));
+    }
+    body["levelIds"] = body["levels"];
+
+    if (m_localMode) {
+        auto gauntlets = loadLocalGauntlets();
+        if (!gauntlets.isArray()) {
+            gauntlets = matjson::Value::array();
+        }
+
+        if (m_editMode) {
+            if (m_editIndex >= 0 && static_cast<size_t>(m_editIndex) < gauntlets.size()) {
+                gauntlets[m_editIndex] = body;
+            } else {
+                body["index"] = static_cast<int>(gauntlets.size());
+                gauntlets.push(body);
+            }
+        } else {
+            body["index"] = static_cast<int>(gauntlets.size());
+            gauntlets.push(body);
+        }
+
+        if (saveLocalGauntlets(gauntlets)) {
+            if (m_owner) {
+                m_owner->refreshList();
+            }
+            upoup->showSuccessMessage(m_editMode ? "Gauntlet updated successfully!" : "Gauntlet added successfully!");
+            m_unsaved = false;
+            this->onClose(nullptr);
+        } else {
+            upoup->showFailMessage("Failed to save local gauntlet.");
+        }
+        return;
     }
 
     m_addGauntletTask.spawn([this, upoup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
@@ -835,3 +928,4 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
         co_return; }, []() {});
 }
+

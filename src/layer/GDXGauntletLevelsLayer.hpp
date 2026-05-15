@@ -14,10 +14,10 @@ struct GDXGauntletLevelEntry {
 
 class GDXGauntletLevelsLayer : public CCLayer {
 public:
-    static GDXGauntletLevelsLayer* create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData);
+    static GDXGauntletLevelsLayer* create(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData, bool localMode = false);
 
 private:
-    bool init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData);
+    bool init(CCArray* levels, const std::string& title, const cocos2d::ccColor3B& color, int gauntletIndex, const matjson::Value& gauntletData, bool localMode);
     void onEnter() override;
     void keyBackClicked() override;
     void update(float dt) override;
@@ -36,4 +36,5 @@ private:
     std::string m_pendingKey;
     int m_pendingLevelId = -1;
     float m_pendingTimeout = 0.0f;
+    bool m_localMode = false;
 };

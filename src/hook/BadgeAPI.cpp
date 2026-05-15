@@ -21,7 +21,7 @@ class $modify(GDXHookProfilePage, ProfilePage) {
         int targetAccountId = a2 ? a2->m_accountID : 0;
 
         auto accountData = argon::getGameAccountData();
-        auto url = std::string(gdx::BASE_API_URL) + "/getUser";
+        auto url = std::string(gdx::baseApiUrl()) + "/getUser";
         matjson::Value body = matjson::Value::object();
         body["accountId"] = accountData.accountId;
         body["targetAccountId"] = targetAccountId;
@@ -87,7 +87,7 @@ class $modify(GDXHookCommentCell, CommentCell) {
         int targetAccountId = p0 ? p0->m_accountID : 0;
 
         auto accountData = argon::getGameAccountData();
-        auto url = std::string(gdx::BASE_API_URL) + "/getUser";
+        auto url = std::string(gdx::baseApiUrl()) + "/getUser";
         matjson::Value body = matjson::Value::object();
         body["accountId"] = accountData.accountId;
         body["targetAccountId"] = targetAccountId;

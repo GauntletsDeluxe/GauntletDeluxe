@@ -92,6 +92,29 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
     void customSetup() override {
         EndLevelLayer::customSetup();
+        if (gdx::isLocalPlayingGauntletLevel()) {
+            if (m_playLayer->m_level->m_normalPercent >= 100) {
+                log::debug("local gauntlet level {} completed", m_playLayer->m_level->m_levelID);
+                if (this->m_listLayer) {
+                    int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
+                    auto completedLevels = loadCompletedGauntletLevels();
+                    bool hasLevel = false;
+                    for (auto existingLevelId : completedLevels) {
+                        if (existingLevelId == levelId) {
+                            hasLevel = true;
+                            break;
+                        }
+                    }
+                    if (!hasLevel) {
+                        completedLevels.push_back(levelId);
+                        saveCompletedGauntletLevels(completedLevels);
+                    }
+                }
+            }
+            gdx::setLocalPlayingGauntletLevel(false);
+            return;
+        }
+
         if (!gdx::isPlayingGauntletLevel()) {
             log::debug("Not a gauntlet level, skipping completion check");
             return;
@@ -102,7 +125,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             if (this->m_listLayer) {
                 auto accountData = argon::getGameAccountData();
                 int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
-                auto url = std::string(gdx::BASE_API_URL) + "/completeLevel";
+                auto url = std::string(gdx::baseApiUrl()) + "/completeLevel";
                 matjson::Value body = matjson::Value::object();
                 body["accountId"] = accountData.accountId;
                 body["argonToken"] = "";

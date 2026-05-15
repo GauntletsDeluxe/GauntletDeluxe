@@ -10,6 +10,7 @@ class GDXAddGauntletPopup;
 class GDXGauntletManagePopup : public geode::Popup {
 public:
     static GDXGauntletManagePopup* create();
+    static GDXGauntletManagePopup* create(bool localMode);
     void refreshList();
 
 private:
@@ -29,6 +30,7 @@ private:
     geode::Scrollbar* m_scrollbar = nullptr;
     matjson::Value m_gauntlets;
     cocos2d::CCMenu* m_menu = nullptr;
+    bool m_localMode = false;
     geode::async::TaskHolder<> m_manageAssetsTask;
     geode::async::TaskHolder<> m_fetchGauntletsTask;
     geode::async::TaskHolder<> m_deleteGauntletTask;

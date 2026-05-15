@@ -132,7 +132,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
     upopup->show();
 
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/setUser";
+    auto url = std::string(gdx::baseApiUrl()) + "/setUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
@@ -207,7 +207,7 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
     }
 
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/getUser";
+    auto url = std::string(gdx::baseApiUrl()) + "/getUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
@@ -288,7 +288,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
     upopup->show();
 
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/setUser";
+    auto url = std::string(gdx::baseApiUrl()) + "/setUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);

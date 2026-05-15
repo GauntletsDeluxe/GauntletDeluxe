@@ -19,8 +19,8 @@ class GDXGauntletManagePopup;
 
 class GDXAddGauntletPopup : public geode::Popup, public LevelManagerDelegate, public SelectArtDelegate {
 public:
-    static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner);
-    static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index);
+    static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, bool localMode = false);
+    static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index, bool localMode = false);
 
 private:
     struct PendingLevelFetch {
@@ -80,6 +80,7 @@ private:
     std::vector<PendingLevelFetch> m_pendingLevelFetches;
     bool m_editMode = false;
     int m_editIndex = -1;
+    bool m_localMode = false;
     matjson::Value m_editGauntlet;
     cocos2d::CCMenu* m_settingsMenu = nullptr;
     geode::async::TaskHolder<> m_addGauntletTask;

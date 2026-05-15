@@ -120,7 +120,7 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 
     // gauntlet sprite on the right
     auto gauntletId = gauntlet["id"].asInt().unwrapOr(gauntlet["index"].asInt().unwrapOr(0));
-    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(gauntletId) + ".png?v2=true";
+    auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletId) + ".png?v2=true";
     auto gauntletSprite = LazySprite::create({120.f, 240.f}, false);
     if (gauntletSprite) {
         gauntletSprite->setAutoResize(true);
@@ -148,3 +148,4 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 
     return true;
 }
+

@@ -9,6 +9,13 @@ using namespace geode::prelude;
 namespace gdx {
     constexpr std::string_view BASE_API_URL = "https://gdgauntletdeluxe.arcticwoof.xyz";
 
+    inline std::string baseApiUrl() {
+        if (Mod::get()->getSettingValue<bool>("enableLocalServer")) {
+            return "http://127.0.0.1:1027";
+        }
+        return std::string(BASE_API_URL);
+    }
+
     // since im tired to getting the argon token in multiple places, just make a helper function for it
     inline auto argonToken = [](const argon::AccountData& accountData) -> arc::Future<std::string> {
         auto authResult = co_await argon::startAuth(accountData);
@@ -37,6 +44,7 @@ namespace gdx {
     inline extern const std::string featuredParticle = "30,2065,2,435,3,135,155,1,156,2,145,30a-1a3a0.3a1a90a90a0a0a70a100a0a0a4a0a0a0a24a1a0a0a1a0a0.823529a0a0.227451a0a1a0a0a1a0a190a1a0a0.996078a0a0.980392a0a1a0a0.4a0a0.3a0a0a0a0a0a0a0a0a2a1a0a0a0a27a0a0a0a0a0a0a0a0a0a0a0a0a0a0;";
 
     inline bool g_isPlayingGauntletLevel = false;
+    inline bool g_isLocalPlayingGauntletLevel = false;
 
     inline void setPlayingGauntletLevel(bool playing) {
         log::debug("Setting playing gauntlet level to {}", playing);
@@ -45,6 +53,15 @@ namespace gdx {
 
     inline bool isPlayingGauntletLevel() {
         return g_isPlayingGauntletLevel;
+    }
+
+    inline void setLocalPlayingGauntletLevel(bool playing) {
+        log::debug("Setting local playing gauntlet level to {}", playing);
+        g_isLocalPlayingGauntletLevel = playing;
+    }
+
+    inline bool isLocalPlayingGauntletLevel() {
+        return g_isLocalPlayingGauntletLevel;
     }
 
     inline std::unordered_map<std::string, CCTexture2D*>& gauntletTextureCache() {

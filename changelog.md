@@ -1,3 +1,8 @@
+## v1.0.5
+
+- Added **Local Gauntlets**, user can create their own gauntlets list.
+  _(This does not reward points and does not sync with the backend, it's purely client-sided and for fun)_
+
 ## v1.0.4
 
 - Added **Featured Gauntlet**, you can identify it by the glowing particle effect.

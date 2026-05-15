@@ -1,7 +1,6 @@
 #include "GDXGauntletLayer.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 #include "GDXLeaderboardLayer.hpp"
-#include "../popup/GDXGauntletCreditsPopup.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
@@ -15,7 +14,6 @@
 #include <Geode/utils/web.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
-#include "GUI/CCControlExtension/CCScale9Sprite.h"
 #include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/LazySprite.hpp"
@@ -98,6 +96,63 @@ namespace {
             log::warn("Failed to create completed gauntlet save directory: {}", res.unwrapErr().message());
         }
         return dir / "completed_gauntlets.json";
+    }
+
+    static asp::fs::path getLocalGauntletPath() {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("{}", res.unwrapErr().message());
+        }
+        return dir / "local_gauntlets.json";
+    }
+
+    static matjson::Value loadLocalGauntlets() {
+        auto path = getLocalGauntletPath();
+        if (!asp::fs::isFile(path).unwrapOr(false)) {
+            return matjson::Value::array();
+        }
+
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read local gauntlet file: {}", content.unwrapErr());
+            return matjson::Value::array();
+        }
+
+        auto jsonResult = matjson::parse(content.unwrap());
+        if (!jsonResult) {
+            log::warn("Failed to parse local gauntlet JSON: {}", jsonResult.unwrapErr());
+            return matjson::Value::array();
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (data.isObject() && data["gauntlets"].isArray()) {
+            return data["gauntlets"];
+        }
+        if (data.isArray()) {
+            return data;
+        }
+        return matjson::Value::array();
+    }
+
+    static bool saveLocalGauntlets(matjson::Value const& gauntlets) {
+        auto path = getLocalGauntletPath();
+        matjson::Value data = matjson::Value::array();
+        if (gauntlets.isArray()) {
+            for (auto const& item : gauntlets) {
+                data.push(item);
+            }
+        }
+        auto result = asp::fs::write(path, data.dump().c_str(), data.dump().size());
+        if (!result) {
+            log::warn("Failed to save local gauntlets: {}", result.unwrapErr());
+        }
+        return static_cast<bool>(result);
+    }
+
+    static std::string makeFileUrl(asp::fs::path const& path) {
+        auto str = path.generic_string();
+        std::replace(str.begin(), str.end(), '\\', '/');
+        return fmt::format("file:///{}", str);
     }
 
     static std::unordered_set<int> loadCompletedGauntlets() {
@@ -313,38 +368,37 @@ bool GDXGauntletLayer::init() {
 
     // info button
     auto bottomLeftMenu = CCMenu::create();
-    bottomLeftMenu->setPosition({30, 70});
+    bottomLeftMenu->setPosition({10, 10});
+    bottomLeftMenu->setAnchorPoint({0.f, 0.f});
     bottomLeftMenu->setContentHeight(100);
-    bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+    bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true)->setCrossAxisReverse(true));
     this->addChild(bottomLeftMenu, 2);
+    m_bottomLeftMenu = bottomLeftMenu;
 
-    auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+    auto infoIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_infoIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     auto infoIconBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLayer::onInfo));
     bottomLeftMenu->addChild(infoIconBtn);
 
     // leaderboard button
-    auto leaderboardIconSpr = CCSprite::createWithSpriteFrameName("GJ_levelLeaderboardBtn_001.png");
-    leaderboardIconSpr->setScale(0.6f);
-    auto leaderboardIconBtn = CCMenuItemSpriteExtra::create(leaderboardIconSpr, this, menu_selector(GDXGauntletLayer::onLeaderboard));
-    bottomLeftMenu->addChild(leaderboardIconBtn);
+    auto leaderboardIconSpr = CircleButtonSprite::createWithSpriteFrameName("rankIcon_1_001.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_leaderboardBtn = CCMenuItemSpriteExtra::create(leaderboardIconSpr, this, menu_selector(GDXGauntletLayer::onLeaderboard));
+    bottomLeftMenu->addChild(m_leaderboardBtn);
 
     // discord button
     auto discordIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_discord.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    discordIconSpr->setScale(0.7f);
-    auto discordIconBtn = CCMenuItemSpriteExtra::create(discordIconSpr, this, menu_selector(GDXGauntletLayer::onDiscord));
-    bottomLeftMenu->addChild(discordIconBtn);
+    m_discordBtn = CCMenuItemSpriteExtra::create(discordIconSpr, this, menu_selector(GDXGauntletLayer::onDiscord));
+    bottomLeftMenu->addChild(m_discordBtn);
 
     // @geode-ignore(unknown-resource)
     auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    manageLabel->setScale(0.7f);
     auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
     bottomLeftMenu->addChild(manageBtn);
 
     bottomLeftMenu->updateLayout();
 
     // refresh gauntlet
-    auto refreshSpr = CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png");
-    refreshSpr->setScale(0.75f);
+    // @geode-ignore(unknown-resource)
+    auto refreshSpr = CircleButtonSprite::createWithSpriteFrameName("geode.loader/reload.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     auto refreshBtn = CCMenuItemSpriteExtra::create(
         refreshSpr,
         this,
@@ -353,25 +407,40 @@ bool GDXGauntletLayer::init() {
     // sync account
     // @geode-ignore(unknown-resource)
     auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("geode.loader/update.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    auto syncBtn = CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXGauntletLayer::onSyncAccount));
+    m_syncBtn = CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXGauntletLayer::onSyncAccount));
 
     // recent toggle
     auto recentOff = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Cyan, CircleBaseSize::Small);
     auto recentOn = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Gray, CircleBaseSize::Small);
     m_recentToggle = CCMenuItemToggler::create(recentOff, recentOn, this, menu_selector(GDXGauntletLayer::onToggleRecent));
     if (m_recentToggle) {
-        m_recentToggle->toggle(!m_recentFilter);
+        m_recentToggle->toggle(m_recentFilter);
     }
 
-    auto bottomRightMenu = CCMenu::create(refreshBtn, syncBtn, m_recentToggle, nullptr);
+    auto localOff = CircleButtonSprite::createWithSpriteFrameName("GDX_localGauntlet.png"_spr, 1.f, CircleBaseColor::Gray, CircleBaseSize::Small);
+    auto localOn = CircleButtonSprite::createWithSpriteFrameName("GDX_localGauntlet.png"_spr, 1.f, CircleBaseColor::Cyan, CircleBaseSize::Small);
+    if (!localOff) {
+        localOff = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Gray, CircleBaseSize::Small);
+    }
+    if (!localOn) {
+        localOn = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Cyan, CircleBaseSize::Small);
+    }
+    m_localToggle = CCMenuItemToggler::create(localOff, localOn, this, menu_selector(GDXGauntletLayer::onToggleLocalMode));
+    updateModeState();
+
+    auto bottomRightMenu = CCMenu::create(refreshBtn, m_syncBtn, m_recentToggle, m_localToggle, nullptr);
     if (bottomRightMenu) {
-        bottomRightMenu->setPosition({winSize.width - 30, 70});
+        bottomRightMenu->setPosition({winSize.width - 10, 10});
         bottomRightMenu->setContentHeight(100);
-        bottomRightMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+        bottomRightMenu->setAnchorPoint({1.f, 0.f});
+        bottomRightMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true));
         this->addChild(bottomRightMenu, 2);
+        m_bottomRightMenu = bottomRightMenu;
     }
 
-    bottomRightMenu->updateLayout();
+    if (m_bottomRightMenu) {
+        m_bottomRightMenu->updateLayout();
+    }
 
     // title styling
     auto title = CCSprite::createWithSpriteFrameName("GDX_title.png"_spr);
@@ -386,25 +455,29 @@ bool GDXGauntletLayer::init() {
     }
 
     // users' gauntlet and level points
-    auto levelPointsSpr = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
-    levelPointsSpr->setPosition({winSize.width - 20, winSize.height - 20});
-    levelPointsSpr->setScale(0.3f);
-    this->addChild(levelPointsSpr, 5);
+    m_levelPointsSpr = CCSprite::createWithSpriteFrameName("GDX_levelPoint.png"_spr);
+    if (m_levelPointsSpr) {
+        m_levelPointsSpr->setPosition({winSize.width - 20, winSize.height - 20});
+        m_levelPointsSpr->setScale(0.3f);
+        this->addChild(m_levelPointsSpr, 5);
+    }
     m_levelPointsCounter = CCCounterLabel::create(static_cast<int>(m_levelPoints), "bigFont.fnt", FormatterType::Integer);
     if (m_levelPointsCounter) {
-        m_levelPointsCounter->setPosition({levelPointsSpr->getPositionX() - 15, levelPointsSpr->getPositionY()});
+        m_levelPointsCounter->setPosition({m_levelPointsSpr ? m_levelPointsSpr->getPositionX() - 15 : winSize.width - 35, m_levelPointsSpr ? m_levelPointsSpr->getPositionY() : winSize.height - 20});
         m_levelPointsCounter->setAnchorPoint({1.0f, 0.5f});
         m_levelPointsCounter->setScale(0.6f);
         this->addChild(m_levelPointsCounter, 5);
     }
 
-    auto gauntletPointsSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
-    gauntletPointsSpr->setPosition({winSize.width - 20, winSize.height - 50});
-    gauntletPointsSpr->setScale(0.4f);
-    this->addChild(gauntletPointsSpr, 5);
+    m_gauntletPointsSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+    if (m_gauntletPointsSpr) {
+        m_gauntletPointsSpr->setPosition({winSize.width - 20, winSize.height - 50});
+        m_gauntletPointsSpr->setScale(0.4f);
+        this->addChild(m_gauntletPointsSpr, 5);
+    }
     m_gauntletPointsCounter = CCCounterLabel::create(static_cast<int>(m_gauntletPoints), "bigFont.fnt", FormatterType::Integer);
     if (m_gauntletPointsCounter) {
-        m_gauntletPointsCounter->setPosition({gauntletPointsSpr->getPositionX() - 15, gauntletPointsSpr->getPositionY()});
+        m_gauntletPointsCounter->setPosition({m_gauntletPointsSpr ? m_gauntletPointsSpr->getPositionX() - 15 : winSize.width - 35, m_gauntletPointsSpr ? m_gauntletPointsSpr->getPositionY() : winSize.height - 50});
         m_gauntletPointsCounter->setAnchorPoint({1.0f, 0.5f});
         m_gauntletPointsCounter->setScale(0.6f);
         this->addChild(m_gauntletPointsCounter, 5);
@@ -482,10 +555,15 @@ void GDXGauntletLayer::onLeaderboard(CCObject* sender) {
 }
 
 void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
+    if (m_localMode) {
+        GDXGauntletManagePopup::create(true)->show();
+        return;
+    }
+
     auto upopup = UploadActionPopup::create(nullptr, "Getting access...");
     upopup->show();
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/getAccess";
+    auto url = std::string(gdx::baseApiUrl()) + "/getAccess";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
 
@@ -558,7 +636,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     upopup->show();
 
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/syncUser";
+    auto url = std::string(gdx::baseApiUrl()) + "/syncUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["argonToken"] = "";
@@ -658,8 +736,24 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
 }
 
 void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
-    m_gauntlets = matjson::Value::array();
-    createGauntletPages(m_gauntlets);
+    if (m_localMode) {
+        m_localGauntlets = loadLocalGauntlets();
+        if (!m_localGauntlets.isArray() || m_localGauntlets.size() == 0) {
+            if (m_localScrollLayer) {
+                m_localScrollLayer->removeFromParent();
+                m_localScrollLayer = nullptr;
+            }
+            m_localGauntletButtons.clear();
+            Notification::create("Local gauntlets are not available. Create local_gauntlets.json in the mod save folder.", NotificationIcon::Info)->show();
+            updatePageButtons();
+            return;
+        }
+        createGauntletPages(m_localGauntlets, true);
+        return;
+    }
+
+    m_onlineGauntlets = matjson::Value::array();
+    createGauntletPages(m_onlineGauntlets, false);
     fetchGauntlets();
 }
 
@@ -668,23 +762,100 @@ void GDXGauntletLayer::onToggleRecent(CCObject* sender) {
     if (m_recentToggle) {
         m_recentToggle->toggle(m_recentFilter);
     }
-    m_gauntlets = matjson::Value::array();
-    createGauntletPages(m_gauntlets);
-    fetchGauntlets();
+    updateModeState();
+    if (!m_localMode) {
+        m_gauntlets = matjson::Value::array();
+        createGauntletPages(m_gauntlets);
+        fetchGauntlets();
+    }
+}
+
+void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
+    m_localMode = !m_localMode;
+    updateModeState();
+
+    if (m_localMode) {
+        m_localGauntlets = loadLocalGauntlets();
+        if (!m_localGauntlets.isArray() || m_localGauntlets.size() == 0) {
+            if (m_localScrollLayer) {
+                m_localScrollLayer->removeFromParent();
+                m_localScrollLayer = nullptr;
+            }
+            m_localGauntletButtons.clear();
+            Notification::create("Local gauntlets are not available. Create local_gauntlets.json in the mod save folder.", NotificationIcon::Info)->show();
+        } else {
+            createGauntletPages(m_localGauntlets, true);
+        }
+
+        if (m_localScrollLayer) {
+            m_localScrollLayer->setVisible(true);
+        }
+        if (m_scrollLayer) {
+            m_scrollLayer->setVisible(false);
+        }
+        if (m_leaderboardBtn) {
+            m_leaderboardBtn->setVisible(false);
+        }
+        if (m_discordBtn) {
+            m_discordBtn->setVisible(false);
+        }
+        if (m_syncBtn) {
+            m_syncBtn->setVisible(false);
+        }
+        if (m_bottomLeftMenu) {
+            m_bottomLeftMenu->updateLayout();
+        }
+        if (m_bottomRightMenu) {
+            m_bottomRightMenu->updateLayout();
+        }
+        updatePageButtons();
+        return;
+    }
+
+    if (m_scrollLayer) {
+        m_scrollLayer->setVisible(true);
+    }
+    if (m_localScrollLayer) {
+        m_localScrollLayer->setVisible(false);
+    }
+    if (m_leaderboardBtn) {
+        m_leaderboardBtn->setVisible(true);
+    }
+    if (m_discordBtn) {
+        m_discordBtn->setVisible(true);
+    }
+    if (m_syncBtn) {
+        m_syncBtn->setVisible(true);
+    }
+    if (m_bottomLeftMenu) {
+        m_bottomLeftMenu->updateLayout();
+    }
+    if (m_bottomRightMenu) {
+        m_bottomRightMenu->updateLayout();
+    }
+
+    if (m_onlineGauntlets.isArray() && m_onlineGauntlets.size() > 0) {
+        updatePageButtons();
+    } else {
+        m_gauntlets = matjson::Value::array();
+        createGauntletPages(m_gauntlets, false);
+        fetchGauntlets();
+    }
 }
 
 void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
     auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
-    if (!button || !m_gauntlets.isArray()) {
+    const auto& activeGauntlets = m_localMode ? m_localGauntlets : m_gauntlets;
+    if (!button || !activeGauntlets.isArray()) {
         return;
     }
 
     auto idx = button->getTag();
-    if (idx < 0 || idx >= static_cast<int>(m_gauntlets.size())) {
+    if (idx < 0 || idx >= static_cast<int>(activeGauntlets.size())) {
         return;
     }
 
-    auto gauntlet = m_gauntlets[idx];
+    auto gauntlet = activeGauntlets[idx];
     auto levelArray = gauntlet["levelIds"];
     if (!levelArray.isArray()) {
         return;
@@ -710,7 +881,7 @@ void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
         static_cast<GLubyte>(gauntlet["g"].asInt().unwrapOr(255)),
         static_cast<GLubyte>(gauntlet["b"].asInt().unwrapOr(255)),
     };
-    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color, gauntlet["index"].asInt().unwrapOr(idx), gauntlet));
+    scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color, gauntlet["index"].asInt().unwrapOr(idx), gauntlet, m_localMode));
     CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 }
 
@@ -719,7 +890,7 @@ void GDXGauntletLayer::fetchGauntlets() {
         m_loadingSpinner->setVisible(true);
     }
 
-    auto url = std::string(gdx::BASE_API_URL) + "/getGauntlets";
+    auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
     if (m_recentFilter) {
         url += "?recent=true";
     }
@@ -752,7 +923,8 @@ void GDXGauntletLayer::fetchGauntlets() {
             if (self->m_loadingSpinner) {
                 self->m_loadingSpinner->setVisible(false);
             }
-            self->createGauntletPages(gauntlets);
+            self->m_onlineGauntlets = gauntlets;
+            self->createGauntletPages(self->m_onlineGauntlets, false);
         });
 
         co_return; }, []() {});
@@ -760,7 +932,7 @@ void GDXGauntletLayer::fetchGauntlets() {
 
 void GDXGauntletLayer::fetchUserData() {
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/getUser";
+    auto url = std::string(gdx::baseApiUrl()) + "/getUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["argonToken"] = "";
@@ -847,6 +1019,14 @@ GDXGauntletNode GDXGauntletNode::fromJson(const matjson::Value& gauntlet) {
     return node;
 }
 
+BoomScrollLayer* GDXGauntletLayer::getActiveScrollLayer() const {
+    return m_localMode ? m_localScrollLayer : m_scrollLayer;
+}
+
+const matjson::Value& GDXGauntletLayer::getActiveGauntlets() const {
+    return m_localMode ? m_localGauntlets : m_gauntlets;
+}
+
 CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Value& gauntlet, std::size_t index) {
     auto node = GDXGauntletNode::fromJson(gauntlet);
     int gauntletIndex = node.id;
@@ -919,7 +1099,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     gauntletBg->setColor({static_cast<GLubyte>(node.r), static_cast<GLubyte>(node.g), static_cast<GLubyte>(node.b)});
 
     auto const imageCenter = ccp(gauntletBg->getContentSize().width / 2, gauntletBg->getContentSize().height / 2 + 10);
-    auto imageUrl = std::string(gdx::BASE_API_URL) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png?v2=true";
+    auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(node.id) + ".png?v2=true";
 
     auto imageContainer = CCNodeRGBA::create();
     if (imageContainer) {
@@ -1060,7 +1240,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
 
     auto gauntletIndex = button->getTag();
     auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::BASE_API_URL) + "/completeGauntlet";
+    auto url = std::string(gdx::baseApiUrl()) + "/completeGauntlet";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["gauntletIndex"] = gauntletIndex;
@@ -1182,30 +1362,45 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
         co_return; }, []() {});
 }
 
-void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
-    m_gauntlets = gauntlets;
+void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool local) {
+    if (local) {
+        m_localGauntlets = gauntlets;
+    } else {
+        m_onlineGauntlets = gauntlets;
+        m_gauntlets = gauntlets;
+    }
 
     m_completedGauntletLevels = loadCompletedGauntletLevels();
     m_claimedGauntlets = loadCompletedGauntlets();
-    if (m_scrollLayer) {
-        m_scrollLayer->removeFromParent();
-        m_scrollLayer = nullptr;
-    }
-    for (auto button : m_gauntletButtons) {
-        if (button) {
-            button->removeFromParent();
+    auto& targetScroll = local ? m_localScrollLayer : m_scrollLayer;
+    auto& targetButtons = local ? m_localGauntletButtons : m_gauntletButtons;
+
+    if (targetScroll) {
+        targetScroll->removeFromParent();
+        targetScroll = nullptr;
+    } else {
+        for (auto button : targetButtons) {
+            if (button) {
+                button->removeFromParent();
+            }
         }
     }
-    m_gauntletButtons.clear();
+    targetButtons.clear();
 
-    if (m_prevPageBtn != nullptr) {
-        m_prevPageBtn->removeFromParent();
-        m_prevPageBtn = nullptr;
-    }
+    if (!local) {
+        if (m_prevPageBtn != nullptr) {
+            m_prevPageBtn->removeFromParent();
+            m_prevPageBtn = nullptr;
+        }
 
-    if (m_nextPageBtn != nullptr) {
-        m_nextPageBtn->removeFromParent();
-        m_nextPageBtn = nullptr;
+        if (m_nextPageBtn != nullptr) {
+            m_nextPageBtn->removeFromParent();
+            m_nextPageBtn = nullptr;
+        }
+        if (m_pageNavMenu != nullptr) {
+            m_pageNavMenu->removeFromParent();
+            m_pageNavMenu = nullptr;
+        }
     }
 
     const auto winSize = CCDirector::sharedDirector()->getWinSize();
@@ -1237,6 +1432,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
         auto gauntletButton = createGauntletButton(gauntlets[i], i);
         if (pageMenu && gauntletButton) {
             pageMenu->addChild(gauntletButton);
+            targetButtons.push_back(gauntletButton);
         }
 
         if (pageMenu && ((i % 3 == 2) || (i + 1 == gauntletCount))) {
@@ -1248,63 +1444,81 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
         return;
     }
 
-    m_scrollLayer = BoomScrollLayer::create(pages, 0, true);
-    if (!m_scrollLayer) {
+    targetScroll = BoomScrollLayer::create(pages, 0, true);
+    if (!targetScroll) {
         return;
     }
 
-    m_scrollLayer->setPosition({0, -45});
-    this->addChild(m_scrollLayer);
+    targetScroll->setPosition({0, -45});
+    targetScroll->setVisible(local ? m_localMode : !m_localMode);
+    this->addChild(targetScroll);
     m_currentPage = 0;
 
     auto pageCount = pages->count();
     if (pageCount > 1) {
-        auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
-        auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
-        if (prevSpr) {
-            prevSpr->setFlipX(true);
-        }
-
-        m_prevPageBtn = CCMenuItemSpriteExtra::create(
-            prevSpr,
-            this,
-            menu_selector(GDXGauntletLayer::onPrev));
-        m_nextPageBtn = CCMenuItemSpriteExtra::create(
-            nextSpr,
-            this,
-            menu_selector(GDXGauntletLayer::onNext));
-
-        if (m_prevPageBtn) {
-            m_prevPageBtn->setPosition({25.f, winSize.height / 2.f});
-        }
-        if (m_nextPageBtn) {
-            m_nextPageBtn->setPosition({winSize.width - 25.f, winSize.height / 2.f});
-        }
-
-        auto navMenu = CCMenu::create();
-        if (navMenu) {
-            navMenu->setPosition({0, 0});
+        if (!m_prevPageBtn) {
+            auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
+            if (prevSpr) {
+                prevSpr->setFlipX(true);
+            }
+            m_prevPageBtn = CCMenuItemSpriteExtra::create(
+                prevSpr,
+                this,
+                menu_selector(GDXGauntletLayer::onPrev));
             if (m_prevPageBtn) {
-                navMenu->addChild(m_prevPageBtn);
+                m_prevPageBtn->setPosition({25.f, winSize.height / 2.f});
+            }
+        }
+
+        if (!m_nextPageBtn) {
+            auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
+            m_nextPageBtn = CCMenuItemSpriteExtra::create(
+                nextSpr,
+                this,
+                menu_selector(GDXGauntletLayer::onNext));
+            if (m_nextPageBtn) {
+                m_nextPageBtn->setPosition({winSize.width - 25.f, winSize.height / 2.f});
+            }
+        }
+
+        if (!m_pageNavMenu) {
+            m_pageNavMenu = CCMenu::create();
+            if (m_pageNavMenu) {
+                m_pageNavMenu->setPosition({0, 0});
+                this->addChild(m_pageNavMenu, 2);
+            }
+        }
+
+        if (m_pageNavMenu) {
+            m_pageNavMenu->removeAllChildrenWithCleanup(true);
+            if (m_prevPageBtn) {
+                m_pageNavMenu->addChild(m_prevPageBtn);
             }
             if (m_nextPageBtn) {
-                navMenu->addChild(m_nextPageBtn);
+                m_pageNavMenu->addChild(m_nextPageBtn);
             }
-            this->addChild(navMenu, 2);
         }
 
         updatePageButtons();
+    } else if (m_pageNavMenu) {
+        if (m_prevPageBtn) {
+            m_prevPageBtn->setVisible(false);
+        }
+        if (m_nextPageBtn) {
+            m_nextPageBtn->setVisible(false);
+        }
     }
 }
 
 void GDXGauntletLayer::update(float dt) {
-    if (!m_scrollLayer) {
+    auto layer = getActiveScrollLayer();
+    if (!layer) {
         return;
     }
 
-    auto page = m_scrollLayer->pageNumberForPosition(m_scrollLayer->getPosition());
-    if (page < 0 || page >= m_scrollLayer->getTotalPages()) {
-        page = m_scrollLayer->m_page;
+    auto page = layer->pageNumberForPosition(layer->getPosition());
+    if (page < 0 || page >= layer->getTotalPages()) {
+        page = layer->m_page;
     }
     if (page != m_currentPage) {
         m_currentPage = page;
@@ -1313,66 +1527,93 @@ void GDXGauntletLayer::update(float dt) {
 }
 
 void GDXGauntletLayer::onPrev(CCObject* sender) {
-    if (!m_scrollLayer) {
+    auto layer = getActiveScrollLayer();
+    if (!layer) {
         return;
     }
 
-    auto total = m_scrollLayer->getTotalPages();
+    auto total = layer->getTotalPages();
     if (total <= 0) {
         return;
     }
 
-    auto page = m_scrollLayer->m_page;
+    auto page = layer->m_page;
     page = (page - 1 + total) % total;
-    
-    m_scrollLayer->repositionPagesLooped();
-    m_scrollLayer->moveToPage(page);
-    m_scrollLayer->updatePages();
+
+    layer->moveToPage(page);
+    layer->updatePages();
     updatePageButtons();
 }
 
 void GDXGauntletLayer::onNext(CCObject* sender) {
-    if (!m_scrollLayer) {
+    auto layer = getActiveScrollLayer();
+    if (!layer) {
         return;
     }
 
-    auto total = m_scrollLayer->getTotalPages();
+    auto total = layer->getTotalPages();
     if (total <= 0) {
         return;
     }
 
-    auto page = m_scrollLayer->m_page;
+    auto page = layer->m_page;
     page = (page + 1) % total;
 
-    m_scrollLayer->repositionPagesLooped();
-    m_scrollLayer->moveToPage(page);
-    m_scrollLayer->updatePages();
+    layer->moveToPage(page);
+    layer->updatePages();
     updatePageButtons();
 }
 
 void GDXGauntletLayer::updatePageButtons() {
-    if (!m_scrollLayer) {
+    auto layer = getActiveScrollLayer();
+    if (!layer) {
         return;
     }
 
-    auto page = m_scrollLayer->pageNumberForPosition(m_scrollLayer->getPosition());
-    if (page < 0 || page >= m_scrollLayer->getTotalPages()) {
-        page = m_scrollLayer->m_page;
+    auto page = layer->pageNumberForPosition(layer->getPosition());
+    if (page < 0 || page >= layer->getTotalPages()) {
+        page = layer->m_page;
     }
-    auto totalPages = m_scrollLayer->getTotalPages();
+    auto totalPages = layer->getTotalPages();
     if (totalPages <= 0) {
+        if (m_prevPageBtn) {
+            m_prevPageBtn->setVisible(false);
+        }
+        if (m_nextPageBtn) {
+            m_nextPageBtn->setVisible(false);
+        }
         return;
     }
 
-    // const bool prevEnabled = page > 0;
-    // const bool nextEnabled = page < totalPages - 1;
+    const bool prevVisible = page > 0;
+    const bool nextVisible = page < totalPages - 1;
 
-    // if (m_prevPageBtn) {
-    //     m_prevPageBtn->setEnabled(prevEnabled);
-    //     m_prevPageBtn->setOpacity(prevEnabled ? 255 : 100);
-    // }
-    // if (m_nextPageBtn) {
-    //     m_nextPageBtn->setEnabled(nextEnabled);
-    //     m_nextPageBtn->setOpacity(nextEnabled ? 255 : 100);
-    // }
+    if (m_prevPageBtn) {
+        m_prevPageBtn->setVisible(prevVisible);
+    }
+    if (m_nextPageBtn) {
+        m_nextPageBtn->setVisible(nextVisible);
+    }
+}
+
+void GDXGauntletLayer::updateModeState() {
+    if (m_localToggle) {
+        m_localToggle->toggle(m_localMode);
+    }
+    if (m_recentToggle) {
+        m_recentToggle->toggle(m_recentFilter);
+        m_recentToggle->setVisible(!m_localMode);
+    }
+    if (m_levelPointsSpr) {
+        m_levelPointsSpr->setVisible(!m_localMode);
+    }
+    if (m_gauntletPointsSpr) {
+        m_gauntletPointsSpr->setVisible(!m_localMode);
+    }
+    if (m_levelPointsCounter) {
+        m_levelPointsCounter->setVisible(!m_localMode);
+    }
+    if (m_gauntletPointsCounter) {
+        m_gauntletPointsCounter->setVisible(!m_localMode);
+    }
 }

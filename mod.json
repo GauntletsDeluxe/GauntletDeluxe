@@ -29,5 +29,12 @@
 	"tags":[
 		"content",
 		"online"
-	]
+	],
+	"settings": {
+		"enableLocalServer":{
+			"type": "bool",
+			"name": "Use Local Server",
+			"default": false
+		}
+	}
 }
