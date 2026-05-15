@@ -92,6 +92,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
     void customSetup() override {
         EndLevelLayer::customSetup();
+        if (m_playLayer->m_isPracticeMode) return;
         if (gdx::isLocalPlayingGauntletLevel()) {
             if (m_playLayer->m_level->m_normalPercent >= 100) {
                 log::debug("local gauntlet level {} completed", m_playLayer->m_level->m_levelID);
@@ -109,40 +110,25 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                         completedLevels.push_back(levelId);
                         saveCompletedGauntletLevels(completedLevels);
 
-                        auto completedIconShadow = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
-                        if (completedIconShadow) {
-                            completedIconShadow->setColor({0, 0, 0});
-                            completedIconShadow->setOpacity(50);
-                            completedIconShadow->setScale(1.1f);
-                            completedIconShadow->setPosition({this->m_listLayer->getContentSize().width / 2.f + 2.f, this->m_listLayer->getContentSize().height / 2.f - 15.f});
-                            this->m_listLayer->addChild(completedIconShadow, 3);
-                        }
-
                         auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
                         if (completedIcon) {
-                            completedIcon->setScale(1.1f);
-                            completedIcon->setPosition({this->m_listLayer->getContentSize().width / 2.f, this->m_listLayer->getContentSize().height / 2.f - 15.f});
-                            this->m_listLayer->addChild(completedIcon, 4);
+                            completedIcon->setPosition({55.f, this->m_listLayer->getContentSize().height / 2.f});
+                            completedIcon->setScale(1.4f);
+                            completedIcon->setOpacity(0);
+                            this->m_listLayer->addChild(completedIcon, 3);
 
-                            auto animation = CCAnimation::create();
-                            for (int i = 1; i <= 8; ++i) {
-                                auto frameName = fmt::format("GJ_completesIcon_{:03d}.png", i);
-                                auto frame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName.c_str());
-                                if (frame) {
-                                    animation->addSpriteFrame(frame);
-                                }
-                            }
-                            if (animation->getFrames() && animation->getFrames()->count() > 1) {
-                                animation->setDelayPerUnit(0.06f);
-                                completedIcon->runAction(CCRepeatForever::create(CCAnimate::create(animation)));
-                            }
+                            auto scaleAction = CCScaleBy::create(.6f, .8f);
+                            auto bounceAction = CCEaseBounceOut::create(scaleAction);
+                            auto fadeAction = CCFadeIn::create(0.6f);
+                            auto spawnAction = CCSpawn::createWithTwoActions(bounceAction, fadeAction);
+                            completedIcon->runAction(spawnAction);
                         }
 
                         Notification::create("Local gauntlet level completed!", NotificationIcon::Success)->show();
                         // @geode-ignore(unknown-resource)
                         FMODAudioEngine::sharedEngine()->playEffect("gold02.ogg");
                         auto circleWave = CCCircleWave::create(10.f, 110.f, 0.5f, false);
-                        circleWave->setPosition({this->m_listLayer->getContentSize().width / 2.f, this->m_listLayer->getContentSize().height / 2.f - 15.f});
+                        circleWave->setPosition({55.f, this->m_listLayer->getContentSize().height / 2.f});
                         circleWave->m_color = ccColor3B({191, 3, 226});
                         this->m_listLayer->addChild(circleWave, 3);
                     }
@@ -156,8 +142,9 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             log::debug("Not a gauntlet level, skipping completion check");
             return;
         }
+
         if (m_playLayer->m_level->m_normalPercent >= 100) {
-            log::debug("gautnlet level {} completed", m_playLayer->m_level->m_levelID);
+            log::debug("gauntlet level {} completed", m_playLayer->m_level->m_levelID);
             // get the summaryContainer
             if (this->m_listLayer) {
                 auto accountData = argon::getGameAccountData();

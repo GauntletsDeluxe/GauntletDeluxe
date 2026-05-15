@@ -296,12 +296,12 @@ bool GDXAddGauntletPopup::init() {
         bgBtn->m_scaleMultiplier = 1.05f;
         m_bgIndexButton = bgBtn;
         m_bgIconSpr = bgIcon;
-        m_buttonMenu->addChildAtPosition(bgBtn, Anchor::BottomLeft, {25, 25}, false);
+        m_buttonMenu->addChildAtPosition(bgBtn, Anchor::BottomLeft, {45, 55}, false);
     }
 
     auto bgLabel = CCLabelBMFont::create("BG", "goldFont.fnt");
     bgLabel->setScale(0.4);
-    m_bgIndexButton->addChildAtPosition(bgLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
+    m_bgIndexButton->addChildAtPosition(bgLabel, Anchor::Top, ccp(0, 2), ccp(0.5, 0));
 
     m_levelInput = TextInput::create(static_cast<float>(m_localMode ? 80.f : 120.f), m_localMode ? "Enter a Level ID to add" : "Level ID", "chatFont.fnt");
     m_levelInput->setCommonFilter(CommonFilter::Int);
@@ -363,19 +363,19 @@ bool GDXAddGauntletPopup::init() {
     refreshLevelList();
 
     auto addLevelBtn = CCMenuItemSpriteExtra::create(
-        ButtonSprite::create("Add Level", "goldFont.fnt", "GJ_button_05.png"),
+        ButtonSprite::create("Add Level", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
         this,
         menu_selector(GDXAddGauntletPopup::onAddLevel));
 
     auto saveBtn = CCMenuItemSpriteExtra::create(
-        ButtonSprite::create("Save", "goldFont.fnt", "GJ_button_01.png"),
+        ButtonSprite::create("Save", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
         this,
         menu_selector(GDXAddGauntletPopup::onSave));
 
     m_settingsMenu = CCMenu::create(addLevelBtn, saveBtn, nullptr);
     if (m_localMode) {
         auto addSpriteBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Add Sprite", "goldFont.fnt", "GJ_button_05.png"),
+            ButtonSprite::create("Add Sprite", 80.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXAddGauntletPopup::onAddSprite));
         if (addSpriteBtn) {
@@ -384,7 +384,7 @@ bool GDXAddGauntletPopup::init() {
 
         m_spriteNameLabel = CCLabelBMFont::create("Sprite: none", "bigFont.fnt");
         if (m_spriteNameLabel) {
-            m_spriteNameLabel->limitLabelWidth(100.f, 0.5f, 0.4f);
+            m_spriteNameLabel->limitLabelWidth(80.f, 0.5f, 0.4f);
             m_spriteNameLabel->setAlignment(kCCTextAlignmentCenter);
             m_spriteNameLabel->setAnchorPoint({0.5f, 0.5f});
             m_spriteNameLabel->setPosition({0.f, -20.f});
@@ -397,8 +397,9 @@ bool GDXAddGauntletPopup::init() {
             ->setAxisAlignment(AxisAlignment::Center)
             ->setAxisReverse(true));
     m_settingsMenu->setContentHeight(m_localMode ? 120.f : 100.f);
+    m_settingsMenu->setContentWidth(100.f);
     m_settingsMenu->updateLayout();
-    m_mainLayer->addChildAtPosition(m_settingsMenu, Anchor::BottomLeft, {110, static_cast<float>(m_localMode ? 75 : 55)}, false);
+    m_mainLayer->addChildAtPosition(m_settingsMenu, Anchor::BottomLeft, {140, static_cast<float>(m_localMode ? 75 : 55)}, false);
 
     return true;
 }
@@ -561,6 +562,7 @@ void GDXAddGauntletPopup::updateLocalSpriteNameLabel() {
         spriteName = pos == std::string::npos ? m_spritePath : m_spritePath.substr(pos + 1);
     }
     m_spriteNameLabel->setString(fmt::format("Sprite: {}", spriteName).c_str());
+    m_spriteNameLabel->limitLabelWidth(80.f, 0.5f, 0.4f);
 }
 
 void GDXAddGauntletPopup::onPickBackground(CCObject* sender) {

@@ -11,6 +11,46 @@
 using namespace geode;
 using namespace geode::prelude;
 
+static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
+    if (!parent) {
+        return nullptr;
+    }
+
+    if (auto texture = gdx::findGauntletTexture(url)) {
+        auto sprite = CCSprite::createWithTexture(texture);
+        if (!sprite) {
+            return nullptr;
+        }
+        sprite->setID("gauntlet-image");
+        if (sprite->getContentSize().width > 0 && sprite->getContentSize().height > 0) {
+            const float fitScale = std::min(size.width / sprite->getContentSize().width, size.height / sprite->getContentSize().height);
+            sprite->setScale(fitScale);
+        }
+        sprite->setPosition(position);
+        parent->addChild(sprite, zOrder);
+        return sprite;
+    }
+
+    auto sprite = LazySprite::create(size, false);
+    if (!sprite) {
+        return nullptr;
+    }
+    sprite->setID("gauntlet-image");
+    sprite->setAutoResize(true);
+    sprite->setPosition(position);
+    sprite->setLoadCallback([sprite, url](geode::Result<> const& result) {
+        if (!result) {
+            return;
+        }
+        if (auto texture = sprite->getTexture()) {
+            gdx::cacheGauntletTexture(url, texture);
+        }
+    });
+    sprite->loadFromUrl(url, CCImage::kFmtPng, true);
+    parent->addChild(sprite, zOrder);
+    return sprite;
+}
+
 GDXUserInfo GDXUserInfo::fromJson(const matjson::Value& value) {
     GDXUserInfo info;
     if (!value.isObject()) {
@@ -121,12 +161,14 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     // gauntlet sprite on the right
     auto gauntletId = gauntlet["id"].asInt().unwrapOr(gauntlet["index"].asInt().unwrapOr(0));
     auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletId) + ".png?v2=true";
-    auto gauntletSprite = LazySprite::create({120.f, 240.f}, false);
+    auto gauntletSprite = createCachedGauntletSprite(m_mainLayer, imageUrl, {430.f, 110.f}, {120.f, 240.f}, 2);
     if (gauntletSprite) {
-        gauntletSprite->setAutoResize(true);
-        gauntletSprite->setZOrder(2);
-        m_mainLayer->addChildAtPosition(gauntletSprite, Anchor::Right, {-100.f, -40.f}, false);
-        gauntletSprite->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+        if (auto lazySprite = typeinfo_cast<LazySprite*>(gauntletSprite)) {
+            lazySprite->setZOrder(2);
+        }
+        if (!typeinfo_cast<LazySprite*>(gauntletSprite)) {
+            gauntletSprite->setZOrder(2);
+        }
     }
 
     // description below the credits area

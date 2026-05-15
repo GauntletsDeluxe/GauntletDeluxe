@@ -4,6 +4,12 @@
   _(This does not reward points and does not sync with the backend, it's purely client-sided and for fun)_
 - Gauntlets will now loop back when navigating next from the last gauntlet or previous from the first gauntlet.
 - Added **Search Gauntlets** feature, allowing users to search for gauntlets by their name.
+- Added **Skull Icon** on the last gauntlet level.
+- Added **Tag System** for online gauntlets.
+- Tweaked the UI for Gauntlet Manager Popup
+- Replaced the Background Index Text Input to use the button to select background for user-friendlyness.
+- Adjusted the completed icon position to be similar to vanilla gauntlet completed icon.
+- Fixed bug where completing a level in practice mode would trigger the gauntlet completion.
 
 ## v1.0.4
 

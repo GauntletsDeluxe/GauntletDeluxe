@@ -445,10 +445,11 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             continue;
         }
 
-        if (i + 1 == m_levels.size()) {
+        if (i + 1 == m_levels.size() && isUnlocked) {
             auto skull = CCSprite::createWithSpriteFrameName("miniSkull_001.png");
             if (skull) {
                 skull->setPosition(imagePosition);
+                skull->setScale(1.2f);
                 imageTarget->addChild(skull, 5);
             }
         }
@@ -469,16 +470,6 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         auto containerCenter = imageContainer ? imageContainer->getPosition() : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
         auto labelCenterX = containerCenter.x;
         auto nameY = containerCenter.y + containerSize.height / 2.f + 16.f;
-
-        if (completedLevels.contains(entry.levelId)) {
-            auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
-            if (completedIcon) {
-                completedIcon->setID("completed-icon");
-                completedIcon->setScale(1.5f);
-                completedIcon->setPosition({containerSize.width / 2.f, containerSize.height / 2.f});
-                imageTarget->addChild(completedIcon, 4);
-            }
-        }
 
         auto nameLabel = CCLabelBMFont::create(entry.levelName.c_str(), "bigFont.fnt");
         nameLabel->setID("gauntlet-name");
@@ -729,7 +720,7 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
                 auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
                 if (completedIcon) {
                     completedIcon->setID("completed-icon");
-                    completedIcon->setScale(1.5f);
+                    completedIcon->setAnchorPoint({.0f, 1.f});
                     completedIcon->setPosition({gauntletContainer->getContentSize().width / 2.f, gauntletContainer->getContentSize().height / 2.f});
                     gauntletContainer->addChild(completedIcon, 4);
                 }

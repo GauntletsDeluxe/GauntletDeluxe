@@ -446,8 +446,8 @@ namespace {
 
     static CCSprite* createRecentToggleSprite(bool on) {
         return CircleButtonSprite::createWithSpriteFrameName(
-            "GJ_sRecentIcon_001.png",
-            .8f,
+            "GDX_recentGauntlet.png"_spr,
+            1.f,
             on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
             CircleBaseSize::Small);
     }
@@ -645,8 +645,10 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
         "**Gauntlets Deluxe** is a <cl>community-run mod</c> that adds a <cg>custom gauntlet to Geometry Dash</c>, featuring fan-made <co>gauntlets based on various themes</c>.\n\n"
         "Players can earn points by completing <cp>levels</c> and <cr>gauntlets</c>, and <cl>compete on the leaderboard</c>.\n\n"
         "The mod also allows for <cl>community-hosted creator contests</c>, where players can submit their own gauntlet levels to be featured in the mod.\n\n"
+        "You can also create your own <cy>local gauntlets</c> that only you can see and play and create <cg>interesting gauntlets</c> for yourself!\n\n"
         "\n---\n"
         "### Points System\n"
+        "##### <co>*Gauntlet Points and Level Points are only obtainable by playing online Gauntlets. Local Gauntlets do not award points.*</c>\n\n"
         "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>**Level Points**</c>: Earned by completing levels in a gauntlet.\n\n"
         "Each level awards a different amount of points based on its difficulty and other factors.\n\n"
         "##### <cy>*If you have already beaten the level before using this mod, you still need to rebeat them to earn Level Points.*</c>\n\n"

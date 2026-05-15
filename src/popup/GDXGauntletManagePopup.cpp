@@ -19,6 +19,46 @@
 using namespace geode;
 using namespace geode::prelude;
 
+static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
+    if (!parent) {
+        return nullptr;
+    }
+
+    if (auto texture = gdx::findGauntletTexture(url)) {
+        auto sprite = CCSprite::createWithTexture(texture);
+        if (!sprite) {
+            return nullptr;
+        }
+        sprite->setID("gauntlet-image");
+        if (sprite->getContentSize().width > 0 && sprite->getContentSize().height > 0) {
+            const float fitScale = std::min(size.width / sprite->getContentSize().width, size.height / sprite->getContentSize().height);
+            sprite->setScale(fitScale);
+        }
+        sprite->setPosition(position);
+        parent->addChild(sprite, zOrder);
+        return sprite;
+    }
+
+    auto sprite = LazySprite::create(size, false);
+    if (!sprite) {
+        return nullptr;
+    }
+    sprite->setID("gauntlet-image");
+    sprite->setAutoResize(true);
+    sprite->setPosition(position);
+    sprite->setLoadCallback([sprite, url](geode::Result<> const& result) {
+        if (!result) {
+            return;
+        }
+        if (auto texture = sprite->getTexture()) {
+            gdx::cacheGauntletTexture(url, texture);
+        }
+    });
+    sprite->loadFromUrl(url, CCImage::kFmtPng, true);
+    parent->addChild(sprite, zOrder);
+    return sprite;
+}
+
 namespace {
     static asp::fs::path getLocalGauntletPath() {
         auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
@@ -455,19 +495,35 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
             }
         });
 
+        bool usedCache = false;
         if (m_localMode && gauntlet["spritePath"].isString()) {
             auto spritePath = gauntlet["spritePath"].asString().unwrapOr("");
             if (!spritePath.empty()) {
                 gauntletImage->loadFromFile(spritePath, CCImage::kFmtPng, true);
             } else {
                 auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
-                gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+                auto cached = createCachedGauntletSprite(cell, imageUrl, gauntletSpritePosition, {50.f, 120.f}, 3);
+                if (cached) {
+                    usedCache = true;
+                } else {
+                    gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+                }
             }
         } else {
             auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
-            gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+            auto cached = createCachedGauntletSprite(cell, imageUrl, gauntletSpritePosition, {50.f, 120.f}, 3);
+            if (cached) {
+                usedCache = true;
+            } else {
+                gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+            }
         }
-        cell->addChild(gauntletImage, 3);
+
+        if (!usedCache) {
+            cell->addChild(gauntletImage, 3);
+        } else if (fallbackSprite) {
+            fallbackSprite->removeFromParent();
+        }
     }
 
     auto nameLabel = CCLabelBMFont::create(name.c_str(), "goldFont.fnt");

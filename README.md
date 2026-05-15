@@ -19,6 +19,7 @@
 - <cy>**Gauntlet Leaderboard**</c>: Compete with other users for the top spot on the leaderboard!
 - <cf>**Fan-Made Creator Contest Gauntlets**</c>: Participate in any upcoming Gauntlet Creator Contests!
 - <cb>**Entirely Community-run**</c>: This mod is entirely run by the community with <cl>**only little gauntlet moderation**</c> to keep it controlled, from the development of the gauntlets to the management of the leaderboard.
+- <cg>**Local Gauntlets**</c>: Create your own gauntlet list! _(This does not reward points and does not sync with the backend, it's purely client-sided and for fun)_
 
 ---
 
@@ -33,7 +34,7 @@
 - **Easy-Medium Demon**: 5 <cp>Level Points</c>
 - **Hard-Extreme Demon**: 7 <cp>Level Points</c>
 
-<cy>*If you have already beaten the level before using this mod, you still need to rebeat them to earn Level Points.*</c>
+<cy>_If you have already beaten the level before using this mod, you still need to rebeat them to earn Level Points._</c>
 
 ---
 

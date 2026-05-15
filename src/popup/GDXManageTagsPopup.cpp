@@ -314,9 +314,7 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
             menu_selector(GDXManageTagsPopup::onDeleteTag));
         deleteBtn->setTag(index);
         actionsMenu->addChild(deleteBtn);
-    }
 
-    if (gdx::isManager() || gdx::isContributor()) {
         auto editSpr = ButtonSprite::create("Edit", 120.f, 40.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
         editSpr->setScale(0.8f);
         auto editBtn = CCMenuItemSpriteExtra::create(
