@@ -75,7 +75,7 @@ bool GDXManageTagsPopup::init() {
     m_loadingSpinner = LoadingSpinner::create(60.f);
     if (m_loadingSpinner) {
         m_loadingSpinner->setAnchorPoint({0.5f, 0.5f});
-        m_mainLayer->addChildAtPosition(m_loadingSpinner, Anchor::Center, {0.f, 0.f});
+        m_list->addChildAtPosition(m_loadingSpinner, Anchor::Center, {0.f, 0.f});
         m_loadingSpinner->setVisible(false);
     }
 
@@ -275,7 +275,7 @@ void GDXManageTagsPopup::clearListContent() {
 
 cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, int index) {
     auto cell = CCLayer::create();
-    cell->setContentSize({370.f, 90.f});
+    cell->setContentSize({370.f, gdx::isManager() ? 90.f : 60.f});
 
     auto r = static_cast<int>(tag["r"].asInt().unwrapOr(128));
     auto g = static_cast<int>(tag["g"].asInt().unwrapOr(128));
@@ -315,10 +315,10 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
             descriptionBg->setScale(0.5f);
             descriptionBg->setOpacity(150);
             descriptionBg->setContentSize({descriptionLabel->getContentSize().width + 10.f, descriptionLabel->getContentSize().height + 10.f});
-            cell->addChildAtPosition(descriptionBg, Anchor::Center, {0.f, -3.f}, false);
+            cell->addChildAtPosition(descriptionBg, Anchor::Center, {0.f, gdx::isManager() ? -3.f : -17.f}, false);
         }
 
-        cell->addChildAtPosition(descriptionLabel, Anchor::Center, {0, -3}, false);
+        cell->addChildAtPosition(descriptionLabel, Anchor::Center, {0, gdx::isManager() ? -3.f : -17.f}, false);
     }
 
     auto actionsMenu = CCMenu::create();

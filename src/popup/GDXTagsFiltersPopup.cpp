@@ -47,9 +47,8 @@ bool GDXTagsFiltersPopup::init() {
 
     m_loadingSpinner = LoadingSpinner::create(40.f);
     if (m_loadingSpinner) {
-        m_loadingSpinner->setPosition({0.f, 10.f});
         m_loadingSpinner->setVisible(false);
-        m_tagMenu->addChild(m_loadingSpinner);
+        m_tagMenu->addChildAtPosition(m_loadingSpinner, Anchor::Center, {0.f, 0.f}, false);
     }
 
     CCMenu* bottomMenu = CCMenu::create();
