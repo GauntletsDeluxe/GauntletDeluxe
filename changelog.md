@@ -3,6 +3,7 @@
 - Added **Local Gauntlets**, user can create their own gauntlets list.
   _(This does not reward points and does not sync with the backend, it's purely client-sided and for fun)_
 - Gauntlets will now loop back when navigating next from the last gauntlet or previous from the first gauntlet.
+- Added **Search Gauntlets** feature, allowing users to search for gauntlets by their name.
 
 ## v1.0.4
 

@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include <Geode/binding/SetTextPopupDelegate.hpp>
 #include <asp/fs.hpp>
 #include <unordered_set>
 #include <vector>
@@ -27,7 +28,7 @@ struct GDXGauntletNode {
     static GDXGauntletNode fromJson(const matjson::Value& gauntlet);
 };
 
-class GDXGauntletLayer : public CCLayer {
+class GDXGauntletLayer : public CCLayer, public SetTextPopupDelegate {
 public:
     static GDXGauntletLayer* create();
 
@@ -54,7 +55,10 @@ private:
     void updatePageButtons();
     void updateLocalToggleState();
     void updateRecentToggleState();
+    void updateSearchButtonState();
     void onEnter() override;
+    void onSearchGauntlets(CCObject* sender);
+    void setTextPopupClosed(SetTextPopup* popup, gd::string text) override;
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local = false);
     BoomScrollLayer* getActiveScrollLayer() const;
@@ -70,6 +74,7 @@ private:
     CCMenuItemSpriteExtra* m_leaderboardBtn = nullptr;
     CCMenuItemSpriteExtra* m_discordBtn = nullptr;
     CCMenuItemSpriteExtra* m_syncBtn = nullptr;
+    CCMenuItemSpriteExtra* m_searchBtn = nullptr;
     CCMenuItemSpriteExtra* m_recentToggle = nullptr;
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
     bool m_recentFilter = false;
@@ -79,6 +84,7 @@ private:
     std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
     std::vector<CCMenuItemSpriteExtra*> m_localGauntletButtons;
     LoadingSpinner* m_loadingSpinner = nullptr;
+    std::string m_searchQuery;
     CCSprite* m_levelPointsSpr = nullptr;
     CCSprite* m_gauntletPointsSpr = nullptr;
     CCCounterLabel* m_levelPointsCounter = nullptr;

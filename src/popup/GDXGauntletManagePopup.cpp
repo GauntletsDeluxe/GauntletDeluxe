@@ -68,6 +68,33 @@ namespace {
         }
         return static_cast<bool>(result);
     }
+
+    static matjson::Value filterGauntletsByName(const matjson::Value& gauntlets, const std::string& query) {
+        if (!gauntlets.isArray()) {
+            return matjson::Value::array();
+        }
+        if (query.empty()) {
+            return gauntlets;
+        }
+
+        std::string lowerQuery = query;
+        std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+
+        matjson::Value filtered = matjson::Value::array();
+        for (auto const& gauntlet : gauntlets) {
+            auto name = gauntlet["name"].asString().unwrapOr("");
+            std::string lowerName = name;
+            std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), [](unsigned char c) {
+                return static_cast<char>(std::tolower(c));
+            });
+            if (lowerName.find(lowerQuery) != std::string::npos) {
+                filtered.push(gauntlet);
+            }
+        }
+        return filtered;
+    }
 }
 
 GDXGauntletManagePopup* GDXGauntletManagePopup::create() {
@@ -94,7 +121,7 @@ bool GDXGauntletManagePopup::init() {
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
     addSideArt(m_mainLayer, SideArt::TopRight, SideArtStyle::PopupGold, false);
 
-    auto listSize = CCSizeMake(356.f, 200.f);
+    auto listSize = CCSizeMake(356.f, 150.f);
     m_list = cue::ListNode::create(listSize);
     m_list->getScrollLayer()->m_contentLayer->setLayout(
         ColumnLayout::create()
@@ -102,9 +129,16 @@ bool GDXGauntletManagePopup::init() {
             ->setAxisReverse(true)
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
-    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, 0.f});
+    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, -40.f});
     m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
+
+    m_searchInput = geode::TextInput::create(320.f, "Search gauntlets", "chatFont.fnt");
+    if (m_searchInput) {
+        m_searchInput->setAnchorPoint({0.5f, 1.f});
+        m_mainLayer->addChildAtPosition(m_searchInput, Anchor::Top, {0.f, -30.f});
+    }
+
     this->scheduleUpdate();
 
     CCMenu* bottomMenu = CCMenu::create();
@@ -223,7 +257,9 @@ void GDXGauntletManagePopup::refreshListItems() {
 
 void GDXGauntletManagePopup::fetchGauntlets() {
     if (m_localMode) {
-        createGauntletList(loadLocalGauntlets());
+        auto gauntlets = loadLocalGauntlets();
+        m_allGauntlets = gauntlets;
+        rebuildGauntletList();
         return;
     }
 
@@ -248,14 +284,20 @@ void GDXGauntletManagePopup::fetchGauntlets() {
 }
 
 void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets) {
+    m_allGauntlets = gauntlets;
+    rebuildGauntletList();
+}
+
+void GDXGauntletManagePopup::rebuildGauntletList() {
     if (!m_list) {
         return;
     }
 
-    m_gauntlets = gauntlets;
+    auto filteredGauntlets = filterGauntletsByName(m_allGauntlets, m_searchFilter);
+    m_gauntlets = filteredGauntlets;
     m_list->clear();
 
-    if (!gauntlets.isArray() || gauntlets.size() == 0) {
+    if (!filteredGauntlets.isArray() || filteredGauntlets.size() == 0) {
         if (!m_emptyLabel) {
             m_emptyLabel = CCLabelBMFont::create("", "goldFont.fnt");
             if (m_emptyLabel) {
@@ -272,8 +314,8 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
         return;
     }
 
-    for (auto i = 0u; i < gauntlets.size(); ++i) {
-        auto const& gauntlet = gauntlets[i];
+    for (auto i = 0u; i < filteredGauntlets.size(); ++i) {
+        auto const& gauntlet = filteredGauntlets[i];
         if (!gauntlet.isObject()) {
             continue;
         }
@@ -288,6 +330,15 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
 
 void GDXGauntletManagePopup::update(float dt) {
     geode::Popup::update(dt);
+    if (!m_searchInput) {
+        return;
+    }
+
+    auto query = m_searchInput->getString();
+    if (query != m_searchFilter) {
+        m_searchFilter = query;
+        rebuildGauntletList();
+    }
 }
 
 CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet, int index) {
@@ -360,7 +411,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         cell->addChild(fallbackSprite, 2);
     }
 
-    auto gauntletImage = LazySprite::create({72.f, 72.f}, false);
+    auto gauntletImage = LazySprite::create({50.f, 120.f}, false);
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
         gauntletImage->setPosition(gauntletSpritePosition);

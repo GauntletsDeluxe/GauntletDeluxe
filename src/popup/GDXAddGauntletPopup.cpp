@@ -382,7 +382,7 @@ bool GDXAddGauntletPopup::init() {
             ->setAxisReverse(true));
     m_settingsMenu->setContentHeight(m_localMode ? 120.f : 100.f);
     m_settingsMenu->updateLayout();
-    m_mainLayer->addChildAtPosition(m_settingsMenu, Anchor::BottomLeft, {110, 55}, false);
+    m_mainLayer->addChildAtPosition(m_settingsMenu, Anchor::BottomLeft, {110, static_cast<float>(m_localMode ? 75 : 55)}, false);
 
     return true;
 }

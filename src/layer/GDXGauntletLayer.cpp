@@ -12,6 +12,7 @@
 #include <Geode/ui/MDPopup.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/web.hpp>
+#include <Geode/binding/SetTextPopup.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/BasedButtonSprite.hpp"
@@ -134,6 +135,31 @@ namespace {
         return matjson::Value::array();
     }
 
+    static matjson::Value filterLocalGauntlets(const matjson::Value& gauntlets, const std::string& query) {
+        if (!gauntlets.isArray() || query.empty()) {
+            return gauntlets;
+        }
+
+        std::string lowerQuery = query;
+        std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+
+        matjson::Value filtered = matjson::Value::array();
+        for (auto const& gauntlet : gauntlets) {
+            auto name = gauntlet["name"].asString().unwrapOr("");
+            std::string lowerName = name;
+            std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), [](unsigned char c) {
+                return static_cast<char>(std::tolower(c));
+            });
+
+            if (lowerName.find(lowerQuery) != std::string::npos) {
+                filtered.push(gauntlet);
+            }
+        }
+        return filtered;
+    }
+
     static bool saveLocalGauntlets(matjson::Value const& gauntlets) {
         auto path = getLocalGauntletPath();
         matjson::Value data = matjson::Value::array();
@@ -147,12 +173,6 @@ namespace {
             log::warn("Failed to save local gauntlets: {}", result.unwrapErr());
         }
         return static_cast<bool>(result);
-    }
-
-    static std::string makeFileUrl(asp::fs::path const& path) {
-        auto str = path.generic_string();
-        std::replace(str.begin(), str.end(), '\\', '/');
-        return fmt::format("file:///{}", str);
     }
 
     static std::unordered_set<int> loadCompletedGauntlets() {
@@ -463,6 +483,23 @@ bool GDXGauntletLayer::init() {
     auto bg = createLayerBG();
     bg->setColor({50, 50, 50});
     this->addChild(bg, -5);
+
+    // search button
+    // @geode-ignore(unknown-resource)
+    auto searchSpr = CircleButtonSprite::createWithSpriteFrameName(
+        "GDX_searchIcon.png"_spr,
+        1.f,
+        m_searchQuery.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
+        CircleBaseSize::Small);
+    m_searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GDXGauntletLayer::onSearchGauntlets));
+
+    // top left menu
+    auto topLeftMenu = CCMenu::create(m_searchBtn, nullptr);
+    topLeftMenu->setPosition({10, winSize.height - 50});
+    topLeftMenu->setContentHeight(100);
+    topLeftMenu->setAnchorPoint({0.f, 1.f});
+    topLeftMenu->setLayout(RowLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true));
+    this->addChild(topLeftMenu, 2);
 
     // info button
     auto bottomLeftMenu = CCMenu::create();
@@ -835,7 +872,8 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
             updatePageButtons();
             return;
         }
-        createGauntletPages(m_localGauntlets, true);
+        auto filtered = filterLocalGauntlets(m_localGauntlets, m_searchQuery);
+        createGauntletPages(filtered, true);
         return;
     }
 
@@ -854,8 +892,60 @@ void GDXGauntletLayer::onToggleRecent(CCObject* sender) {
     }
 }
 
+void GDXGauntletLayer::onSearchGauntlets(CCObject* sender) {
+    auto popup = SetTextPopup::create(
+        m_searchQuery,
+        "Search query",
+        128,
+        m_localMode ? "Search local gauntlets" : "Search gauntlets",
+        "Search",
+        true,
+        60.0f);
+    if (popup) {
+        popup->m_delegate = this;
+        popup->show();
+    }
+}
+
+void GDXGauntletLayer::setTextPopupClosed(SetTextPopup* popup, gd::string text) {
+    if (!popup) {
+        return;
+    }
+
+    auto newSearch = std::string(text);
+    if (newSearch == m_searchQuery) {
+        return;
+    }
+
+    m_searchQuery = std::move(newSearch);
+    updateSearchButtonState();
+    if (m_localMode) {
+        m_localGauntlets = loadLocalGauntlets();
+        if (!m_localGauntlets.isArray() || m_localGauntlets.size() == 0) {
+            if (m_localScrollLayer) {
+                m_localScrollLayer->removeFromParent();
+                m_localScrollLayer = nullptr;
+            }
+            m_localGauntletButtons.clear();
+            Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            updatePageButtons();
+            return;
+        }
+
+        auto filtered = filterLocalGauntlets(m_localGauntlets, m_searchQuery);
+        createGauntletPages(filtered, true);
+        return;
+    }
+
+    m_gauntlets = matjson::Value::array();
+    createGauntletPages(m_gauntlets);
+    fetchGauntlets();
+}
+
 void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     m_localMode = !m_localMode;
+    m_searchQuery.clear();
+    updateSearchButtonState();
     updateLocalToggleState();
     updateRecentToggleState();
 
@@ -869,7 +959,8 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
             m_localGauntletButtons.clear();
             Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
         } else {
-            createGauntletPages(m_localGauntlets, true);
+            auto filtered = filterLocalGauntlets(m_localGauntlets, m_searchQuery);
+            createGauntletPages(filtered, true);
         }
 
         if (m_localScrollLayer) {
@@ -911,6 +1002,9 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     }
     if (m_syncBtn) {
         m_syncBtn->setVisible(true);
+    }
+    if (m_searchBtn) {
+        m_searchBtn->setVisible(true);
     }
     if (m_bottomLeftMenu) {
         m_bottomLeftMenu->updateLayout();
@@ -976,8 +1070,14 @@ void GDXGauntletLayer::fetchGauntlets() {
     }
 
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
+    bool hasQuery = false;
     if (m_recentFilter) {
         url += "?recent=true";
+        hasQuery = true;
+    }
+    if (!m_searchQuery.empty()) {
+        url += hasQuery ? "&" : "?";
+        url += "search=" + m_searchQuery;
     }
     auto self = geode::Ref<GDXGauntletLayer>(this);
     m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() -> arc::Future<> {
@@ -1479,7 +1579,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         targetScroll = nullptr;
     } else {
         for (auto button : targetButtons) {
-            if (button) {
+            if (button && button->getParent()) {
                 button->removeFromParent();
             }
         }
@@ -1741,6 +1841,22 @@ void GDXGauntletLayer::updateLocalToggleState() {
     }
     if (m_gauntletPointsCounter) {
         m_gauntletPointsCounter->setVisible(!m_localMode);
+    }
+}
+
+void GDXGauntletLayer::updateSearchButtonState() {
+    if (!m_searchBtn) {
+        return;
+    }
+
+    auto sprite = CircleButtonSprite::createWithSpriteFrameName(
+        "GDX_searchIcon.png"_spr,
+        1.f,
+        m_searchQuery.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
+        CircleBaseSize::Small);
+    if (sprite) {
+        m_searchBtn->setSprite(sprite);
+        m_searchBtn->updateSprite();
     }
 }
 
