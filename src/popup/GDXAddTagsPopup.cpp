@@ -2,7 +2,6 @@
 #include "GDXManageTagsPopup.hpp"
 #include "../include/GDXConstant.hpp"
 #include "Geode/ui/Layout.hpp"
-#include "Geode/ui/NineSlice.hpp"
 #include <Geode/ui/General.hpp>
 #include <Geode/ui/Button.hpp>
 #include <Geode/ui/ColorPickPopup.hpp>
@@ -121,8 +120,8 @@ void GDXAddTagsPopup::onSelectColor(CCObject* sender) {
 }
 
 void GDXAddTagsPopup::onSubmit(CCObject* sender) {
-    auto name = m_nameInput ? m_nameInput->getString() : std::string();
-    auto description = m_descriptionInput ? m_descriptionInput->getString() : std::string();
+    auto name = m_nameInput ? m_nameInput->getString() : gd::string();
+    auto description = m_descriptionInput ? m_descriptionInput->getString() : gd::string();
     if (name.empty()) {
         Notification::create("Tag name cannot be empty.", NotificationIcon::Warning)->show();
         return;

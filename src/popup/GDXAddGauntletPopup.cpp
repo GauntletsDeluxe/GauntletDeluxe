@@ -961,8 +961,10 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     body["description"] = std::string(description);
     if (!m_localMode) {
         body["reward"] = reward;
-        body["suggestedBy"] = numFromString<int>(m_suggestedByInput ? m_suggestedByInput->getString() : std::string()).unwrapOr(0);
-        body["spriteBy"] = numFromString<int>(m_spriteByInput ? m_spriteByInput->getString() : std::string()).unwrapOr(0);
+        auto suggestedByString = m_suggestedByInput ? m_suggestedByInput->getString() : gd::string();
+        auto spriteByString = m_spriteByInput ? m_spriteByInput->getString() : gd::string();
+        body["suggestedBy"] = numFromString<int>(suggestedByString).unwrapOr(0);
+        body["spriteBy"] = numFromString<int>(spriteByString).unwrapOr(0);
     }
     body["r"] = color.r;
     body["g"] = color.g;

@@ -764,7 +764,7 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
         return;
     }
 
-    auto searchObj = GJSearchObject::create(SearchType::Search, numToString(entry.levelId));
+    auto searchObj = GJSearchObject::create(SearchType::Type19, numToString(entry.levelId));
     if (!searchObj) {
         return;
     }
