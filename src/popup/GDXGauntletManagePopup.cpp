@@ -183,7 +183,7 @@ void GDXGauntletManagePopup::refreshList() {
     fetchGauntlets();
 }
 
-void GDXGauntletManagePopup::refreshListItems() {
+void GDXGauntletManagePopup::clearListContent() {
     if (!m_list) {
         return;
     }
@@ -192,6 +192,17 @@ void GDXGauntletManagePopup::refreshListItems() {
     if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
         m_list->getScrollLayer()->m_contentLayer->removeAllChildrenWithCleanup(true);
     }
+    if (m_emptyLabel) {
+        m_emptyLabel->setVisible(false);
+    }
+}
+
+void GDXGauntletManagePopup::refreshListItems() {
+    if (!m_list) {
+        return;
+    }
+
+    clearListContent();
 
     auto cell = CCLayer::create();
     cell->setContentSize(m_list->getListSize());
@@ -243,12 +254,21 @@ void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets)
 
     m_gauntlets = gauntlets;
     m_list->clear();
+
     if (!gauntlets.isArray() || gauntlets.size() == 0) {
-        auto emptyLabel = CCLabelBMFont::create(m_localMode ? "No local gauntlets saved." : "No gauntlets available.", "goldFont.fnt");
-        m_list->addChild(emptyLabel);
-        emptyLabel->setAnchorPoint({0.5f, 0.5f});
-        emptyLabel->setScale(0.8f);
-        emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
+        if (!m_emptyLabel) {
+            m_emptyLabel = CCLabelBMFont::create("", "goldFont.fnt");
+            if (m_emptyLabel) {
+                m_emptyLabel->setAnchorPoint({0.5f, 0.5f});
+                m_emptyLabel->setScale(0.8f);
+                m_list->addChild(m_emptyLabel);
+            }
+        }
+        if (m_emptyLabel) {
+            m_emptyLabel->setString(m_localMode ? "No local gauntlets saved." : "No gauntlets available.");
+            m_emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
+            m_emptyLabel->setVisible(true);
+        }
         return;
     }
 
@@ -340,7 +360,6 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         cell->addChild(fallbackSprite, 2);
     }
 
-    auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
     auto gauntletImage = LazySprite::create({72.f, 72.f}, false);
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
@@ -350,7 +369,19 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
                 fallbackSprite->removeFromParent();
             }
         });
-        gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+
+        if (m_localMode && gauntlet["spritePath"].isString()) {
+            auto spritePath = gauntlet["spritePath"].asString().unwrapOr("");
+            if (!spritePath.empty()) {
+                gauntletImage->loadFromFile(spritePath, CCImage::kFmtPng, true);
+            } else {
+                auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
+                gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+            }
+        } else {
+            auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
+            gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
+        }
         cell->addChild(gauntletImage, 3);
     }
 
@@ -389,19 +420,21 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         cell->addChildAtPosition(descriptionBg, Anchor::Center, {12.f, 0.f}, false);
     }
 
-    auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
-    if (rewardSpr) {
-        rewardSpr->setScale(0.25f);
-        rewardSpr->setAnchorPoint({1.f, 0.5f});
-        rewardSpr->setPosition({95.f, 13.f});
-        cell->addChild(rewardSpr);
-    }
+    if (!m_localMode) {
+        auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+        if (rewardSpr) {
+            rewardSpr->setScale(0.25f);
+            rewardSpr->setAnchorPoint({1.f, 0.5f});
+            rewardSpr->setPosition({95.f, 13.f});
+            cell->addChild(rewardSpr);
+        }
 
-    auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
-    rewardLabel->setAnchorPoint({0.f, 0.5f});
-    rewardLabel->setPosition({100.f, 13.f});
-    rewardLabel->limitLabelWidth(180.f, 0.35f, 0.2f);
-    cell->addChild(rewardLabel);
+        auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
+        rewardLabel->setAnchorPoint({0.f, 0.5f});
+        rewardLabel->setPosition({100.f, 13.f});
+        rewardLabel->limitLabelWidth(180.f, 0.35f, 0.2f);
+        cell->addChild(rewardLabel);
+    }
 
     return cell;
 }

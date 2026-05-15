@@ -52,10 +52,11 @@ private:
     void fetchUserData();
     void createGauntletPages(const matjson::Value& gauntlets, bool local = false);
     void updatePageButtons();
-    void updateModeState();
+    void updateLocalToggleState();
+    void updateRecentToggleState();
     void onEnter() override;
 
-    CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index);
+    CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local = false);
     BoomScrollLayer* getActiveScrollLayer() const;
     const matjson::Value& getActiveGauntlets() const;
     BoomScrollLayer* m_scrollLayer = nullptr;
@@ -69,8 +70,8 @@ private:
     CCMenuItemSpriteExtra* m_leaderboardBtn = nullptr;
     CCMenuItemSpriteExtra* m_discordBtn = nullptr;
     CCMenuItemSpriteExtra* m_syncBtn = nullptr;
-    CCMenuItemToggler* m_recentToggle = nullptr;
-    CCMenuItemToggler* m_localToggle = nullptr;
+    CCMenuItemSpriteExtra* m_recentToggle = nullptr;
+    CCMenuItemSpriteExtra* m_localToggle = nullptr;
     bool m_recentFilter = false;
     bool m_localMode = false;
     matjson::Value m_onlineGauntlets;

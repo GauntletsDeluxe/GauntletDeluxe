@@ -12,6 +12,8 @@ class SelectArtLayer;
 
 struct LevelRewardEntry {
     int levelId = 0;
+    std::string levelName;
+    std::string creatorName;
     int reward = 0;
 };
 
@@ -42,9 +44,11 @@ private:
     void onMoveLevelUp(CCObject* sender);
     void onMoveLevelDown(CCObject* sender);
     void onToggleFeatured(CCObject* sender);
+    void onAddSprite(CCObject* sender);
     void refreshLevelList();
     void applyEditMode();
     void updateBgIcon();
+    void updateFeatureToggleState();
     void loadNextPendingLevel();
     LevelCell* createLevelCellFromLevel(GJGameLevel* level, int reward);
     void selectArtClosed(SelectArtLayer* layer) override;
@@ -73,7 +77,7 @@ private:
     cocos2d::ccColor3B m_selectedColor = {255, 255, 255};
     cocos2d::CCSprite* m_colorSpr = nullptr;
     geode::ColorPickPopup* m_colorPopup = nullptr;
-    CCMenuItemToggler* m_featureToggle = nullptr;
+    CCMenuItemSpriteExtra* m_featureToggle = nullptr;
     bool m_isFeatured = false;
     std::vector<LevelRewardEntry> m_levels;
     std::vector<LevelCell*> m_levelCells;
@@ -82,6 +86,8 @@ private:
     int m_editIndex = -1;
     bool m_localMode = false;
     matjson::Value m_editGauntlet;
+    std::string m_spritePath;
     cocos2d::CCMenu* m_settingsMenu = nullptr;
     geode::async::TaskHolder<> m_addGauntletTask;
+    geode::async::TaskHolder<> m_addSpriteTask;
 };

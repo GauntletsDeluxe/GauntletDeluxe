@@ -190,6 +190,77 @@ static LazySprite* createLazySpriteWithFallback(CCNode* parent, const std::strin
     return sprite;
 }
 
+static LazySprite* createLocalSprite(CCNode* parent, const asp::fs::path& path, const CCPoint& position, const CCSize& size, int zOrder = 2) {
+    auto sprite = LazySprite::create(size, false);
+    if (!sprite) {
+        return nullptr;
+    }
+
+    sprite->setID("gauntlet-image");
+    sprite->setAutoResize(true);
+    sprite->setPosition(position);
+
+    auto fallbackShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+    if (fallbackShadow) {
+        fallbackShadow->setColor({0, 0, 0});
+        fallbackShadow->setOpacity(50);
+        fallbackShadow->setScaleX(1.f);
+        fallbackShadow->setScaleY(1.1f);
+        fallbackShadow->setPosition(position);
+        fallbackShadow->setPositionY(position.y - 10.f);
+        if (parent) {
+            parent->addChild(fallbackShadow, zOrder - 2);
+        }
+    }
+
+    auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+    if (fallbackSprite) {
+        fallbackSprite->setPosition(position);
+        if (parent) {
+            parent->addChild(fallbackSprite, zOrder - 1);
+        }
+    }
+
+    sprite->setLoadCallback([fallbackSprite, fallbackShadow, sprite, position, size, parent, zOrder](geode::Result<> const& result) {
+        if (!result) {
+            return;
+        }
+        if (fallbackSprite) {
+            fallbackSprite->removeFromParent();
+        }
+        if (fallbackShadow) {
+            fallbackShadow->removeFromParent();
+        }
+        if (auto texture = sprite->getTexture()) {
+            if (texture->getName() != 0) {
+                auto shadow = CCSprite::createWithTexture(texture);
+                if (shadow) {
+                    if (shadow->getContentSize().width > 0 && shadow->getContentSize().height > 0) {
+                        const float fitScale = std::min(
+                            size.width / shadow->getContentSize().width,
+                            size.height / shadow->getContentSize().height);
+                        shadow->setScale(fitScale);
+                        shadow->setScaleY(fitScale + 0.1f);
+                    }
+                    shadow->setPosition(position);
+                    shadow->setPositionY(position.y - 10.f);
+                    shadow->setColor({0, 0, 0});
+                    shadow->setOpacity(50);
+                    if (parent) {
+                        parent->addChild(shadow, zOrder - 2);
+                    }
+                }
+            }
+        }
+    });
+    sprite->loadFromFile(path, CCImage::kFmtPng, true);
+
+    if (parent) {
+        parent->addChild(sprite, zOrder);
+    }
+    return sprite;
+}
+
 static CCSprite* createRemoteSprite(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
     if (auto texture = gdx::findGauntletTexture(url)) {
         if (texture->getName() != 0) {
@@ -296,16 +367,18 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     this->addChildAtPosition(titleShadow, Anchor::Top, {4, -24}, false);
     this->addChildAtPosition(titleLabel, Anchor::Top, {0, -20}, false);
 
-    auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-    if (infoIconSpr) {
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLevelsLayer::onGauntletInfo));
-        auto bottomRightMenu = CCMenu::create(infoBtn, nullptr);
-        if (bottomRightMenu) {
-            bottomRightMenu->setPosition({winSize.width - 30, 70});
-            bottomRightMenu->setContentHeight(100);
-            bottomRightMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
-            this->addChild(bottomRightMenu, 2);
-            bottomRightMenu->updateLayout();
+    if (!localMode) {
+        auto infoIconSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+        if (infoIconSpr) {
+            auto infoBtn = CCMenuItemSpriteExtra::create(infoIconSpr, this, menu_selector(GDXGauntletLevelsLayer::onGauntletInfo));
+            auto bottomRightMenu = CCMenu::create(infoBtn, nullptr);
+            if (bottomRightMenu) {
+                bottomRightMenu->setPosition({winSize.width - 30, 70});
+                bottomRightMenu->setContentHeight(100);
+                bottomRightMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start));
+                this->addChild(bottomRightMenu, 2);
+                bottomRightMenu->updateLayout();
+            }
         }
     }
 
@@ -356,9 +429,28 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         auto imagePosition = imageContainer
                                  ? ccp(imageTarget->getContentSize().width / 2.f, imageTarget->getContentSize().height / 2.f)
                                  : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
-        auto gauntletSprite = createRemoteSprite(imageTarget, imageUrl, imagePosition, iconSize);
+        LazySprite* localSprite = nullptr;
+        if (m_localMode && m_gauntletData["spritePath"].isString()) {
+            auto spritePath = m_gauntletData["spritePath"].asString().unwrapOr("");
+            if (!spritePath.empty()) {
+                asp::fs::path path(spritePath);
+                if (asp::fs::isFile(path).unwrapOr(false)) {
+                    localSprite = createLocalSprite(imageTarget, path, imagePosition, iconSize);
+                }
+            }
+        }
+
+        auto gauntletSprite = localSprite ? static_cast<CCSprite*>(localSprite) : createRemoteSprite(imageTarget, imageUrl, imagePosition, iconSize);
         if (!gauntletSprite) {
             continue;
+        }
+
+        if (i + 1 == m_levels.size()) {
+            auto skull = CCSprite::createWithSpriteFrameName("miniSkull_001.png");
+            if (skull) {
+                skull->setPosition(imagePosition);
+                imageTarget->addChild(skull, 5);
+            }
         }
 
         if (!isUnlocked) {
@@ -794,4 +886,3 @@ void GDXGauntletLevelsLayer::update(float dt) {
 void GDXGauntletLevelsLayer::keyBackClicked() {
     CCDirector::sharedDirector()->popSceneWithTransition(0.5f, PopTransition::kPopTransitionFade);
 }
-

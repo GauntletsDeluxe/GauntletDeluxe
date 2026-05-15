@@ -24,12 +24,13 @@ private:
     void refreshListItems();
     void fetchGauntlets();
     void createGauntletList(const matjson::Value& gauntlets);
+    void clearListContent();
     void deleteGauntletAtIndex(int index);
     cocos2d::CCNode* createGauntletCell(const matjson::Value& gauntlet, int index);
     cue::ListNode* m_list = nullptr;
     geode::Scrollbar* m_scrollbar = nullptr;
+    cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
     matjson::Value m_gauntlets;
-    cocos2d::CCMenu* m_menu = nullptr;
     bool m_localMode = false;
     geode::async::TaskHolder<> m_manageAssetsTask;
     geode::async::TaskHolder<> m_fetchGauntletsTask;

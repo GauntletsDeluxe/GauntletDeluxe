@@ -301,6 +301,88 @@ namespace {
         return sprite;
     }
 
+    static LazySprite* createLocalSprite(CCNode* parent, const asp::fs::path& path, const CCPoint& position, const CCSize& size, int zOrder = 2) {
+        auto sprite = LazySprite::create(size, false);
+        if (!sprite) {
+            return nullptr;
+        }
+
+        sprite->setID("gauntlet-image");
+        sprite->setAutoResize(true);
+        sprite->setPosition(position);
+
+        auto fallbackShadow = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        if (fallbackShadow) {
+            fallbackShadow->setColor({0, 0, 0});
+            fallbackShadow->setOpacity(50);
+            if (fallbackShadow->getContentSize().width > 0 && fallbackShadow->getContentSize().height > 0) {
+                const float fitScale = std::min(
+                    size.width / fallbackShadow->getContentSize().width,
+                    size.height / fallbackShadow->getContentSize().height);
+                fallbackShadow->setScale(fitScale * 1.05f);
+                fallbackShadow->setScaleY(fitScale + 0.1f);
+            }
+            fallbackShadow->setPosition(position);
+            fallbackShadow->setPositionY(position.y - 10.f);
+            if (parent) {
+                parent->addChild(fallbackShadow, zOrder - 2);
+            }
+        }
+
+        auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+        if (fallbackSprite) {
+            if (fallbackSprite->getContentSize().width > 0 && fallbackSprite->getContentSize().height > 0) {
+                const float fitScale = std::min(
+                    size.width / fallbackSprite->getContentSize().width,
+                    size.height / fallbackSprite->getContentSize().height);
+                fallbackSprite->setScale(fitScale);
+            }
+            fallbackSprite->setPosition(position);
+            if (parent) {
+                parent->addChild(fallbackSprite, zOrder - 1);
+            }
+        }
+
+        sprite->setLoadCallback([fallbackSprite, fallbackShadow, path, position, size, parent, zOrder, sprite](geode::Result<> const& result) {
+            if (!result) {
+                return;
+            }
+            if (fallbackSprite) {
+                fallbackSprite->removeFromParent();
+            }
+            if (fallbackShadow) {
+                fallbackShadow->removeFromParent();
+            }
+            if (auto texture = sprite->getTexture()) {
+                if (texture->getName() != 0) {
+                    auto shadow = CCSprite::createWithTexture(texture);
+                    if (shadow) {
+                        if (shadow->getContentSize().width > 0 && shadow->getContentSize().height > 0) {
+                            const float fitScale = std::min(
+                                size.width / shadow->getContentSize().width,
+                                size.height / shadow->getContentSize().height);
+                            shadow->setScale(fitScale);
+                            shadow->setScaleY(fitScale + 0.1f);
+                        }
+                        shadow->setPosition(position);
+                        shadow->setPositionY(position.y - 10.f);
+                        shadow->setColor({0, 0, 0});
+                        shadow->setOpacity(50);
+                        if (parent) {
+                            parent->addChild(shadow, zOrder - 2);
+                        }
+                    }
+                }
+            }
+        });
+        sprite->loadFromFile(path, CCImage::kFmtPng, true);
+
+        if (parent) {
+            parent->addChild(sprite, zOrder);
+        }
+        return sprite;
+    }
+
     static CCSprite* createRemoteSprite(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
         if (auto texture = gdx::findGauntletTexture(url)) {
             if (texture->getName() != 0) {
@@ -340,6 +422,22 @@ namespace {
             }
         }
         return createLazySpriteWithFallback(parent, url, position, size, zOrder);
+    }
+
+    static CCSprite* createRecentToggleSprite(bool on) {
+        return CircleButtonSprite::createWithSpriteFrameName(
+            "GJ_sRecentIcon_001.png",
+            .8f,
+            on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
+            CircleBaseSize::Small);
+    }
+
+    static CCSprite* createLocalToggleSprite(bool on) {
+        return CircleButtonSprite::createWithSpriteFrameName(
+            "GDX_localGauntlet.png"_spr,
+            1.f,
+            on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
+            CircleBaseSize::Small);
     }
 }
 
@@ -410,23 +508,12 @@ bool GDXGauntletLayer::init() {
     m_syncBtn = CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXGauntletLayer::onSyncAccount));
 
     // recent toggle
-    auto recentOff = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Cyan, CircleBaseSize::Small);
-    auto recentOn = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Gray, CircleBaseSize::Small);
-    m_recentToggle = CCMenuItemToggler::create(recentOff, recentOn, this, menu_selector(GDXGauntletLayer::onToggleRecent));
-    if (m_recentToggle) {
-        m_recentToggle->toggle(m_recentFilter);
-    }
+    m_recentToggle = CCMenuItemSpriteExtra::create(createRecentToggleSprite(m_recentFilter), this, menu_selector(GDXGauntletLayer::onToggleRecent));
+    updateRecentToggleState();
 
-    auto localOff = CircleButtonSprite::createWithSpriteFrameName("GDX_localGauntlet.png"_spr, 1.f, CircleBaseColor::Gray, CircleBaseSize::Small);
-    auto localOn = CircleButtonSprite::createWithSpriteFrameName("GDX_localGauntlet.png"_spr, 1.f, CircleBaseColor::Cyan, CircleBaseSize::Small);
-    if (!localOff) {
-        localOff = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Gray, CircleBaseSize::Small);
-    }
-    if (!localOn) {
-        localOn = CircleButtonSprite::createWithSpriteFrameName("GJ_sRecentIcon_001.png", .8f, CircleBaseColor::Cyan, CircleBaseSize::Small);
-    }
-    m_localToggle = CCMenuItemToggler::create(localOff, localOn, this, menu_selector(GDXGauntletLayer::onToggleLocalMode));
-    updateModeState();
+    m_localToggle = CCMenuItemSpriteExtra::create(createLocalToggleSprite(m_localMode), this, menu_selector(GDXGauntletLayer::onToggleLocalMode));
+    updateLocalToggleState();
+    updateRecentToggleState();
 
     auto bottomRightMenu = CCMenu::create(refreshBtn, m_syncBtn, m_recentToggle, m_localToggle, nullptr);
     if (bottomRightMenu) {
@@ -744,7 +831,7 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
                 m_localScrollLayer = nullptr;
             }
             m_localGauntletButtons.clear();
-            Notification::create("Local gauntlets are not available. Create local_gauntlets.json in the mod save folder.", NotificationIcon::Info)->show();
+            Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
             updatePageButtons();
             return;
         }
@@ -759,10 +846,7 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
 
 void GDXGauntletLayer::onToggleRecent(CCObject* sender) {
     m_recentFilter = !m_recentFilter;
-    if (m_recentToggle) {
-        m_recentToggle->toggle(m_recentFilter);
-    }
-    updateModeState();
+    updateRecentToggleState();
     if (!m_localMode) {
         m_gauntlets = matjson::Value::array();
         createGauntletPages(m_gauntlets);
@@ -772,7 +856,8 @@ void GDXGauntletLayer::onToggleRecent(CCObject* sender) {
 
 void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     m_localMode = !m_localMode;
-    updateModeState();
+    updateLocalToggleState();
+    updateRecentToggleState();
 
     if (m_localMode) {
         m_localGauntlets = loadLocalGauntlets();
@@ -782,7 +867,7 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
                 m_localScrollLayer = nullptr;
             }
             m_localGauntletButtons.clear();
-            Notification::create("Local gauntlets are not available. Create local_gauntlets.json in the mod save folder.", NotificationIcon::Info)->show();
+            Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
         } else {
             createGauntletPages(m_localGauntlets, true);
         }
@@ -1027,7 +1112,7 @@ const matjson::Value& GDXGauntletLayer::getActiveGauntlets() const {
     return m_localMode ? m_localGauntlets : m_gauntlets;
 }
 
-CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Value& gauntlet, std::size_t index) {
+CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local) {
     auto node = GDXGauntletNode::fromJson(gauntlet);
     int gauntletIndex = node.id;
     std::string gauntletName = node.name;
@@ -1112,7 +1197,21 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     auto imageTarget = imageContainer ? imageContainer : gauntletBg;
     auto imageSize = imageContainer ? imageContainer->getContentSize() : CCSize{90.f, 140.f};
     auto imagePosition = imageContainer ? ccp(imageSize.width / 2.f, imageSize.height / 2.f) : imageCenter;
-    auto gauntletImage = createRemoteSprite(imageTarget, imageUrl, imagePosition, imageSize, 0);
+
+    CCSprite* gauntletImage = nullptr;
+    if (local && gauntlet["spritePath"].isString()) {
+        auto spritePath = gauntlet["spritePath"].asString().unwrapOr("");
+        if (!spritePath.empty()) {
+            asp::fs::path path(spritePath);
+            if (asp::fs::isFile(path).unwrapOr(false)) {
+                auto localSprite = createLocalSprite(imageTarget, path, imagePosition, imageSize, 0);
+                gauntletImage = localSprite;
+            }
+        }
+    }
+    if (!gauntletImage) {
+        gauntletImage = createRemoteSprite(imageTarget, imageUrl, imagePosition, imageSize, 0);
+    }
 
     auto completedCount = 0;
     for (auto const& level : node.levelIds) {
@@ -1141,7 +1240,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
             completedIcon->setPosition({gauntletBg->getContentSize().width / 2.f, 50.f});
             gauntletBg->addChild(completedIcon, 4);
         }
-    } else if (hasCompletedAllLevels) {
+    } else if (hasCompletedAllLevels && !local) {
         auto rewardBtnSpr = CCSprite::createWithSpriteFrameName("GJ_rewardBtn_001.png");
         if (rewardBtnSpr) {
             rewardBtn = CCMenuItemSpriteExtra::create(rewardBtnSpr, this, menu_selector(GDXGauntletLayer::onCompleteGauntlet));
@@ -1153,7 +1252,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
                 gauntletBg->addChild(rewardMenu, 3);
             }
         }
-    } else {
+    } else if (!local) {
         auto rewardLabel = CCLabelBMFont::create(numToString(node.reward).c_str(), "bigFont.fnt");
         rewardLabel->setAlignment(kCCTextAlignmentLeft);
         rewardLabel->setAnchorPoint({1.f, 0.5f});
@@ -1429,7 +1528,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
             pages->addObject(page);
         }
 
-        auto gauntletButton = createGauntletButton(gauntlets[i], i);
+        auto gauntletButton = createGauntletButton(gauntlets[i], i, local);
         if (pageMenu && gauntletButton) {
             pageMenu->addChild(gauntletButton);
             targetButtons.push_back(gauntletButton);
@@ -1444,7 +1543,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         return;
     }
 
-    targetScroll = BoomScrollLayer::create(pages, 0, true);
+    targetScroll = BoomScrollLayer::create(pages, 0, false);
     if (!targetScroll) {
         return;
     }
@@ -1490,23 +1589,59 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         }
 
         if (m_pageNavMenu) {
-            m_pageNavMenu->removeAllChildrenWithCleanup(true);
-            if (m_prevPageBtn) {
+            if (m_prevPageBtn && !m_prevPageBtn->getParent()) {
                 m_pageNavMenu->addChild(m_prevPageBtn);
             }
-            if (m_nextPageBtn) {
+            if (m_nextPageBtn && !m_nextPageBtn->getParent()) {
                 m_pageNavMenu->addChild(m_nextPageBtn);
             }
         }
 
         updatePageButtons();
-    } else if (m_pageNavMenu) {
-        if (m_prevPageBtn) {
-            m_prevPageBtn->setVisible(false);
+    } else {
+        if (!m_prevPageBtn) {
+            auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
+            if (prevSpr) {
+                prevSpr->setFlipX(true);
+            }
+            m_prevPageBtn = CCMenuItemSpriteExtra::create(
+                prevSpr,
+                this,
+                menu_selector(GDXGauntletLayer::onPrev));
+            if (m_prevPageBtn) {
+                m_prevPageBtn->setPosition({25.f, winSize.height / 2.f});
+            }
         }
-        if (m_nextPageBtn) {
-            m_nextPageBtn->setVisible(false);
+
+        if (!m_nextPageBtn) {
+            auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
+            m_nextPageBtn = CCMenuItemSpriteExtra::create(
+                nextSpr,
+                this,
+                menu_selector(GDXGauntletLayer::onNext));
+            if (m_nextPageBtn) {
+                m_nextPageBtn->setPosition({winSize.width - 25.f, winSize.height / 2.f});
+            }
         }
+
+        if (!m_pageNavMenu) {
+            m_pageNavMenu = CCMenu::create();
+            if (m_pageNavMenu) {
+                m_pageNavMenu->setPosition({0, 0});
+                this->addChild(m_pageNavMenu, 2);
+            }
+        }
+
+        if (m_pageNavMenu) {
+            if (m_prevPageBtn && !m_prevPageBtn->getParent()) {
+                m_pageNavMenu->addChild(m_prevPageBtn);
+            }
+            if (m_nextPageBtn && !m_nextPageBtn->getParent()) {
+                m_pageNavMenu->addChild(m_nextPageBtn);
+            }
+        }
+
+        updatePageButtons();
     }
 }
 
@@ -1576,33 +1711,24 @@ void GDXGauntletLayer::updatePageButtons() {
     }
     auto totalPages = layer->getTotalPages();
     if (totalPages <= 0) {
-        if (m_prevPageBtn) {
-            m_prevPageBtn->setVisible(false);
-        }
-        if (m_nextPageBtn) {
-            m_nextPageBtn->setVisible(false);
-        }
         return;
     }
 
-    const bool prevVisible = page > 0;
-    const bool nextVisible = page < totalPages - 1;
-
     if (m_prevPageBtn) {
-        m_prevPageBtn->setVisible(prevVisible);
+        m_prevPageBtn->setVisible(true);
     }
     if (m_nextPageBtn) {
-        m_nextPageBtn->setVisible(nextVisible);
+        m_nextPageBtn->setVisible(true);
     }
 }
 
-void GDXGauntletLayer::updateModeState() {
+void GDXGauntletLayer::updateLocalToggleState() {
     if (m_localToggle) {
-        m_localToggle->toggle(m_localMode);
-    }
-    if (m_recentToggle) {
-        m_recentToggle->toggle(m_recentFilter);
-        m_recentToggle->setVisible(!m_localMode);
+        auto sprite = createLocalToggleSprite(m_localMode);
+        if (sprite) {
+            m_localToggle->setSprite(sprite);
+            m_localToggle->updateSprite();
+        }
     }
     if (m_levelPointsSpr) {
         m_levelPointsSpr->setVisible(!m_localMode);
@@ -1615,5 +1741,16 @@ void GDXGauntletLayer::updateModeState() {
     }
     if (m_gauntletPointsCounter) {
         m_gauntletPointsCounter->setVisible(!m_localMode);
+    }
+}
+
+void GDXGauntletLayer::updateRecentToggleState() {
+    if (m_recentToggle) {
+        auto sprite = createRecentToggleSprite(m_recentFilter);
+        if (sprite) {
+            m_recentToggle->setSprite(sprite);
+            m_recentToggle->updateSprite();
+        }
+        m_recentToggle->setVisible(!m_localMode);
     }
 }

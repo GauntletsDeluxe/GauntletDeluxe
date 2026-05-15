@@ -10,6 +10,7 @@
 #include <cue/ListNode.hpp>
 #include <Geode/binding/SelectArtLayer.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
+#include <Geode/utils/file.hpp>
 #include <string>
 #include <string_view>
 
@@ -261,46 +262,41 @@ bool GDXAddGauntletPopup::init() {
     m_nameInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_nameInput, Anchor::Left, {65, 80});
 
-    m_gauntletReward = TextInput::create(80.f, "Gauntlet Reward", "chatFont.fnt");
-    m_gauntletReward->setCommonFilter(CommonFilter::Int);
-    m_gauntletReward->setLabel("Gauntlet Reward");
-    m_mainLayer->addChildAtPosition(m_gauntletReward, Anchor::Left, {155, 80});
-
     m_descriptionInput = TextInput::create(105.f, "Gauntlet Description", "chatFont.fnt");
     m_descriptionInput->setLabel("Gauntlet Description");
     m_descriptionInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_descriptionInput, Anchor::Left, {75, 30});
 
-    m_suggestedByInput = TextInput::create(80.f, "Suggested By", "chatFont.fnt");
-    m_suggestedByInput->setLabel("Suggested By");
-    m_suggestedByInput->setCommonFilter(CommonFilter::Int);
-    m_mainLayer->addChildAtPosition(m_suggestedByInput, Anchor::Left, {65, -20});
+    if (!m_localMode) {
+        m_suggestedByInput = TextInput::create(80.f, "Suggested By", "chatFont.fnt");
+        m_suggestedByInput->setLabel("Suggested By");
+        m_suggestedByInput->setCommonFilter(CommonFilter::Int);
+        m_mainLayer->addChildAtPosition(m_suggestedByInput, Anchor::Left, {65, -20});
 
-    m_spriteByInput = TextInput::create(80.f, "Sprite By", "chatFont.fnt");
-    m_spriteByInput->setLabel("Sprite By");
-    m_spriteByInput->setCommonFilter(CommonFilter::Int);
-    m_mainLayer->addChildAtPosition(m_spriteByInput, Anchor::Left, {155, -20});
+        m_spriteByInput = TextInput::create(80.f, "Sprite By", "chatFont.fnt");
+        m_spriteByInput->setLabel("Sprite By");
+        m_spriteByInput->setCommonFilter(CommonFilter::Int);
+        m_mainLayer->addChildAtPosition(m_spriteByInput, Anchor::Left, {155, -20});
+    }
+
+    if (!m_localMode) {
+        m_gauntletReward = TextInput::create(80.f, "Gauntlet Reward", "chatFont.fnt");
+        m_gauntletReward->setCommonFilter(CommonFilter::Int);
+        m_gauntletReward->setLabel("Gauntlet Reward");
+        m_mainLayer->addChildAtPosition(m_gauntletReward, Anchor::Left, {155, 80});
+    }
 
     m_bgIndex = 14;
     auto bgIcon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
-    bgIcon->setAnchorPoint({0.5f, 0.5f});
     auto bgBtn = CCMenuItemSpriteExtra::create(
         bgIcon,
         this,
         menu_selector(GDXAddGauntletPopup::onPickBackground));
     if (bgBtn) {
-        bgBtn->setAnchorPoint({0.5f, 0.5f});
-        bgBtn->setScale(0.7f);
         bgBtn->m_scaleMultiplier = 1.05f;
         m_bgIndexButton = bgBtn;
         m_bgIconSpr = bgIcon;
-        m_buttonMenu->addChildAtPosition(bgBtn, Anchor::TopRight, {-100.f, -15.f}, false);
-        if (auto bgLabel = CCLabelBMFont::create("BG", "bigFont.fnt")) {
-            bgLabel->setScale(0.35f);
-            bgLabel->setAnchorPoint({1.f, 0.5f});
-            bgLabel->setPosition({-5.f, 15.f});
-            bgBtn->addChild(bgLabel);
-        }
+        m_buttonMenu->addChildAtPosition(bgBtn, Anchor::BottomLeft, {25, 25}, false);
     }
 
     m_levelInput = TextInput::create(120.f, "Level ID", "chatFont.fnt");
@@ -308,10 +304,12 @@ bool GDXAddGauntletPopup::init() {
     m_levelInput->setZOrder(2);
     m_mainLayer->addChildAtPosition(m_levelInput, Anchor::Bottom, {10, 22});
 
-    m_levelRewardInput = TextInput::create(120.f, "Level Reward", "chatFont.fnt");
-    m_levelRewardInput->setCommonFilter(CommonFilter::Int);
-    m_levelRewardInput->setZOrder(2);
-    m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 22});
+    if (!m_localMode) {
+        m_levelRewardInput = TextInput::create(120.f, "Level Reward", "chatFont.fnt");
+        m_levelRewardInput->setCommonFilter(CommonFilter::Int);
+        m_levelRewardInput->setZOrder(2);
+        m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 22});
+    }
 
     auto colorSpr = CCSprite::create("GJ_squareB_01.png");
     colorSpr->setScale(0.4f);
@@ -332,12 +330,11 @@ bool GDXAddGauntletPopup::init() {
     colorBtn->addChildAtPosition(colorLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
 
     // featured toggle
-    auto offFeaturedNode = CCSprite::createWithSpriteFrameName("GDX_emptyBox.png"_spr);
-    auto onFeaturedNode = CCSprite::createWithSpriteFrameName("GDX_checkBox.png"_spr);
-    offFeaturedNode->setScale(0.6f);
-    onFeaturedNode->setScale(0.6f);
-    m_featureToggle = CCMenuItemToggler::create(offFeaturedNode, onFeaturedNode, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
-    m_featureToggle->toggle(m_isFeatured);
+    auto featureSprite = CCSprite::createWithSpriteFrameName(m_isFeatured ? "GDX_checkBox.png"_spr : "GDX_emptyBox.png"_spr);
+    if (featureSprite) {
+        featureSprite->setScale(0.6f);
+    }
+    m_featureToggle = CCMenuItemSpriteExtra::create(featureSprite, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
     m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
     auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
     featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
@@ -369,11 +366,21 @@ bool GDXAddGauntletPopup::init() {
         menu_selector(GDXAddGauntletPopup::onSave));
 
     m_settingsMenu = CCMenu::create(addLevelBtn, saveBtn, nullptr);
+    if (m_localMode) {
+        auto addSpriteBtn = CCMenuItemSpriteExtra::create(
+            ButtonSprite::create("Add Sprite", "goldFont.fnt", "GJ_button_05.png"),
+            this,
+            menu_selector(GDXAddGauntletPopup::onAddSprite));
+        if (addSpriteBtn) {
+            m_settingsMenu->addChild(addSpriteBtn);
+        }
+    }
+
     m_settingsMenu->setLayout(ColumnLayout::create()
             ->setGap(10.f)
             ->setAxisAlignment(AxisAlignment::Center)
             ->setAxisReverse(true));
-    m_settingsMenu->setContentHeight(100.f);
+    m_settingsMenu->setContentHeight(m_localMode ? 120.f : 100.f);
     m_settingsMenu->updateLayout();
     m_mainLayer->addChildAtPosition(m_settingsMenu, Anchor::BottomLeft, {110, 55}, false);
 
@@ -395,8 +402,11 @@ void GDXAddGauntletPopup::applyEditMode() {
         m_spriteByInput->setString(numToString(m_editGauntlet["spriteBy"]["accountId"].asInt().unwrapOr(0)).c_str());
     }
     m_bgIndex = m_editGauntlet["bgIndex"].asInt().unwrapOr(14);
+    m_spritePath = m_editGauntlet["spritePath"].asString().unwrapOr("");
     updateBgIcon();
-    m_gauntletReward->setString(numToString(m_editGauntlet["reward"].asInt().unwrapOr(0)).c_str());
+    if (m_gauntletReward) {
+        m_gauntletReward->setString(numToString(m_editGauntlet["reward"].asInt().unwrapOr(0)).c_str());
+    }
     m_selectedColor.r = static_cast<GLubyte>(m_editGauntlet["r"].asInt().unwrapOr(255));
     m_selectedColor.g = static_cast<GLubyte>(m_editGauntlet["g"].asInt().unwrapOr(255));
     m_selectedColor.b = static_cast<GLubyte>(m_editGauntlet["b"].asInt().unwrapOr(255));
@@ -408,9 +418,7 @@ void GDXAddGauntletPopup::applyEditMode() {
     m_levelCells.clear();
     m_pendingLevelFetches.clear();
     m_isFeatured = m_editGauntlet["isFeatured"].asBool().unwrapOr(false);
-    if (m_featureToggle) {
-        m_featureToggle->toggle(m_isFeatured);
-    }
+    updateFeatureToggleState();
 
     std::string levelIds;
     for (auto i = 0u; i < m_editGauntlet["levelIds"].size(); ++i) {
@@ -421,6 +429,8 @@ void GDXAddGauntletPopup::applyEditMode() {
 
         auto levelId = static_cast<int>(entry["levelId"].asInt().unwrapOr(0));
         auto reward = static_cast<int>(entry["reward"].asInt().unwrapOr(0));
+        auto levelName = entry["levelName"].asString().unwrapOr("");
+        auto creatorName = entry["creatorName"].asString().unwrapOr("");
         if (levelId <= 0) {
             continue;
         }
@@ -430,7 +440,7 @@ void GDXAddGauntletPopup::applyEditMode() {
         }
         levelIds += numToString(levelId);
 
-        m_levels.push_back({levelId, reward});
+        m_levels.push_back({levelId, levelName, creatorName, reward});
         m_levelCells.emplace_back(nullptr);
     }
 
@@ -449,7 +459,7 @@ void GDXAddGauntletPopup::applyEditMode() {
 }
 
 void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
-    if (!m_levelInput || !m_levelRewardInput || !m_levelList || !m_gauntletReward || m_searchingLevel) {
+    if (!m_levelInput || !m_levelList || m_searchingLevel) {
         return;
     }
 
@@ -459,14 +469,26 @@ void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
     }
 
     auto levelValue = m_levelInput->getString();
-    auto rewardValue = m_levelRewardInput->getString();
-    if (levelValue.empty() || rewardValue.empty()) {
+    if (levelValue.empty()) {
         return;
     }
 
     int levelId = numFromString<int>(levelValue).unwrapOr(0);
-    int levelReward = numFromString<int>(rewardValue).unwrapOr(0);
-    if (levelId <= 0 || levelReward < 0) {
+    int levelReward = 0;
+    if (!m_localMode) {
+        if (!m_levelRewardInput) {
+            return;
+        }
+        auto rewardValue = m_levelRewardInput->getString();
+        if (rewardValue.empty()) {
+            return;
+        }
+        levelReward = numFromString<int>(rewardValue).unwrapOr(0);
+        if (levelReward < 0) {
+            return;
+        }
+    }
+    if (levelId <= 0) {
         return;
     }
 
@@ -533,17 +555,65 @@ void GDXAddGauntletPopup::updateBgIcon() {
     }
 
     auto icon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
-    icon->setAnchorPoint({0.5f, 0.5f});
     if (!icon) {
         return;
     }
     m_bgIconSpr = icon;
     m_bgIndexButton->setNormalImage(icon);
-    m_bgIndexButton->setScale(0.7f);
 }
 
 void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
     m_isFeatured = !m_isFeatured;
+    updateFeatureToggleState();
+}
+
+void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
+    auto self = geode::Ref<GDXAddGauntletPopup>(this);
+    m_addSpriteTask.spawn([self = std::move(self)]() -> arc::Future<> {
+        geode::utils::file::FilePickOptions options;
+        geode::utils::file::FilePickOptions::Filter filter;
+        filter.description = "PNG Images";
+        filter.files = {"*.png"};
+        options.filters.push_back(std::move(filter));
+
+        auto result = co_await geode::utils::file::pick(
+            geode::utils::file::PickMode::OpenFile,
+            std::move(options));
+
+        if (!result) {
+            co_return;
+        }
+
+        auto maybeThisIsThePath = std::move(result).unwrap();
+        if (!maybeThisIsThePath.has_value()) {
+            co_return;
+        }
+
+        auto path = std::move(maybeThisIsThePath).value();
+        if (path.empty()) {
+            co_return;
+        }
+
+        auto pathString = geode::utils::string::pathToString(path);
+        co_await geode::async::waitForMainThread([self, pathString = std::move(pathString)]() {
+            self->m_spritePath = std::move(pathString);
+        });
+        co_return;
+    }, []() {});
+}
+
+void GDXAddGauntletPopup::updateFeatureToggleState() {
+    if (!m_featureToggle) {
+        return;
+    }
+
+    auto sprite = CCSprite::createWithSpriteFrameName(m_isFeatured ? "GDX_checkBox.png"_spr : "GDX_emptyBox.png"_spr);
+    if (!sprite) {
+        return;
+    }
+    sprite->setScale(0.6f);
+    m_featureToggle->setSprite(sprite);
+    m_featureToggle->updateSprite();
 }
 
 void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
@@ -580,9 +650,11 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
             return;
         }
 
-        m_levels.push_back({m_pendingLevelId, m_pendingLevelReward});
+        m_levels.push_back({m_pendingLevelId, level->m_levelName, level->m_creatorName, m_pendingLevelReward});
         m_levelInput->setString("");
-        m_levelRewardInput->setString("");
+        if (m_levelRewardInput) {
+            m_levelRewardInput->setString("");
+        }
 
         auto cell = createLevelCellFromLevel(level, m_pendingLevelReward);
         if (cell) {
@@ -619,8 +691,12 @@ void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char cons
                 continue;
             }
             auto cell = createLevelCellFromLevel(it->second, entry.reward);
-            m_levelCells[i] = cell;
-            inserted = true;
+            if (cell) {
+                m_levels[i].levelName = it->second->m_levelName;
+                m_levels[i].creatorName = it->second->m_creatorName;
+                m_levelCells[i] = cell;
+                inserted = true;
+            }
         }
 
         if (inserted) {
@@ -804,7 +880,7 @@ void GDXAddGauntletPopup::onMoveLevelDown(CCObject* sender) {
 }
 
 void GDXAddGauntletPopup::onSave(CCObject* sender) {
-    if (!m_owner || !m_nameInput || !m_descriptionInput || !m_suggestedByInput || !m_spriteByInput) {
+    if (!m_owner || !m_nameInput || !m_descriptionInput) {
         return;
     }
 
@@ -813,23 +889,25 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
     auto name = m_nameInput->getString();
     auto description = m_descriptionInput->getString();
-    auto reward = numFromString<int>(m_gauntletReward->getString()).unwrapOr(0);
+    auto reward = m_gauntletReward ? numFromString<int>(m_gauntletReward->getString()).unwrapOr(0) : 0;
     if (name.empty() || description.empty()) {
         upoup->showFailMessage("Name and description cannot be empty.");
         return;
     }
 
     auto accountData = argon::getGameAccountData();
-    for (auto i = 0u; i < m_levels.size() && i < m_levelCells.size(); ++i) {
-        if (!m_levelCells[i]) {
-            continue;
+    if (!m_localMode) {
+        for (auto i = 0u; i < m_levels.size() && i < m_levelCells.size(); ++i) {
+            if (!m_levelCells[i]) {
+                continue;
+            }
+            auto rewardInput = typeinfo_cast<TextInput*>(m_levelCells[i]->getChildByIDRecursive("level-reward-input"));
+            if (!rewardInput) {
+                continue;
+            }
+            auto rewardString = rewardInput->getString();
+            m_levels[i].reward = numFromString<int>(rewardString).unwrapOr(m_levels[i].reward);
         }
-        auto rewardInput = typeinfo_cast<TextInput*>(m_levelCells[i]->getChildByIDRecursive("level-reward-input"));
-        if (!rewardInput) {
-            continue;
-        }
-        auto rewardString = rewardInput->getString();
-        m_levels[i].reward = numFromString<int>(rewardString).unwrapOr(m_levels[i].reward);
     }
 
     auto levels = m_levels;
@@ -840,13 +918,15 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     body["argonToken"] = "";
     body["name"] = std::string(name);
     body["description"] = std::string(description);
-    body["reward"] = reward;
+    if (!m_localMode) {
+        body["reward"] = reward;
+        body["suggestedBy"] = numFromString<int>(m_suggestedByInput ? m_suggestedByInput->getString() : std::string()).unwrapOr(0);
+        body["spriteBy"] = numFromString<int>(m_spriteByInput ? m_spriteByInput->getString() : std::string()).unwrapOr(0);
+    }
     body["r"] = color.r;
     body["g"] = color.g;
     body["b"] = color.b;
     body["isFeatured"] = m_isFeatured;
-    body["suggestedBy"] = numFromString<int>(m_suggestedByInput->getString()).unwrapOr(0);
-    body["spriteBy"] = numFromString<int>(m_spriteByInput->getString()).unwrapOr(0);
     body["bgIndex"] = m_bgIndex;
     if (m_editMode) {
         body["index"] = m_editIndex;
@@ -855,12 +935,20 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     for (auto const& entry : levels) {
         matjson::Value levelObj = matjson::Value::object();
         levelObj["levelId"] = entry.levelId;
-        levelObj["reward"] = entry.reward;
+        if (!m_localMode) {
+            levelObj["reward"] = entry.reward;
+        }
+        levelObj["levelName"] = entry.levelName;
+        levelObj["creatorName"] = entry.creatorName;
         body["levels"].push(std::move(levelObj));
     }
     body["levelIds"] = body["levels"];
 
     if (m_localMode) {
+        if (!m_spritePath.empty()) {
+            body["spritePath"] = m_spritePath;
+        }
+
         auto gauntlets = loadLocalGauntlets();
         if (!gauntlets.isArray()) {
             gauntlets = matjson::Value::array();
@@ -928,4 +1016,3 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
         co_return; }, []() {});
 }
-
