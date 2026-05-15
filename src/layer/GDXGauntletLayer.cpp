@@ -15,9 +15,11 @@
 #include <Geode/utils/web.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
+#include "GUI/CCControlExtension/CCScale9Sprite.h"
 #include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/LazySprite.hpp"
+#include "Geode/ui/NineSlice.hpp"
 #include <argon/argon.hpp>
 
 using namespace geode::prelude;
@@ -860,7 +862,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         auto glow = NineSlice::createWithSpriteFrameName("GDX_featuredGlow.png"_spr);
         if (glow) {
             glow->setPosition({gauntletBg->getContentSize().width / 2.f, gauntletBg->getContentSize().height / 2.f});
-            glow->setContentSize(gauntletBg->getContentSize() + CCSize{10.f, 10.f});
+            glow->setContentSize(gauntletBg->getContentSize() + CCSize{5.f, 5.f});
             glow->setColor({255, 215, 0});
             glow->setScale(1.0f);
             glow->setOpacity(255);
@@ -1246,7 +1248,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets) {
         return;
     }
 
-    m_scrollLayer = BoomScrollLayer::create(pages, 0, false);
+    m_scrollLayer = BoomScrollLayer::create(pages, 0, true);
     if (!m_scrollLayer) {
         return;
     }
@@ -1322,10 +1324,10 @@ void GDXGauntletLayer::onPrev(CCObject* sender) {
 
     auto page = m_scrollLayer->m_page;
     page = (page - 1 + total) % total;
-
+    
+    m_scrollLayer->repositionPagesLooped();
     m_scrollLayer->moveToPage(page);
     m_scrollLayer->updatePages();
-    // m_scrollLayer->repositionPagesLooped();
     updatePageButtons();
 }
 
@@ -1342,9 +1344,9 @@ void GDXGauntletLayer::onNext(CCObject* sender) {
     auto page = m_scrollLayer->m_page;
     page = (page + 1) % total;
 
+    m_scrollLayer->repositionPagesLooped();
     m_scrollLayer->moveToPage(page);
     m_scrollLayer->updatePages();
-    // m_scrollLayer->repositionPagesLooped();
     updatePageButtons();
 }
 
@@ -1362,15 +1364,15 @@ void GDXGauntletLayer::updatePageButtons() {
         return;
     }
 
-    const bool prevEnabled = page > 0;
-    const bool nextEnabled = page < totalPages - 1;
+    // const bool prevEnabled = page > 0;
+    // const bool nextEnabled = page < totalPages - 1;
 
-    if (m_prevPageBtn) {
-        m_prevPageBtn->setEnabled(prevEnabled);
-        m_prevPageBtn->setOpacity(prevEnabled ? 255 : 100);
-    }
-    if (m_nextPageBtn) {
-        m_nextPageBtn->setEnabled(nextEnabled);
-        m_nextPageBtn->setOpacity(nextEnabled ? 255 : 100);
-    }
+    // if (m_prevPageBtn) {
+    //     m_prevPageBtn->setEnabled(prevEnabled);
+    //     m_prevPageBtn->setOpacity(prevEnabled ? 255 : 100);
+    // }
+    // if (m_nextPageBtn) {
+    //     m_nextPageBtn->setEnabled(nextEnabled);
+    //     m_nextPageBtn->setOpacity(nextEnabled ? 255 : 100);
+    // }
 }

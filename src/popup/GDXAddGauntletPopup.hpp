@@ -4,8 +4,11 @@
 #include <Geode/binding/LevelManagerDelegate.hpp>
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/TextInput.hpp>
+#include <Geode/binding/SelectArtDelegate.hpp>
 #include <cue/ListNode.hpp>
 #include <vector>
+
+class SelectArtLayer;
 
 struct LevelRewardEntry {
     int levelId = 0;
@@ -14,7 +17,7 @@ struct LevelRewardEntry {
 
 class GDXGauntletManagePopup;
 
-class GDXAddGauntletPopup : public geode::Popup, public LevelManagerDelegate {
+class GDXAddGauntletPopup : public geode::Popup, public LevelManagerDelegate, public SelectArtDelegate {
 public:
     static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner);
     static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index);
@@ -34,14 +37,17 @@ private:
     void onCancel(CCObject* sender);
     void onAddLevel(CCObject* sender);
     void onPickColor(CCObject* sender);
+    void onPickBackground(CCObject* sender);
     void onDeleteLevel(CCObject* sender);
     void onMoveLevelUp(CCObject* sender);
     void onMoveLevelDown(CCObject* sender);
     void onToggleFeatured(CCObject* sender);
     void refreshLevelList();
     void applyEditMode();
+    void updateBgIcon();
     void loadNextPendingLevel();
     LevelCell* createLevelCellFromLevel(GJGameLevel* level, int reward);
+    void selectArtClosed(SelectArtLayer* layer) override;
     void configureLevelCell(LevelCell* cell, int reward);
 
     void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) override;
@@ -58,7 +64,9 @@ private:
     geode::TextInput* m_descriptionInput = nullptr;
     geode::TextInput* m_suggestedByInput = nullptr;
     geode::TextInput* m_spriteByInput = nullptr;
-    geode::TextInput* m_bgIndexInput = nullptr;
+    int m_bgIndex = 14;
+    CCMenuItemSpriteExtra* m_bgIndexButton = nullptr;
+    cocos2d::CCSprite* m_bgIconSpr = nullptr;
     geode::TextInput* m_levelInput = nullptr;
     geode::TextInput* m_levelRewardInput = nullptr;
     cue::ListNode* m_levelList = nullptr;

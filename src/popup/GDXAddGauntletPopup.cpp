@@ -6,12 +6,18 @@
 #include <arc/runtime/Runtime.hpp>
 #include <argon/argon.hpp>
 #include <cue/ListNode.hpp>
+#include <Geode/binding/SelectArtLayer.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <string>
 #include <string_view>
 
 using namespace geode;
 using namespace geode::prelude;
+
+static std::string getBgIconSpriteName(int index) {
+    int bgIndex = std::clamp(index, 1, 59);
+    return fmt::format("bgIcon_{:02d}_001.png", bgIndex);
+}
 
 LevelCell* GDXAddGauntletPopup::createLevelCellFromLevel(GJGameLevel* level, int reward) {
     if (!level) {
@@ -193,6 +199,7 @@ bool GDXAddGauntletPopup::init() {
 
     m_nameInput = TextInput::create(80.f, "Gauntlet Name", "chatFont.fnt");
     m_nameInput->setLabel("Gauntlet Name");
+    m_nameInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_nameInput, Anchor::Left, {65, 80});
 
     m_gauntletReward = TextInput::create(80.f, "Gauntlet Reward", "chatFont.fnt");
@@ -215,11 +222,26 @@ bool GDXAddGauntletPopup::init() {
     m_spriteByInput->setCommonFilter(CommonFilter::Int);
     m_mainLayer->addChildAtPosition(m_spriteByInput, Anchor::Left, {155, -20});
 
-    m_bgIndexInput = TextInput::create(80.f, "Background Index", "chatFont.fnt");
-    m_bgIndexInput->setCommonFilter(CommonFilter::Int);
-    m_bgIndexInput->setZOrder(2);
-    m_bgIndexInput->setString("14");
-    m_mainLayer->addChildAtPosition(m_bgIndexInput, Anchor::TopRight, {-130.f, -23.f}, false);
+    m_bgIndex = 14;
+    auto bgIcon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
+    bgIcon->setAnchorPoint({0.5f, 0.5f});
+    bgIcon->setScale(0.7f);
+    auto bgBtn = CCMenuItemSpriteExtra::create(
+        bgIcon,
+        this,
+        menu_selector(GDXAddGauntletPopup::onPickBackground));
+    if (bgBtn) {
+        bgBtn->setAnchorPoint({0.5f, 0.5f});
+        m_bgIndexButton = bgBtn;
+        m_bgIconSpr = bgIcon;
+        m_buttonMenu->addChildAtPosition(bgBtn, Anchor::TopRight, {-100.f, -15.f}, false);
+        if (auto bgLabel = CCLabelBMFont::create("BG", "bigFont.fnt")) {
+            bgLabel->setScale(0.35f);
+            bgLabel->setAnchorPoint({1.f, 0.5f});
+            bgLabel->setPosition({-5.f, 15.f});
+            bgBtn->addChild(bgLabel);
+        }
+    }
 
     m_levelInput = TextInput::create(120.f, "Level ID", "chatFont.fnt");
     m_levelInput->setCommonFilter(CommonFilter::Int);
@@ -312,9 +334,8 @@ void GDXAddGauntletPopup::applyEditMode() {
     if (m_spriteByInput) {
         m_spriteByInput->setString(numToString(m_editGauntlet["spriteBy"]["accountId"].asInt().unwrapOr(0)).c_str());
     }
-    if (m_bgIndexInput) {
-        m_bgIndexInput->setString(numToString(m_editGauntlet["bgIndex"].asInt().unwrapOr(14)).c_str());
-    }
+    m_bgIndex = m_editGauntlet["bgIndex"].asInt().unwrapOr(14);
+    updateBgIcon();
     m_gauntletReward->setString(numToString(m_editGauntlet["reward"].asInt().unwrapOr(0)).c_str());
     m_selectedColor.r = static_cast<GLubyte>(m_editGauntlet["r"].asInt().unwrapOr(255));
     m_selectedColor.g = static_cast<GLubyte>(m_editGauntlet["g"].asInt().unwrapOr(255));
@@ -426,6 +447,38 @@ void GDXAddGauntletPopup::onPickColor(CCObject* sender) {
         });
         m_colorPopup->show();
     }
+}
+
+void GDXAddGauntletPopup::onPickBackground(CCObject* sender) {
+    auto layer = SelectArtLayer::create(SelectArtType::Background, m_bgIndex);
+    if (!layer) {
+        return;
+    }
+    layer->m_delegate = this;
+    layer->show();
+}
+
+void GDXAddGauntletPopup::selectArtClosed(SelectArtLayer* layer) {
+    if (!layer) {
+        return;
+    }
+
+    m_bgIndex = layer->m_art;
+    updateBgIcon();
+}
+
+void GDXAddGauntletPopup::updateBgIcon() {
+    if (!m_bgIndexButton) {
+        return;
+    }
+
+    auto icon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
+    icon->setScale(0.7f);
+    if (!icon) {
+        return;
+    }
+    m_bgIconSpr = icon;
+    m_bgIndexButton->setNormalImage(icon);
 }
 
 void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
@@ -690,7 +743,7 @@ void GDXAddGauntletPopup::onMoveLevelDown(CCObject* sender) {
 }
 
 void GDXAddGauntletPopup::onSave(CCObject* sender) {
-    if (!m_owner || !m_nameInput || !m_descriptionInput || !m_suggestedByInput || !m_spriteByInput || !m_bgIndexInput) {
+    if (!m_owner || !m_nameInput || !m_descriptionInput || !m_suggestedByInput || !m_spriteByInput) {
         return;
     }
 
@@ -733,7 +786,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     body["isFeatured"] = m_isFeatured;
     body["suggestedBy"] = numFromString<int>(m_suggestedByInput->getString()).unwrapOr(0);
     body["spriteBy"] = numFromString<int>(m_spriteByInput->getString()).unwrapOr(0);
-    body["bgIndex"] = numFromString<int>(m_bgIndexInput->getString()).unwrapOr(14);
+    body["bgIndex"] = m_bgIndex;
     if (m_editMode) {
         body["index"] = m_editIndex;
     }
