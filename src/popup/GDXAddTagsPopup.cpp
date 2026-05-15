@@ -132,8 +132,8 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["argonToken"] = "";
-    body["name"] = name;
-    body["description"] = description;
+    body["name"] = std::string(name);
+    body["description"] = std::string(description);
     body["r"] = m_r;
     body["g"] = m_g;
     body["b"] = m_b;
