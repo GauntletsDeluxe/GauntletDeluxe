@@ -6,6 +6,7 @@
 - Added **Search Gauntlets** feature, allowing users to search for gauntlets by their name.
 - Added **Skull Icon** on the last gauntlet level.
 - Added **Tag System** for online gauntlets.
+- Added the gauntlet reward points on the level info when opening from the gauntlet levels selection.
 - Tweaked the UI for Gauntlet Manager Popup
 - Replaced the Background Index Text Input to use the button to select background for user-friendlyness.
 - Adjusted the completed icon position to be similar to vanilla gauntlet completed icon.

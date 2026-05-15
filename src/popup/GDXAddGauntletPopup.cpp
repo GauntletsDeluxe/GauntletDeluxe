@@ -375,7 +375,7 @@ bool GDXAddGauntletPopup::init() {
     m_settingsMenu = CCMenu::create(addLevelBtn, saveBtn, nullptr);
     if (m_localMode) {
         auto addSpriteBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Add Sprite", 80.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+            ButtonSprite::create("Add Sprite", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXAddGauntletPopup::onAddSprite));
         if (addSpriteBtn) {
@@ -490,6 +490,7 @@ void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
 
     auto levelValue = m_levelInput->getString();
     if (levelValue.empty()) {
+        Notification::create("Please enter a valid level ID.", NotificationIcon::Error)->show();
         return;
     }
 

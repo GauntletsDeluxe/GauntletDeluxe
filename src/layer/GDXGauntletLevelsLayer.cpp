@@ -617,6 +617,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 void GDXGauntletLevelsLayer::onEnter() {
     CCLayer::onEnter();
     this->refreshCompletionIcons();
+    gdx::setPlayingGauntletLevel(false);
 }
 
 void GDXGauntletLevelsLayer::refreshCompletionIcons() {
