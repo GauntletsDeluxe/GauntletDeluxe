@@ -129,7 +129,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                         FMODAudioEngine::sharedEngine()->playEffect("gold02.ogg");
                         auto circleWave = CCCircleWave::create(10.f, 110.f, 0.5f, false);
                         circleWave->setPosition({55.f, this->m_listLayer->getContentSize().height / 2.f});
-                        circleWave->m_color = ccColor3B({191, 3, 226});
+                        circleWave->m_color = ccColor3B({110, 210, 40});
                         this->m_listLayer->addChild(circleWave, 3);
                     }
                 }

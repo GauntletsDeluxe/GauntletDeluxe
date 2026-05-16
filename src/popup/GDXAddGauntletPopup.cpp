@@ -335,19 +335,18 @@ bool GDXAddGauntletPopup::init() {
     colorBtn->addChildAtPosition(colorLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
 
     // featured toggle
-    if (!m_localMode) {
-        auto featureSprite = CCSprite::createWithSpriteFrameName(m_isFeatured ? "GDX_checkBox.png"_spr : "GDX_emptyBox.png"_spr);
-        if (featureSprite) {
-            featureSprite->setScale(0.6f);
-        }
-        m_featureToggle = CCMenuItemSpriteExtra::create(featureSprite, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
-        m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
-        auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
-        featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
-        featuredLabel->setAnchorPoint({1.f, 0.5f});
-        featuredLabel->setScale(0.3f);
-        m_featureToggle->addChildAtPosition(featuredLabel, Anchor::Left, {-5.f, 0.f}, false);
+
+    auto featureSprite = CCSprite::createWithSpriteFrameName(m_isFeatured ? "GDX_checkBox.png"_spr : "GDX_emptyBox.png"_spr);
+    if (featureSprite) {
+        featureSprite->setScale(0.6f);
     }
+    m_featureToggle = CCMenuItemSpriteExtra::create(featureSprite, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
+    m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
+    auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
+    featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
+    featuredLabel->setAnchorPoint({1.f, 0.5f});
+    featuredLabel->setScale(0.3f);
+    m_featureToggle->addChildAtPosition(featuredLabel, Anchor::Left, {-5.f, 0.f}, false);
 
     auto listSize = CCSizeMake(356.f, 250.f);
     m_levelList = cue::ListNode::create(listSize);

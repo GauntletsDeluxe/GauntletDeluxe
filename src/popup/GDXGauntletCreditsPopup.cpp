@@ -51,6 +51,37 @@ static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& u
     return sprite;
 }
 
+static cocos2d::CCNode* createGauntletCreditsTagCell(const matjson::Value& tag) {
+    std::string tagName = tag["name"].asString().unwrapOr("Tag");
+    if (tagName.empty()) {
+        tagName = "Tag";
+    }
+
+    // @geode-ignore(unknown-resource)
+    auto tagCell = NineSlice::createWithSpriteFrameName("geode.loader/tab-bg.png");
+    if (!tagCell) {
+        return nullptr;
+    }
+
+    auto r = static_cast<GLubyte>(tag["r"].asInt().unwrapOr(255));
+    auto g = static_cast<GLubyte>(tag["g"].asInt().unwrapOr(255));
+    auto b = static_cast<GLubyte>(tag["b"].asInt().unwrapOr(255));
+    tagCell->setColor({r, g, b});
+    tagCell->setOpacity(255);
+    tagCell->setScale(0.5f);
+
+    auto tagLabel = CCLabelBMFont::create(tagName.c_str(), "bigFont.fnt");
+    if (tagLabel) {
+        tagLabel->setScale(0.4f);
+        tagLabel->setAnchorPoint({0.5f, 0.5f});
+        tagLabel->setColor({255, 255, 255});
+        tagCell->setContentSize({tagLabel->getScaledContentSize().width + 10.f, tagLabel->getScaledContentSize().height + 10.f});
+        tagCell->addChildAtPosition(tagLabel, Anchor::Center, {0.f, 0.f}, false);
+    }
+
+    return tagCell;
+}
+
 GDXUserInfo GDXUserInfo::fromJson(const matjson::Value& value) {
     GDXUserInfo info;
     if (!value.isObject()) {
@@ -95,9 +126,9 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     if (creditsBg) {
         creditsBg->setInsets({10, 10, 10, 10});
         creditsBg->setAnchorPoint({0.f, .5f});
-        creditsBg->setContentSize({320.f, 160.f});
+        creditsBg->setContentSize({320.f, 140.f});
         creditsBg->setOpacity(100);
-        m_mainLayer->addChildAtPosition(creditsBg, Anchor::Left, {20.f, -40.f}, false);
+        m_mainLayer->addChildAtPosition(creditsBg, Anchor::Left, {20.f, -20.f}, false);
     }
 
     // gauntlet sprite creator label
@@ -121,13 +152,20 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
         creditsBg->addChild(spriteIcon);
     }
 
-    auto spriteByLabel = geode::Button::createWithLabel(spriteBy.username.c_str(), "goldFont.fnt", [spriteBy](geode::Button* sender) {
+    auto spriteByName = spriteBy.username.empty() ? "Unknown" : spriteBy.username.c_str();
+    auto spriteByLabel = geode::Button::createWithLabel(spriteByName, "goldFont.fnt", [spriteBy](geode::Button* sender) {
         ProfilePage::create(spriteBy.accountId, false)->show();
     });
-    spriteByLabel->setAnchorPoint({0.f, 0.5f});
-    spriteByLabel->setScale(.7f);
-    spriteByLabel->setPosition({50.f, creditsBg->getContentSize().height - 45.f});
-    creditsBg->addChild(spriteByLabel);
+    if (spriteByLabel) {
+        if (spriteBy.username.empty()) {
+            spriteByLabel->setEnabled(false);
+            spriteByLabel->setColor({255, 115, 255});
+        }
+        spriteByLabel->setAnchorPoint({0.f, 0.5f});
+        spriteByLabel->setScale(.7f);
+        spriteByLabel->setPosition({50.f, creditsBg->getContentSize().height - 45.f});
+        creditsBg->addChild(spriteByLabel);
+    }
 
     // gauntlet suggester label
     auto suggestedLabel = CCLabelBMFont::create("Gauntlet Suggester:", "bigFont.fnt");
@@ -150,18 +188,25 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
         creditsBg->addChild(suggestedIcon);
     }
 
-    auto suggestedByLabel = geode::Button::createWithLabel(suggestedBy.username.c_str(), "goldFont.fnt", [suggestedBy](geode::Button* sender) {
+    auto suggestedByName = suggestedBy.username.empty() ? "Unknown" : suggestedBy.username.c_str();
+    auto suggestedByLabel = geode::Button::createWithLabel(suggestedByName, "goldFont.fnt", [suggestedBy](geode::Button* sender) {
         ProfilePage::create(suggestedBy.accountId, false)->show();
     });
-    suggestedByLabel->setAnchorPoint({0.f, 0.5f});
-    suggestedByLabel->setScale(.7f);
-    suggestedByLabel->setPosition({50.f, creditsBg->getContentSize().height - 110.f});
-    creditsBg->addChild(suggestedByLabel);
+    if (suggestedByLabel) {
+        if (suggestedBy.username.empty()) {
+            suggestedByLabel->setEnabled(false);
+            suggestedByLabel->setColor({255, 115, 255});
+        }
+        suggestedByLabel->setAnchorPoint({0.f, 0.5f});
+        suggestedByLabel->setScale(.7f);
+        suggestedByLabel->setPosition({50.f, creditsBg->getContentSize().height - 110.f});
+        creditsBg->addChild(suggestedByLabel);
+    }
 
     // gauntlet sprite on the right
     auto gauntletId = gauntlet["id"].asInt().unwrapOr(gauntlet["index"].asInt().unwrapOr(0));
     auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletId) + ".png?v2=true";
-    auto gauntletSprite = createCachedGauntletSprite(m_mainLayer, imageUrl, {430.f, 110.f}, {120.f, 240.f}, 2);
+    auto gauntletSprite = createCachedGauntletSprite(m_mainLayer, imageUrl, {430.f, 102.f}, {120.f, 240.f}, 2);
     if (gauntletSprite) {
         if (auto lazySprite = typeinfo_cast<LazySprite*>(gauntletSprite)) {
             lazySprite->setZOrder(2);
@@ -169,6 +214,14 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
         if (!typeinfo_cast<LazySprite*>(gauntletSprite)) {
             gauntletSprite->setZOrder(2);
         }
+    }
+
+    auto gauntletBg = NineSlice::create("square02_small.png");
+    if (gauntletBg) {
+        gauntletBg->setContentSize({130, 170});
+        gauntletBg->setOpacity(100);
+        gauntletBg->setZOrder(-1);
+        gauntletSprite->addChildAtPosition(gauntletBg, Anchor::Center, {0.f, 0.f}, false);
     }
 
     // description below the credits area
@@ -188,6 +241,36 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
         m_mainLayer->addChildAtPosition(descriptionBg, Anchor::Top, {0.f, -40.f}, false);
     }
 
+    auto tags = gauntlet["tags"];
+    if (tags.isArray() && tags.size() > 0) {
+        auto tagMenu = CCMenu::create();
+        if (tagMenu) {
+            tagMenu->setLayout(RowLayout::create()
+                    ->setGap(5.f)
+                    ->setAxisAlignment(AxisAlignment::Center)
+                    ->setGrowCrossAxis(true)
+                    ->setAxisReverse(true)
+                    ->setCrossAxisOverflow(false));
+            tagMenu->setContentSize({310.f, 25.f});
+            tagMenu->setPosition({0.f, 0.f});
+            tagMenu->setZOrder(2);
+
+            for (auto i = 0u; i < tags.size(); ++i) {
+                if (auto tagCell = createGauntletCreditsTagCell(tags[i])) {
+                    tagMenu->addChild(tagCell);
+                }
+            }
+
+            tagMenu->updateLayout();
+            m_mainLayer->addChildAtPosition(tagMenu, Anchor::BottomLeft, {180.f, 30.f}, false);
+        }
+        auto tagsBg = NineSlice::create("square02_small.png");
+        if (tagsBg) {
+            tagsBg->setContentSize({tagMenu->getContentSize().width + 10.f, tagMenu->getContentSize().height + 10.f});
+            tagsBg->setOpacity(100);
+            m_mainLayer->addChildAtPosition(tagsBg, Anchor::BottomLeft, {180.f, 30.f}, false);
+        }
+    }
+
     return true;
 }
-

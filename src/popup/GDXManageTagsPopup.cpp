@@ -64,7 +64,7 @@ bool GDXManageTagsPopup::init() {
 
     if (gdx::isManager() || gdx::isContributor()) {
         auto webBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Tag Management", "goldFont.fnt", "GJ_button_05.png"),
+            ButtonSprite::create("Tag Manager", "goldFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXManageTagsPopup::onManageTagsWeb));
         bottomMenu->addChild(webBtn);

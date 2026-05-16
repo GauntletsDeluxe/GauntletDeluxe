@@ -1,6 +1,7 @@
 ## v1.0.6
 
 - Added **Tags Display** on the Gauntlet list. You can click on the tags to view the full list of tags in a popup.
+- Added **Tags** on the Credits Popup.
 - Fixed bug where syncing your online gauntlet progression resets your local gauntlet progression.
 - Fixed bug where tags with spaces don't display properly on the gauntlet list.
 - Adjusted the tags cell sizes to fit the UI better.
