@@ -383,9 +383,10 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     }
 
     if (m_levels.empty()) {
-        auto emptyLabel = CCLabelBMFont::create("No levels found.", "goldFont.fnt");
+        auto emptyLabel = CCLabelBMFont::create("No Gauntlet levels found", "goldFont.fnt");
         emptyLabel->setPosition({winSize.width / 2, winSize.height / 2});
         this->addChild(emptyLabel, 2);
+        this->setKeypadEnabled(true);
         return true;
     }
 

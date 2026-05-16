@@ -11,7 +11,7 @@ public:
 private:
     bool init(std::string const& gauntletName, const matjson::Value& tags);
     void update(float dt) override;
-    void onDummy(CCObject* sender);
+    void onTagCell(CCObject* sender);
     cocos2d::CCNode* createTagCell(const matjson::Value& tag, int index);
 
     cocos2d::CCMenu* m_tagMenu = nullptr;

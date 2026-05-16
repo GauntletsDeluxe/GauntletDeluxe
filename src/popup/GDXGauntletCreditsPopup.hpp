@@ -22,4 +22,7 @@ public:
 
 private:
     bool init(const matjson::Value& gauntlet);
+    void onTagCell(CCObject* sender);
+
+    matjson::Value m_gauntlet;
 };

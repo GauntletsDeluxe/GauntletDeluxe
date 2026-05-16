@@ -20,7 +20,9 @@ bool GDXShowTagsPopup::init(std::string const& gauntletName, const matjson::Valu
     }
 
     m_gauntletName = gauntletName;
-    setTitle((m_gauntletName.empty() ? "Gauntlet Tags" : m_gauntletName).c_str());
+    auto title = m_gauntletName.empty() ? std::string("Gauntlet") : m_gauntletName;
+    title += " Tags";
+    setTitle(title.c_str());
     addSideArt(m_mainLayer, SideArt::All, SideArtStyle::PopupGold, false);
 
     m_tags = tags;
@@ -57,7 +59,11 @@ bool GDXShowTagsPopup::init(std::string const& gauntletName, const matjson::Valu
         for (auto i = 0u; i < m_tags.size(); ++i) {
             auto tagCell = createTagCell(m_tags[i], static_cast<int>(i));
             if (tagCell) {
-                m_tagMenu->addChild(tagCell);
+                auto tagButton = CCMenuItemSpriteExtra::create(tagCell, this, menu_selector(GDXShowTagsPopup::onTagCell));
+                if (tagButton) {
+                    tagButton->setTag(static_cast<int>(i));
+                    m_tagMenu->addChild(tagButton);
+                }
             }
         }
         if (m_tagMenu) {
@@ -70,6 +76,34 @@ bool GDXShowTagsPopup::init(std::string const& gauntletName, const matjson::Valu
 
 void GDXShowTagsPopup::update(float dt) {
     Popup::update(dt);
+}
+
+void GDXShowTagsPopup::onTagCell(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto index = btn->getTag();
+    if (!m_tags.isArray() || index < 0 || static_cast<size_t>(index) >= m_tags.size()) {
+        return;
+    }
+
+    auto tag = m_tags[static_cast<size_t>(index)];
+    std::string name = tag["name"].asString().unwrapOr("Tag");
+    if (name.empty()) {
+        name = "Tag";
+    }
+    std::string description = tag["description"].asString().unwrapOr("No description available.");
+    if (description.empty()) {
+        description = "No description available.";
+    }
+
+    MDPopup::create(
+        name.c_str(),
+        description.c_str(),
+        "OK")
+        ->show();
 }
 
 cocos2d::CCNode* GDXShowTagsPopup::createTagCell(const matjson::Value& tag, int index) {

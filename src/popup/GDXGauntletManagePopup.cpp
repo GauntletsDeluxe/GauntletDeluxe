@@ -479,12 +479,6 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     auto const gauntletSpritePosition = ccp(40.f, cell->getContentSize().height / 2.f);
     auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
 
-    if (fallbackSprite) {
-        fallbackSprite->setScale(0.65f);
-        fallbackSprite->setPosition(gauntletSpritePosition);
-        cell->addChild(fallbackSprite, 2);
-    }
-
     auto gauntletImage = LazySprite::create({50.f, 120.f}, false);
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
@@ -520,7 +514,12 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         }
 
         if (!usedCache) {
-            cell->addChild(gauntletImage, 3);
+            cell->addChild(gauntletImage, 1);
+            if (fallbackSprite) {
+                fallbackSprite->setScale(0.65f);
+                fallbackSprite->setPosition(gauntletSpritePosition);
+                cell->addChild(fallbackSprite, 2);
+            }
         } else if (fallbackSprite) {
             fallbackSprite->removeFromParent();
         }

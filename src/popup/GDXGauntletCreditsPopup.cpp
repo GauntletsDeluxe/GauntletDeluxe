@@ -68,7 +68,6 @@ static cocos2d::CCNode* createGauntletCreditsTagCell(const matjson::Value& tag) 
     auto b = static_cast<GLubyte>(tag["b"].asInt().unwrapOr(255));
     tagCell->setColor({r, g, b});
     tagCell->setOpacity(255);
-    tagCell->setScale(0.5f);
 
     auto tagLabel = CCLabelBMFont::create(tagName.c_str(), "bigFont.fnt");
     if (tagLabel) {
@@ -117,6 +116,7 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     m_title->setPositionY(m_title->getPositionY() - 5.f);
 
     auto description = gauntlet["description"].asString().unwrapOr("No description available.");
+    m_gauntlet = gauntlet;
     auto spriteBy = GDXUserInfo::fromJson(gauntlet["spriteBy"]);
     auto suggestedBy = GDXUserInfo::fromJson(gauntlet["suggestedBy"]);
 
@@ -218,10 +218,9 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 
     auto gauntletBg = NineSlice::create("square02_small.png");
     if (gauntletBg) {
-        gauntletBg->setContentSize({130, 170});
+        gauntletBg->setContentSize({150, 180});
         gauntletBg->setOpacity(100);
-        gauntletBg->setZOrder(-1);
-        gauntletSprite->addChildAtPosition(gauntletBg, Anchor::Center, {0.f, 0.f}, false);
+        m_mainLayer->addChildAtPosition(gauntletBg, Anchor::Right, {-100.f, -40.f}, false);
     }
 
     // description below the credits area
@@ -257,7 +256,11 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 
             for (auto i = 0u; i < tags.size(); ++i) {
                 if (auto tagCell = createGauntletCreditsTagCell(tags[i])) {
-                    tagMenu->addChild(tagCell);
+                    auto tagButton = CCMenuItemSpriteExtra::create(tagCell, this, menu_selector(GDXGauntletCreditsPopup::onTagCell));
+                    if (tagButton) {
+                        tagButton->setTag(static_cast<int>(i));
+                        tagMenu->addChild(tagButton);
+                    }
                 }
             }
 
@@ -273,4 +276,29 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     }
 
     return true;
+}
+
+void GDXGauntletCreditsPopup::onTagCell(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto index = btn->getTag();
+    auto tags = m_gauntlet["tags"];
+    if (!tags.isArray() || index < 0 || static_cast<size_t>(index) >= tags.size()) {
+        return;
+    }
+
+    auto tag = tags[static_cast<size_t>(index)];
+    std::string name = tag["name"].asString().unwrapOr("Tag");
+    if (name.empty()) {
+        name = "Tag";
+    }
+    std::string description = tag["description"].asString().unwrapOr("No description available.");
+    if (description.empty()) {
+        description = "No description available.";
+    }
+
+    MDPopup::create(name.c_str(), description.c_str(), "OK")->show();
 }
