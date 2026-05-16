@@ -1,7 +1,15 @@
+## v1.0.6
+
+- Added **Tags Display** on the Gauntlet list. You can click on the tags to view the full list of tags in a popup.
+- Fixed bug where syncing your online gauntlet progression resets your local gauntlet progression.
+- Fixed bug where tags with spaces don't display properly on the gauntlet list.
+- Adjusted the tags cell sizes to fit the UI better.
+- Nav arrows are hidden when there's only a single page of gauntlets.
+
 ## v1.0.5
 
-- Added **Local Gauntlets**, user can create their own gauntlets list.
-  _(This does not reward points and does not sync with the backend, it's purely client-sided and for fun)_
+- Added **Local Gauntlets**: users can create their own gauntlet lists.
+  _(This does not reward points and does not sync with the backend; it's purely client-side and for fun)_
 - Gauntlets will now loop back when navigating next from the last gauntlet or previous from the first gauntlet.
 - Added **Search Gauntlets** feature, allowing users to search for gauntlets by their name.
 - Added **Skull Icon** on the last gauntlet level.

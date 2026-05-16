@@ -14,7 +14,7 @@
 
 ### Features
 
-- <cp>**Levels Points**</c>: Earned by completing levels in a gauntlet.
+- <cp>**Level Points**</c>: Earned by completing levels in a gauntlet.
 - <cr>**Gauntlet Points**</c>: Earn points by completing any of these fan-made gauntlets. Gauntlet points are based on the amount of levels and their difficulty.
 - <cy>**Gauntlet Leaderboard**</c>: Compete with other users for the top spot on the leaderboard!
 - <cf>**Fan-Made Creator Contest Gauntlets**</c>: Participate in any upcoming Gauntlet Creator Contests!
@@ -53,7 +53,7 @@
 
 - <cg>**Geode Mod Developer**</c>: [ArcticWoof](user:7689052)
 - <cg>**Bot/Backend Developer**</c>: [bonneville1](user:4882817)
-- <cg>**Graphic Design and Logo**</c>: [DaRealSkellyGuy](user:29960249)
-- <cg>**Gauntlet Managers/Maintainers**</c>: [DaRealSkellyGuy](user:29960249) & [Niki2025](user:26209086)
+- <cg>**Geode Mod Design and Logo**</c>: [DaRealSkellyGuy](user:29960249)
+- <cg>**Gauntlet Managers/Maintainers**</c>: [DaRealSkellyGuy](user:29960249), [Niki2025](user:26209086) & [bonneville1](user:4882817)
 
 ![King Clawthorne](arcticwoof.rated_layouts/king.png)

@@ -33,7 +33,7 @@ bool GDXTagsFiltersPopup::init() {
 
     m_tagMenu = CCMenu::create();
     if (m_tagMenu) {
-        m_tagMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Center)->setGrowCrossAxis(true)->setAxisReverse(true)->setCrossAxisOverflow(false));
+        m_tagMenu->setLayout(RowLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Center)->setGrowCrossAxis(true)->setAxisReverse(true)->setCrossAxisOverflow(false));
         m_tagMenu->setContentSize({m_mainLayer->getContentWidth() - 30.f, m_mainLayer->getContentHeight() - 100.f});
         m_tagMenu->setPosition({0.f, 0.f});
         m_tagMenu->setZOrder(2);
@@ -248,11 +248,13 @@ CCNode* GDXTagsFiltersPopup::createTagCell(const matjson::Value& tag, int index)
     }
     if (index == m_selectedIndex) {
         cell->setOpacity(255);
+        tagLabel->setOpacity(255);
     } else {
         cell->setOpacity(150);
+        tagLabel->setOpacity(150);
     }
-    tagLabel->limitLabelWidth(100.f, 1.f, 0.3f);
-    cell->setContentSize({tagLabel->getScaledContentSize().width + 10.f, 40.f});
+    tagLabel->setScale(0.45f);
+    cell->setContentSize({tagLabel->getScaledContentSize().width + 10.f, tagLabel->getScaledContentSize().height + 10.f});
     cell->addChildAtPosition(tagLabel, Anchor::Center, {0.f, 0.f}, false);
 
     auto button = CCMenuItemSpriteExtra::create(cell, this, menu_selector(GDXTagsFiltersPopup::onTagCell));

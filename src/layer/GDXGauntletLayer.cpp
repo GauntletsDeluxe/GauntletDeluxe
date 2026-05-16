@@ -2,6 +2,7 @@
 #include "GDXGauntletLevelsLayer.hpp"
 #include "GDXLeaderboardLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
+#include "../popup/GDXShowTagsPopup.hpp"
 #include "../popup/GDXTagsFiltersPopup.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
@@ -26,6 +27,7 @@
 using namespace geode::prelude;
 
 namespace {
+    // time to copy paste this encoder i found, it works btw
     static std::string urlEncode(std::string const& value) {
         static const char* hex = "0123456789ABCDEF";
         std::string encoded;
@@ -672,12 +674,12 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
         "##### <co>*Gauntlet Points and Level Points are only obtainable by playing online Gauntlets. Local Gauntlets do not award points.*</c>\n\n"
         "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>**Level Points**</c>: Earned by completing levels in a gauntlet.\n\n"
         "Each level awards a different amount of points based on its difficulty and other factors.\n\n"
-        "##### <cy>*If you have already beaten the level before using this mod, you still need to rebeat them to earn Level Points.*</c>\n\n"
+        "##### <cy>*If you have already beaten a level before using this mod, you still need to beat it again to earn Level Points.*</c>\n\n"
         "![GDX](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>**Gauntlet Points**</c>: Earn points by completing any of these fan-made gauntlets.\n\n"
-        "Gauntlet points are based on the amount of levels and their difficulty.\n"
+        "Gauntlet points are based on the number of levels and their difficulty.\n"
         "\n---\n"
         "### <cp>Level Points</c>\n"
-        "#### Level Points are measured in the following criteria:\n"
+        "#### Level Points are awarded based on the following criteria:\n"
         "- **Auto - Easy**: 1 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c> \n"
         "- **Normal**: 2 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
         "- **Hard** _(4-5 stars)_: 3 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
@@ -686,7 +688,7 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
         "- **Hard-Extreme Demon**: 7 ![Level Points](frame:arcticwoof.gauntlets_deluxe/GDX_levelPoint.png?scale=0.15) <cp>Level Points</c>\n"
         "\n---\n"
         "### <cr>Gauntlet Points</c>\n"
-        "#### Gauntlet Points are measured in the following criteria:\n"
+        "#### Gauntlet Points are awarded based on the following criteria:\n"
         "- **Auto - Hard Level Mix**: 3 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c> \n"
         "- **Hard - Insane Level Mix**: 5 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c>\n"
         "- **Easy Demon - Medium Demon Mix**: 10 ![Gauntlet Points](frame:arcticwoof.gauntlets_deluxe/GDX_gauntletPoint.png?scale=0.2) <cr>Gauntlet Points</c>\n"
@@ -864,6 +866,16 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
                     }
                 }
             }
+        }
+
+        auto existingLevels = loadCompletedGauntletLevels();
+        for (auto levelId : existingLevels) {
+            completedLevels.insert(levelId);
+        }
+
+        auto existingGauntlets = loadCompletedGauntlets();
+        for (auto gauntletId : existingGauntlets) {
+            completedGauntlets.insert(gauntletId);
         }
 
         auto levelsSaved = saveCompletedGauntletLevels(completedLevels);
@@ -1109,6 +1121,31 @@ void GDXGauntletLayer::onGauntletButtonClick(CCObject* sender) {
     };
     scene->addChild(GDXGauntletLevelsLayer::create(levels, gauntlet["name"].asString().unwrapOr("Gauntlet"), color, gauntlet["index"].asInt().unwrapOr(idx), gauntlet, m_localMode));
     CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
+}
+
+void GDXGauntletLayer::onShowGauntletTags(CCObject* sender) {
+    auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!button) {
+        return;
+    }
+
+    const auto& activeGauntlets = getActiveGauntlets();
+    if (!activeGauntlets.isArray()) {
+        return;
+    }
+
+    auto idx = button->getTag();
+    if (idx < 0 || idx >= static_cast<int>(activeGauntlets.size())) {
+        return;
+    }
+
+    auto gauntlet = activeGauntlets[idx];
+    auto tags = gauntlet["tags"];
+    auto gauntletName = gauntlet["name"].asString().unwrapOr("Gauntlet");
+    auto popup = GDXShowTagsPopup::create(gauntletName, tags);
+    if (popup) {
+        popup->show();
+    }
 }
 
 void GDXGauntletLayer::fetchGauntlets() {
@@ -1458,6 +1495,58 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         rewardTextLabelShadow->setOpacity(50);
         rewardTextLabelShadow->setScale(0.4f);
         gauntletBg->addChild(rewardTextLabelShadow, 2);
+    }
+
+    if (gauntlet["tags"].isArray() && gauntlet["tags"].size() > 0) {
+        auto tagsArray = gauntlet["tags"];
+        auto firstTag = tagsArray[0];
+        std::string firstTagName = firstTag["name"].asString().unwrapOr("Tag");
+        if (firstTagName.empty()) {
+            firstTagName = "Tag";
+        }
+
+        // @geode-ignore(unknown-resource)
+        auto tagCell = NineSlice::createWithSpriteFrameName("geode.loader/tab-bg.png");
+        if (tagCell) {
+            auto r = static_cast<GLubyte>(firstTag["r"].asInt().unwrapOr(255));
+            auto g = static_cast<GLubyte>(firstTag["g"].asInt().unwrapOr(255));
+            auto b = static_cast<GLubyte>(firstTag["b"].asInt().unwrapOr(255));
+            tagCell->setColor({r, g, b});
+            tagCell->setOpacity(255);
+            tagCell->setScale(0.5f);
+
+            auto tagLabel = CCLabelBMFont::create(firstTagName.c_str(), "bigFont.fnt");
+            if (tagLabel) {
+                tagLabel->setScale(0.4f);
+                tagLabel->setColor({255, 255, 255});
+                tagLabel->limitLabelWidth(90.f, 0.5f, 0.35f);
+                tagCell->setContentSize({tagLabel->getScaledContentSize().width + 10.f, tagLabel->getScaledContentSize().height + 10.f});
+                tagCell->addChildAtPosition(tagLabel, Anchor::Center, {0.f, 0.f}, false);
+            }
+
+            CCLabelBMFont* extraLabel = nullptr;
+            int extraCount = static_cast<int>(tagsArray.size()) - 1;
+            if (extraCount > 0) {
+                extraLabel = CCLabelBMFont::create(fmt::format("+{}", extraCount).c_str(), "goldFont.fnt");
+                if (extraLabel) {
+                    extraLabel->setScale(0.7f);
+                    extraLabel->setColor({255, 255, 255});
+                    extraLabel->setAnchorPoint({0.f, 0.5f});
+                    tagCell->addChildAtPosition(extraLabel, Anchor::Right, {2.f, 0.f}, false);
+                }
+            }
+
+            auto tagButton = CCMenuItemSpriteExtra::create(tagCell, this, menu_selector(GDXGauntletLayer::onShowGauntletTags));
+            if (tagButton) {
+                tagButton->setTag(static_cast<int>(index));
+                tagButton->setPosition({gauntletBg->getContentSize().width / 2.f, 18.f});
+                auto tagMenu = CCMenu::create(tagButton, nullptr);
+                if (tagMenu) {
+                    tagMenu->setPosition({0.f, 0.f});
+                    gauntletBg->addChild(tagMenu, 4);
+                }
+            }
+        }
     }
 
     auto completionLabelShadow = CCLabelBMFont::create(fmt::format("{}/{}", completedCount, node.levelIds.size()).c_str(), "bigFont.fnt");
@@ -1865,7 +1954,16 @@ void GDXGauntletLayer::updatePageButtons() {
         page = layer->m_page;
     }
     auto totalPages = layer->getTotalPages();
-    if (totalPages <= 0) {
+    if (totalPages <= 1) {
+        if (m_prevPageBtn) {
+            m_prevPageBtn->setVisible(false);
+        }
+        if (m_nextPageBtn) {
+            m_nextPageBtn->setVisible(false);
+        }
+        if (m_pageNavMenu) {
+            m_pageNavMenu->setVisible(false);
+        }
         return;
     }
 
@@ -1874,6 +1972,9 @@ void GDXGauntletLayer::updatePageButtons() {
     }
     if (m_nextPageBtn) {
         m_nextPageBtn->setVisible(true);
+    }
+    if (m_pageNavMenu) {
+        m_pageNavMenu->setVisible(true);
     }
 }
 

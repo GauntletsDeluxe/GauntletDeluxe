@@ -49,6 +49,7 @@ private:
     void onNext(CCObject* sender);
     void onCompleteGauntlet(CCObject* sender);
     void onGauntletButtonClick(CCObject* sender);
+    void onShowGauntletTags(CCObject* sender);
     void fetchGauntlets();
     void fetchUserData();
     void createGauntletPages(const matjson::Value& gauntlets, bool local = false);
