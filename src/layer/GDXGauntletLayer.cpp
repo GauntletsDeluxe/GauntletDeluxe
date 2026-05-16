@@ -6,6 +6,7 @@
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <algorithm>
+#include <cctype>
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
@@ -25,6 +26,22 @@
 using namespace geode::prelude;
 
 namespace {
+    static std::string urlEncode(std::string const& value) {
+        static const char* hex = "0123456789ABCDEF";
+        std::string encoded;
+        encoded.reserve(value.size() * 3);
+        for (unsigned char c : value) {
+            if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+                encoded.push_back(c);
+            } else {
+                encoded.push_back('%');
+                encoded.push_back(hex[c >> 4]);
+                encoded.push_back(hex[c & 0xF]);
+            }
+        }
+        return encoded;
+    }
+
     static asp::fs::path getCompletedGauntletLevelsPath() {
         auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
@@ -1102,7 +1119,7 @@ void GDXGauntletLayer::fetchGauntlets() {
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
     bool hasQuery = false;
     if (!m_tagFilter.empty()) {
-        url += "?tag=" + m_tagFilter;
+        url += "?tag=" + urlEncode(m_tagFilter);
         hasQuery = true;
     }
     if (m_recentFilter) {
@@ -1112,7 +1129,7 @@ void GDXGauntletLayer::fetchGauntlets() {
     }
     if (!m_searchQuery.empty()) {
         url += hasQuery ? "&" : "?";
-        url += "search=" + m_searchQuery;
+        url += "search=" + urlEncode(m_searchQuery);
     }
     auto self = geode::Ref<GDXGauntletLayer>(this);
     m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() -> arc::Future<> {
