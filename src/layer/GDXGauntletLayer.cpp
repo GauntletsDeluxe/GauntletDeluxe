@@ -302,7 +302,7 @@ namespace {
             }
         }
 
-        sprite->setLoadCallback([fallbackSprite, fallbackShadow, url, sprite, position, size, parent, zOrder](geode::Result<> const& result) {
+        sprite->setLoadCallback([fallbackSprite = geode::Ref<CCSprite>(fallbackSprite), fallbackShadow = geode::Ref<CCSprite>(fallbackShadow), url, sprite = geode::Ref<LazySprite>(sprite), position, size, parent = geode::Ref<CCNode>(parent), zOrder](geode::Result<> const& result) {
             if (!result) {
                 return;
             }
@@ -389,7 +389,7 @@ namespace {
             }
         }
 
-        sprite->setLoadCallback([fallbackSprite, fallbackShadow, path, position, size, parent, zOrder, sprite](geode::Result<> const& result) {
+        sprite->setLoadCallback([fallbackSprite = geode::Ref<CCSprite>(fallbackSprite), fallbackShadow = geode::Ref<CCSprite>(fallbackShadow), path, position, size, parent = geode::Ref<CCNode>(parent), zOrder, sprite = geode::Ref<LazySprite>(sprite)](geode::Result<> const& result) {
             if (!result) {
                 return;
             }
@@ -1207,7 +1207,7 @@ void GDXGauntletLayer::fetchGauntlets() {
 
         auto gauntlets = std::move(jsonResult).unwrap();
         co_await geode::async::waitForMainThread([self = std::move(self), gauntlets = std::move(gauntlets)]() mutable {
-            if (self) {
+            if (self && self->isRunning()) {
                 if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -1263,7 +1263,7 @@ void GDXGauntletLayer::fetchUserData() {
         }
 
         co_await geode::async::waitForMainThread([self = std::move(self), userData = std::move(userData)]() mutable {
-            if (self) {
+            if (self && self->isRunning()) {
                 self->m_userAccountId = userData["accountId"].asInt().unwrapOr(0);
                 self->m_username = userData["username"].asString().unwrapOr(" ");
                 self->m_gauntletPoints = userData["gauntletPoints"].asInt().unwrapOr(0);
@@ -1717,7 +1717,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
                 return;
             }
 
-            if (self) {
+            if (self && self->isRunning()) {
                 self->m_gauntletPoints = static_cast<int>(newGauntletPoints);
                 if (self->m_gauntletPointsCounter) {
                     self->m_gauntletPointsCounter->setTargetCount(self->m_gauntletPoints);
