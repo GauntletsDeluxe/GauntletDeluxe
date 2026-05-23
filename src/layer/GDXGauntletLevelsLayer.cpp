@@ -9,6 +9,7 @@
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/LazySprite.hpp"
 #include "../popup/GDXGauntletCreditsPopup.hpp"
+#include "../popup/GDXLikeItemPopup.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 
 using namespace geode::prelude;
@@ -382,17 +383,11 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         }
     }
 
-    if (m_levels.empty()) {
-        auto emptyLabel = CCLabelBMFont::create("No Gauntlet levels found", "goldFont.fnt");
-        emptyLabel->setPosition({winSize.width / 2, winSize.height / 2});
-        this->addChild(emptyLabel, 2);
-        this->setKeypadEnabled(true);
-        return true;
-    }
-
     m_levelsMenu = CCMenu::create();
-    m_levelsMenu->setPosition({0, 0});
-    this->addChild(m_levelsMenu, 1);
+    if (m_levelsMenu) {
+        m_levelsMenu->setPosition({0, 0});
+        this->addChild(m_levelsMenu, 1);
+    }
 
     const float buttonY = winSize.height / 2.f;
     const float leftMargin = 80.f;
@@ -604,7 +599,33 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                     continue;
                 }
                 dot->setPosition({x, y});
-                m_levelsMenu->addChild(dot, -3);
+                if (m_levelsMenu) {
+                    m_levelsMenu->addChild(dot, -3);
+                }
+            }
+        }
+    }
+
+    bool hasCompletedGauntlet = !m_levels.empty() && std::all_of(m_levels.begin(), m_levels.end(), [&completedLevels](auto const& entry) {
+        return completedLevels.contains(entry.levelId);
+    });
+
+    auto feedbackSprite = CCSprite::createWithSpriteFrameName(
+        hasCompletedGauntlet ? "GJ_like2Btn_001.png" : "GJ_like2Btn2_001.png");
+    if (feedbackSprite) {
+        feedbackSprite->setScale(0.8f);
+        auto feedbackBtn = CCMenuItemSpriteExtra::create(feedbackSprite, this, menu_selector(GDXGauntletLevelsLayer::onLikeItem));
+        if (feedbackBtn) {
+            feedbackBtn->setPosition({34.f, 34.f});
+            if (!hasCompletedGauntlet) {
+                feedbackBtn->setEnabled(false);
+                feedbackBtn->setOpacity(180);
+            }
+
+            auto bottomLeftMenu = CCMenu::create(feedbackBtn, nullptr);
+            if (bottomLeftMenu) {
+                bottomLeftMenu->setPosition({0.f, 0.f});
+                this->addChild(bottomLeftMenu, 2);
             }
         }
     }
@@ -806,6 +827,14 @@ void GDXGauntletLevelsLayer::onGauntletInfo(CCObject* sender) {
         return;
     }
     GDXGauntletCreditsPopup::create(m_gauntletData)->show();
+}
+
+void GDXGauntletLevelsLayer::onLikeItem(CCObject* sender) {
+    if (!m_gauntletData.isObject()) {
+        return;
+    }
+
+    GDXLikeItemPopup::create(m_gauntletData)->show();
 }
 
 void GDXGauntletLevelsLayer::update(float dt) {

@@ -240,6 +240,53 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
         m_mainLayer->addChildAtPosition(descriptionBg, Anchor::Top, {0.f, -40.f}, false);
     }
 
+    auto rateNode = CCNode::create();
+    if (rateNode) {
+        rateNode->setID("gauntlet-rate-node");
+        rateNode->setAnchorPoint({0.5f, 0.5f});
+        rateNode->setScale(0.8f);
+        m_mainLayer->addChildAtPosition(rateNode, Anchor::TopRight, {-73.f, -25.f}, false);
+
+        auto nodeBg = NineSlice::create("square02_small.png");
+        if (nodeBg) {
+            nodeBg->setContentSize({130.f, 30.f});
+            nodeBg->setOpacity(100);
+            rateNode->addChildAtPosition(nodeBg, Anchor::Center, {0.f, 0.f}, false);
+        }
+
+        auto feedback = gauntlet["feedback"];
+        int likes = feedback["likes"].asInt().unwrapOr(0);
+        int dislikes = feedback["dislikes"].asInt().unwrapOr(0);
+
+        auto likesIconSpr = CCSprite::createWithSpriteFrameName("GJ_likesIcon_001.png");
+        if (likesIconSpr) {
+            likesIconSpr->setPosition({-45.f, 0.f});
+            rateNode->addChild(likesIconSpr);
+        }
+
+        auto likesLabel = CCLabelBMFont::create(numToString(likes).c_str(), "bigFont.fnt");
+        if (likesLabel) {
+            likesLabel->limitLabelWidth(80.f, 0.7f, 0.5f);
+            likesLabel->setAnchorPoint({0.f, 0.5f});
+            likesLabel->setPosition({-25.f, 0.f});
+            rateNode->addChild(likesLabel);
+        }
+
+        auto dislikesIconSpr = CCSprite::createWithSpriteFrameName("GJ_dislikesIcon_001.png");
+        if (dislikesIconSpr) {
+            dislikesIconSpr->setPosition({15.f, 5.f});
+            rateNode->addChild(dislikesIconSpr);
+        }
+
+        auto dislikesLabel = CCLabelBMFont::create(numToString(dislikes).c_str(), "bigFont.fnt");
+        if (dislikesLabel) {
+            dislikesLabel->limitLabelWidth(80.f, 0.7f, 0.5f);
+            dislikesLabel->setAnchorPoint({0.f, 0.5f});
+            dislikesLabel->setPosition({35.f, 0.f});
+            rateNode->addChild(dislikesLabel);
+        }
+    }
+
     auto tags = gauntlet["tags"];
     if (tags.isArray() && tags.size() > 0) {
         auto tagMenu = CCMenu::create();

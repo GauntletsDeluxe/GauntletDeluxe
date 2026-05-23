@@ -23,6 +23,7 @@ private:
     void update(float dt) override;
     void onLevelClicked(CCObject* sender);
     void onGauntletInfo(CCObject* sender);
+    void onLikeItem(CCObject* sender);
     void refreshCompletionIcons();
 
     std::vector<GDXGauntletLevelEntry> m_levels;

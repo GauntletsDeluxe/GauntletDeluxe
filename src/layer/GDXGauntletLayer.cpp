@@ -2,6 +2,7 @@
 #include "GDXGauntletLevelsLayer.hpp"
 #include "GDXLeaderboardLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
+#include "../popup/GDXLikeItemPopup.hpp"
 #include "../popup/GDXShowTagsPopup.hpp"
 #include "../popup/GDXTagsFiltersPopup.hpp"
 #include <Geode/Enums.hpp>
@@ -1563,6 +1564,29 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     completionLabel->setPosition({imageCenter.x, imageCenter.y - 40.f});
     gauntletBg->addChild(completionLabel, 3);
 
+    // show predominant feedback (likes or dislikes) under the completion label
+    auto feedback = gauntlet["feedback"];
+    int likes = feedback["likes"].asInt().unwrapOr(0);
+    int dislikes = feedback["dislikes"].asInt().unwrapOr(0);
+    int displayValue = likes >= dislikes ? likes : dislikes;
+    const char* iconName = likes >= dislikes ? "GJ_likesIcon_001.png" : "GJ_dislikesIcon_001.png";
+
+    auto feedbackIcon = CCSprite::createWithSpriteFrameName(iconName);
+    if (feedbackIcon) {
+        feedbackIcon->setScale(0.4f);
+        feedbackIcon->setAnchorPoint({1.f, 0.5f});
+        feedbackIcon->setPosition({imageCenter.x - 1.f, imageCenter.y - 51.f});
+        gauntletBg->addChild(feedbackIcon, 3);
+    }
+
+    auto feedbackLabel = CCLabelBMFont::create(numToString(displayValue).c_str(), "bigFont.fnt");
+    if (feedbackLabel) {
+        feedbackLabel->limitLabelWidth(80.f, 0.35f, 0.25f);
+        feedbackLabel->setAnchorPoint({0.f, 0.5f});
+        feedbackLabel->setPosition({imageCenter.x + 1.f, imageCenter.y - 51.f});
+        gauntletBg->addChild(feedbackLabel, 3);
+    }
+
     auto button = CCMenuItemSpriteExtra::create(gauntletBg, this, menu_selector(GDXGauntletLayer::onGauntletButtonClick));
     if (!button) {
         return nullptr;
@@ -1576,10 +1600,11 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
 
 void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
     auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
-    CCPoint buttonPos = button->getPosition();
     if (!button) {
         return;
     }
+
+    CCPoint buttonPos = button->getPosition();
 
     auto gauntletIndex = button->getTag();
     auto accountData = argon::getGameAccountData();
@@ -1700,6 +1725,18 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
             circleWave->setPosition(buttonPos);
             circleWave->m_color = ccColor3B({255, 100, 100});
             button->getParent()->addChild(circleWave, 3);
+
+            const auto& activeGauntlets = self->getActiveGauntlets();
+            if (activeGauntlets.isArray()) {
+                for (auto i = 0u; i < activeGauntlets.size(); ++i) {
+                    auto gauntlet = activeGauntlets[i];
+                    auto currentIndex = gauntlet["id"].asInt().unwrapOr(gauntlet["index"].asInt().unwrapOr(-1));
+                    if (currentIndex == gauntletIndex) {
+                        GDXLikeItemPopup::create(gauntlet)->show();
+                        break;
+                    }
+                }
+            }
         });
 
         co_return; }, []() {});
