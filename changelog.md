@@ -3,6 +3,7 @@
 - Added **Likes and Dislikes** on Gauntlets. You can give a like or dislike to a gauntlet, and the total likes and dislikes will be displayed on the gauntlet info popup.
 - Fixed an issue with local gauntlet levels where beating the same level from an online gauntlet was also counted as beating the local gauntlet level.
 - Fixed random crashes related to cached image destruction (CCTextureAtlas dtor) on background threads.
+- Fixed issue where saving a gauntlet with a custom sprite will not save the sprite if the original sprite is deleted on the device.
 
 ## v1.0.6
 

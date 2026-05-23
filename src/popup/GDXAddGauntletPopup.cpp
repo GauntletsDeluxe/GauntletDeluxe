@@ -13,6 +13,8 @@
 #include <Geode/utils/file.hpp>
 #include <string>
 #include <string_view>
+#include <asp/time.hpp>
+#include <filesystem>
 
 using namespace geode;
 using namespace geode::prelude;
@@ -359,6 +361,7 @@ bool GDXAddGauntletPopup::init() {
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(listSize.height));
     m_mainLayer->addChildAtPosition(m_levelList, Anchor::Right, {-180.f, 0.f});
+    m_levelList->getScrollLayer()->m_disableMovement = true;
     refreshLevelList();
 
     auto addLevelBtn = CCMenuItemSpriteExtra::create(
@@ -992,6 +995,36 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
     if (m_localMode) {
         if (!m_spritePath.empty()) {
+            // ass ass ass ass
+            std::string oldSpritePath = m_editMode ? m_editGauntlet["spritePath"].asString().unwrapOr("") : "";
+            if (m_spritePath != oldSpritePath) {
+                auto savedDir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+                if (auto res = asp::fs::createDirAll(savedDir); !res) {
+                    log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
+                }
+
+                auto originalPath = std::filesystem::path(m_spritePath);
+                auto extension = originalPath.has_extension() ? originalPath.extension().string() : ".png";
+                auto newFileName = fmt::format("local_sprite_{}{}",
+                    asp::time::SystemTime::now().timeSinceEpoch().millis(),
+                    extension);
+                auto newFilePath = savedDir / newFileName;
+
+                std::error_code ec;
+                std::filesystem::copy_file(m_spritePath, newFilePath, std::filesystem::copy_options::overwrite_existing, ec);
+                if (!ec) {
+                    m_spritePath = newFilePath.string();
+                    if (!oldSpritePath.empty()) {
+                        auto oldPath = std::filesystem::path(oldSpritePath);
+                        if (oldPath.parent_path() == savedDir) {
+                            std::error_code ec2;
+                            std::filesystem::remove(oldPath, ec2);
+                        }
+                    }
+                } else {
+                    log::warn("Failed to copy local sprite to saved directory: {}", ec.message());
+                }
+            }
             body["spritePath"] = m_spritePath;
         }
 
