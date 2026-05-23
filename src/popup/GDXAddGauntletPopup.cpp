@@ -1,4 +1,4 @@
-﻿#include "GDXAddGauntletPopup.hpp"
+#include "GDXAddGauntletPopup.hpp"
 #include "GDXGauntletManagePopup.hpp"
 #include <algorithm>
 #include <unordered_map>
@@ -603,7 +603,7 @@ void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
 
 void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
     auto self = geode::Ref<GDXAddGauntletPopup>(this);
-    m_addSpriteTask.spawn([self = std::move(self)]() -> arc::Future<> {
+    m_addSpriteTask.spawn([self = std::move(self)]() mutable -> arc::Future<> {
         geode::utils::file::FilePickOptions options;
         geode::utils::file::FilePickOptions::Filter filter;
         filter.description = "PNG Images";
@@ -615,7 +615,7 @@ void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
             std::move(options));
 
         if (!result) {
-            co_await geode::async::waitForMainThread([]() {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Sprite selection failed.", NotificationIcon::Error)->show();
             });
             co_return;
@@ -623,21 +623,22 @@ void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
 
         auto maybeThisIsThePath = std::move(result).unwrap();
         if (!maybeThisIsThePath.has_value()) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         auto path = std::move(maybeThisIsThePath).value();
         if (path.empty()) {
-            co_await geode::async::waitForMainThread([]() {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Sprite selection failed.", NotificationIcon::Error)->show();
             });
             co_return;
         }
 
         auto pathString = geode::utils::string::pathToString(path);
-        co_await geode::async::waitForMainThread([self, pathString = std::move(pathString)]() {
-            self->m_spritePath = std::move(pathString);
+        co_await geode::async::waitForMainThread([self = std::move(self), pathString = std::move(pathString)]() {
             if (self) {
+                self->m_spritePath = std::move(pathString);
                 self->updateLocalSpriteNameLabel();
             }
             Notification::create("Sprite selected successfully.", NotificationIcon::Success)->show();
@@ -1024,11 +1025,13 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         return;
     }
 
-    m_addGauntletTask.spawn([this, upoup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    auto self = geode::Ref<GDXAddGauntletPopup>(this);
+    auto upopupRef = geode::Ref<UploadActionPopup>(upoup);
+    m_addGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([upoup] {
-                upoup->showFailMessage("Authentication failed.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
         }
@@ -1042,20 +1045,25 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([upoup, response] {
-                upoup->showFailMessage(gdx::getResponseMessage(response, "Failed to add gauntlet."));
+            auto errMsg = gdx::getResponseMessage(response, "Failed to add gauntlet.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
         if (response.ok()) {
-            co_await geode::async::waitForMainThread([this, upoup] {
-                if (m_owner) {
-                    m_owner->refreshList();
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                bool isEdit = false;
+                if (self) {
+                    isEdit = self->m_editMode;
+                    if (self->m_owner) {
+                        self->m_owner->refreshList();
+                    }
+                    self->m_unsaved = false;
+                    self->onClose(nullptr);
                 }
-                upoup->showSuccessMessage(m_editMode ? "Gauntlet updated successfully!" : "Gauntlet added successfully!");
-                m_unsaved = false;
-                this->onClose(nullptr);
+                if (upopupRef) upopupRef->showSuccessMessage(isEdit ? "Gauntlet updated successfully!" : "Gauntlet added successfully!");
             });
         }
 

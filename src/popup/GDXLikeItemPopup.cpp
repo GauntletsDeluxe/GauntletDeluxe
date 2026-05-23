@@ -94,13 +94,14 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
     m_selfHold = this;
     auto self = geode::Ref<GDXLikeItemPopup>(this);
-    m_requestTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    m_requestTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([self, upopup]() {
-                self->m_isSending = false;
-                if (upopup) {
-                    upopup->showFailMessage("Authentication failed.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
+                if (self) self->m_isSending = false;
+                if (upopupRef) {
+                    upopupRef->showFailMessage("Authentication failed.");
                 }
             });
             co_return;
@@ -114,10 +115,11 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([self, upopup, response]() {
-                self->m_isSending = false;
-                if (upopup) {
-                    upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to send feedback."));
+            auto errMsg = gdx::getResponseMessage(response, "Failed to send feedback.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
+                if (self) self->m_isSending = false;
+                if (upopupRef) {
+                    upopupRef->showFailMessage(errMsg);
                 }
             });
             co_return;
@@ -125,10 +127,10 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self, upopup]() {
-                self->m_isSending = false;
-                if (upopup) {
-                    upopup->showFailMessage("Failed to parse response.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
+                if (self) self->m_isSending = false;
+                if (upopupRef) {
+                    upopupRef->showFailMessage("Failed to parse response.");
                 }
             });
             co_return;
@@ -136,21 +138,22 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
         auto result = std::move(jsonResult).unwrap();
         if (!result["success"].asBool().unwrapOr(false)) {
-            co_await geode::async::waitForMainThread([self, upopup, response]() {
-                self->m_isSending = false;
-                if (upopup) {
-                    upopup->showFailMessage(gdx::getResponseMessage(response, "Request was not successful."));
+            auto errMsg = gdx::getResponseMessage(response, "Request was not successful.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
+                if (self) self->m_isSending = false;
+                if (upopupRef) {
+                    upopupRef->showFailMessage(errMsg);
                 }
             });
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([self, upopup]() {
-            self->m_isSending = false;
-            if (upopup) {
-                upopup->showSuccessMessage("Feedback sent.");
+        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
+            if (self) self->m_isSending = false;
+            if (upopupRef) {
+                upopupRef->showSuccessMessage("Feedback sent.");
             }
-            self->onClose(nullptr);
+            if (self) self->onClose(nullptr);
         });
 
         co_return; }, []() {});

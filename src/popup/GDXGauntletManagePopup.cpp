@@ -342,21 +342,24 @@ void GDXGauntletManagePopup::fetchGauntlets() {
     }
 
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
-    m_fetchGauntletsTask.spawn([this, url = std::move(url)]() -> arc::Future<> {
+    auto self = geode::Ref<GDXGauntletManagePopup>(this);
+    m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() mutable -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
                             .get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         auto jsonResult = response.json();
         if (!jsonResult) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         auto gauntlets = std::move(jsonResult).unwrap();
-        co_await geode::async::waitForMainThread([this, gauntlets = std::move(gauntlets)]() mutable {
-            createGauntletList(gauntlets);
+        co_await geode::async::waitForMainThread([self = std::move(self), gauntlets = std::move(gauntlets)]() mutable {
+            if (self) self->createGauntletList(gauntlets);
         });
         co_return; }, []() {});
 }
@@ -673,11 +676,13 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
 
     auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
     upopup->show();
-    m_deleteGauntletTask.spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    auto self = geode::Ref<GDXGauntletManagePopup>(this);
+    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    m_deleteGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([upopup] {
-                upopup->showFailMessage("Authentication failed.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
         }
@@ -691,15 +696,16 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
                             .post(url);
 
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([response, upopup] {
-                upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to delete gauntlet."));
+            auto errMsg = gdx::getResponseMessage(response, "Failed to delete gauntlet.");
+            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([this, upopup] {
-            this->refreshList();
-            upopup->showSuccessMessage("Gauntlet deleted successfully.");
+        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+            if (self) self->refreshList();
+            if (upopupRef) upopupRef->showSuccessMessage("Gauntlet deleted successfully.");
         });
         co_return; }, []() {});
 }

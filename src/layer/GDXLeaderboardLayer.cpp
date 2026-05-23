@@ -145,9 +145,11 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     body["argonToken"] = "";
     body["type"] = m_type;
 
-    m_leaderboardTask.spawn([this, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    auto self = geode::Ref<GDXLeaderboardLayer>(this);
+    m_leaderboardTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
@@ -158,9 +160,9 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([this]() {
-                if (m_loadingSpinner) {
-                    m_loadingSpinner->setVisible(false);
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                if (self && self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
                 }
             });
             co_return;
@@ -168,17 +170,17 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([this]() {
-                if (m_loadingSpinner) {
-                    m_loadingSpinner->setVisible(false);
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                if (self && self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
                 }
             });
             co_return;
         }
 
         auto leaderboard = std::move(jsonResult).unwrap();
-        co_await geode::async::waitForMainThread([this, leaderboard = std::move(leaderboard)]() mutable {
-            if (!m_list) {
+        co_await geode::async::waitForMainThread([self = std::move(self), leaderboard = std::move(leaderboard)]() mutable {
+            if (!self || !self->m_list) {
                 return;
             }
 
@@ -280,14 +282,14 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                     cell->addChild(glow, -1);
                 }
 
-                m_list->addCell(cell);
+                self->m_list->addCell(cell);
             }
 
-            m_list->updateLayout();
-            m_list->scrollToTop();
+            self->m_list->updateLayout();
+            self->m_list->scrollToTop();
 
-            if (m_loadingSpinner) {
-                m_loadingSpinner->setVisible(false);
+            if (self->m_loadingSpinner) {
+                self->m_loadingSpinner->setVisible(false);
             }
         });
         co_return;

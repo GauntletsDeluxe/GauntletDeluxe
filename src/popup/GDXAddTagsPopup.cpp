@@ -144,11 +144,13 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
     auto upopup = UploadActionPopup::create(nullptr, m_editIndex >= 0 ? "Updating tag..." : "Adding tag...");
     upopup->show();
 
-    m_requestTask.spawn([this, upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    auto self = geode::Ref<GDXAddTagsPopup>(this);
+    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    m_requestTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([upopup] {
-                upopup->showFailMessage("Authentication failed.");
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+                if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
         }
@@ -160,35 +162,39 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([upopup, response] {
-                upopup->showFailMessage(gdx::getResponseMessage(response, "Request failed."));
+            auto errMsg = gdx::getResponseMessage(response, "Request failed.");
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([upopup] {
-                upopup->showFailMessage("Failed to parse response.");
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+                if (upopupRef) upopupRef->showFailMessage("Failed to parse response.");
             });
             co_return;
         }
 
         auto result = std::move(jsonResult).unwrap();
         if (!result["success"].asBool().unwrapOr(false)) {
-            co_await geode::async::waitForMainThread([upopup, response] {
-                upopup->showFailMessage(gdx::getResponseMessage(response, "Request was not successful."));
+            auto errMsg = gdx::getResponseMessage(response, "Request was not successful.");
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([this, upopup] {
-            upopup->showSuccessMessage(m_editIndex >= 0 ? "Tag updated." : "Tag added.");
-            if (m_parent) {
-                m_parent->refreshTags();
+        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+            if (self) {
+                if (upopupRef) upopupRef->showSuccessMessage(self->m_editIndex >= 0 ? "Tag updated." : "Tag added.");
+                if (self->m_parent) {
+                    self->m_parent->refreshTags();
+                }
+                self->m_unsaved = false;
+                self->onClose(nullptr);
             }
-            m_unsaved = false;
-            this->onClose(nullptr);
         });
         co_return; }, []() {});
 }
