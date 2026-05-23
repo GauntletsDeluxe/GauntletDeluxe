@@ -160,6 +160,7 @@ bool GDXGauntletManagePopup::init() {
     }
 
     setTitle(m_localMode ? "Manage Local Gauntlets" : "Manage Gauntlets Deluxe");
+    m_title->setPositionX(m_title->getPositionX() + 60.f);
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
     addSideArt(m_mainLayer, SideArt::TopRight, SideArtStyle::PopupGold, false);
 
@@ -185,8 +186,14 @@ bool GDXGauntletManagePopup::init() {
 
     CCMenu* actionMenu = CCMenu::create();
     actionMenu->setLayout(ColumnLayout::create()->setGap(10.f)->setAxisAlignment(AxisAlignment::Center)->setAxisReverse(true));
-    actionMenu->setContentSize({120.f, m_mainLayer->getContentSize().height - 10.f});
+    actionMenu->setContentSize({120.f, m_mainLayer->getContentSize().height - 40.f});
+    actionMenu->setZOrder(2);
     m_mainLayer->addChildAtPosition(actionMenu, Anchor::Left, {75.f, 0}, false);
+
+    auto actionBg = NineSlice::create("square02_001.png");
+    actionBg->setContentSize({actionMenu->getContentSize().width + 10.f, actionMenu->getContentSize().height + 10.f});
+    actionBg->setOpacity(100);
+    m_mainLayer->addChildAtPosition(actionBg, Anchor::Left, {75.f, 0}, false);
 
     if (m_localMode) {
         auto addBtn = CCMenuItemSpriteExtra::create(

@@ -610,22 +610,24 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         return completedLevels.contains(entry.levelId);
     });
 
-    auto feedbackSprite = CCSprite::createWithSpriteFrameName(
-        hasCompletedGauntlet ? "GJ_like2Btn_001.png" : "GJ_like2Btn2_001.png");
-    if (feedbackSprite) {
-        feedbackSprite->setScale(0.8f);
-        auto feedbackBtn = CCMenuItemSpriteExtra::create(feedbackSprite, this, menu_selector(GDXGauntletLevelsLayer::onLikeItem));
-        if (feedbackBtn) {
-            feedbackBtn->setPosition({34.f, 34.f});
-            if (!hasCompletedGauntlet) {
-                feedbackBtn->setEnabled(false);
-                feedbackBtn->setOpacity(180);
-            }
+    if (!m_localMode) {
+        auto feedbackSprite = CCSprite::createWithSpriteFrameName(
+            hasCompletedGauntlet ? "GJ_like2Btn_001.png" : "GJ_like2Btn2_001.png");
+        if (feedbackSprite) {
+            feedbackSprite->setScale(0.8f);
+            auto feedbackBtn = CCMenuItemSpriteExtra::create(feedbackSprite, this, menu_selector(GDXGauntletLevelsLayer::onLikeItem));
+            if (feedbackBtn) {
+                feedbackBtn->setPosition({34.f, 34.f});
+                if (!hasCompletedGauntlet) {
+                    feedbackBtn->setEnabled(false);
+                    feedbackBtn->setOpacity(180);
+                }
 
-            auto bottomLeftMenu = CCMenu::create(feedbackBtn, nullptr);
-            if (bottomLeftMenu) {
-                bottomLeftMenu->setPosition({0.f, 0.f});
-                this->addChild(bottomLeftMenu, 2);
+                auto bottomLeftMenu = CCMenu::create(feedbackBtn, nullptr);
+                if (bottomLeftMenu) {
+                    bottomLeftMenu->setPosition({0.f, 0.f});
+                    this->addChild(bottomLeftMenu, 2);
+                }
             }
         }
     }

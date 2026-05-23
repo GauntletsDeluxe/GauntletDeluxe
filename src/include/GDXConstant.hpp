@@ -96,10 +96,10 @@ namespace gdx {
     }
 
     inline void onManagerBadge() {
-        FLAlertLayer::create("Gauntlet Manager", "This user has the ability to <cg>create gauntlets</c> and <co>manage the leaderboard</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
+        FLAlertLayer::create("Gauntlet Manager", "This user has the same ability as <cl>contributor</c> but can also <cg>create online gauntlets</c> and <cc>create gauntlet tags</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
     }
 
     inline void onContributorBadge() {
-        FLAlertLayer::create("Gauntlet Contributor", "This user has the ability to <cl>edit created gauntlets</c> and is the one <cg>in charge of looking over gauntlet ideas</c> from <cy>other users</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
+        FLAlertLayer::create("Gauntlet Contributor", "This user has the ability to <cl>edit created gauntlets</c>, <co>manage the leaderboard</c> is the one <cg>in charge of looking over gauntlet ideas</c> from <cy>other users</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
     }
 }

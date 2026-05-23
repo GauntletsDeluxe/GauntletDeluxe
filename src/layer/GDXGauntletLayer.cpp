@@ -670,6 +670,7 @@ void GDXGauntletLayer::onInfo(CCObject* sender) {
         "Players can earn points by completing <cp>levels</c> and <cr>gauntlets</c>, and <cl>compete on the leaderboard</c>.\n\n"
         "The mod also allows for <cl>community-hosted creator contests</c>, where players can submit their own gauntlet levels to be featured in the mod.\n\n"
         "You can also create your own <cy>local gauntlets</c> that only you can see and play and create <cg>interesting gauntlets</c> for yourself!\n\n"
+        "When you fully <cg>completed a gauntlet</c>, you can submit your <cc>feedback</c> on that gauntlet by <cy>liking</c> or <cr>disliking</c> it!\n\n"
         "\n---\n"
         "### Points System\n"
         "##### <co>*Gauntlet Points and Level Points are only obtainable by playing online Gauntlets. Local Gauntlets do not award points.*</c>\n\n"
@@ -1435,6 +1436,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         }
     } else if (hasCompletedAllLevels && !local) {
         auto rewardBtnSpr = CCSprite::createWithSpriteFrameName("GJ_rewardBtn_001.png");
+        rewardBtnSpr->setScale(0.8f);
         if (rewardBtnSpr) {
             rewardBtn = CCMenuItemSpriteExtra::create(rewardBtnSpr, this, menu_selector(GDXGauntletLayer::onCompleteGauntlet));
             rewardBtn->setTag(gauntletIndex);
@@ -1565,26 +1567,28 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     gauntletBg->addChild(completionLabel, 3);
 
     // show predominant feedback (likes or dislikes) under the completion label
-    auto feedback = gauntlet["feedback"];
-    int likes = feedback["likes"].asInt().unwrapOr(0);
-    int dislikes = feedback["dislikes"].asInt().unwrapOr(0);
-    int displayValue = likes >= dislikes ? likes : dislikes;
-    const char* iconName = likes >= dislikes ? "GJ_likesIcon_001.png" : "GJ_dislikesIcon_001.png";
+    if (!this->m_localMode) {
+        auto feedback = gauntlet["feedback"];
+        int likes = feedback["likes"].asInt().unwrapOr(0);
+        int dislikes = feedback["dislikes"].asInt().unwrapOr(0);
+        int displayValue = likes >= dislikes ? likes : dislikes;
+        const char* iconName = likes >= dislikes ? "GJ_likesIcon_001.png" : "GJ_dislikesIcon_001.png";
 
-    auto feedbackIcon = CCSprite::createWithSpriteFrameName(iconName);
-    if (feedbackIcon) {
-        feedbackIcon->setScale(0.4f);
-        feedbackIcon->setAnchorPoint({1.f, 0.5f});
-        feedbackIcon->setPosition({imageCenter.x - 1.f, imageCenter.y - 51.f});
-        gauntletBg->addChild(feedbackIcon, 3);
-    }
+        auto feedbackIcon = CCSprite::createWithSpriteFrameName(iconName);
+        if (feedbackIcon) {
+            feedbackIcon->setScale(0.4f);
+            feedbackIcon->setAnchorPoint({1.f, 0.5f});
+            feedbackIcon->setPosition({imageCenter.x - 1.f, imageCenter.y - 51.f});
+            gauntletBg->addChild(feedbackIcon, 3);
+        }
 
-    auto feedbackLabel = CCLabelBMFont::create(numToString(displayValue).c_str(), "bigFont.fnt");
-    if (feedbackLabel) {
-        feedbackLabel->limitLabelWidth(80.f, 0.35f, 0.25f);
-        feedbackLabel->setAnchorPoint({0.f, 0.5f});
-        feedbackLabel->setPosition({imageCenter.x + 1.f, imageCenter.y - 51.f});
-        gauntletBg->addChild(feedbackLabel, 3);
+        auto feedbackLabel = CCLabelBMFont::create(numToString(displayValue).c_str(), "bigFont.fnt");
+        if (feedbackLabel) {
+            feedbackLabel->limitLabelWidth(80.f, 0.35f, 0.25f);
+            feedbackLabel->setAnchorPoint({0.f, 0.5f});
+            feedbackLabel->setPosition({imageCenter.x + 1.f, imageCenter.y - 51.f});
+            gauntletBg->addChild(feedbackLabel, 3);
+        }
     }
 
     auto button = CCMenuItemSpriteExtra::create(gauntletBg, this, menu_selector(GDXGauntletLayer::onGauntletButtonClick));
@@ -1613,7 +1617,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
     body["accountId"] = accountData.accountId;
     body["gauntletIndex"] = gauntletIndex;
 
-    auto rewardSpinner = LoadingSpinner::create(45.f);
+    auto rewardSpinner = LoadingSpinner::create(35.f);
     if (rewardSpinner) {
         rewardSpinner->setPosition(buttonPos);
         rewardSpinner->setVisible(true);
@@ -1726,6 +1730,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
             circleWave->m_color = ccColor3B({255, 100, 100});
             button->getParent()->addChild(circleWave, 3);
 
+            if (!self->m_localMode) {
             const auto& activeGauntlets = self->getActiveGauntlets();
             if (activeGauntlets.isArray()) {
                 for (auto i = 0u; i < activeGauntlets.size(); ++i) {
@@ -1737,6 +1742,7 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
                     }
                 }
             }
+        }
         });
 
         co_return; }, []() {});

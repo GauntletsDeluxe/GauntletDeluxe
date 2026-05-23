@@ -1,3 +1,7 @@
+## v1.0.7
+
+- Added **Likes and Dislikes** on Gauntlets. You can give a like or dislike to a gauntlet, and the total likes and dislikes will be displayed on the gauntlet info popup.
+
 ## v1.0.6
 
 - Added **Tags Display** on the Gauntlet list. You can click on the tags to view the full list of tags in a popup.

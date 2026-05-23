@@ -260,29 +260,33 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 
         auto likesIconSpr = CCSprite::createWithSpriteFrameName("GJ_likesIcon_001.png");
         if (likesIconSpr) {
-            likesIconSpr->setPosition({-45.f, 0.f});
+            likesIconSpr->setPosition({-55.f, 6.f});
+            likesIconSpr->setScale(0.5f);
+            likesIconSpr->setAnchorPoint({0.f, 0.5f});
             rateNode->addChild(likesIconSpr);
         }
 
-        auto likesLabel = CCLabelBMFont::create(numToString(likes).c_str(), "bigFont.fnt");
+        auto likesLabel = CCLabelBMFont::create(GameToolbox::pointsToString(likes).c_str(), "bigFont.fnt");
         if (likesLabel) {
-            likesLabel->limitLabelWidth(80.f, 0.7f, 0.5f);
+            likesLabel->limitLabelWidth(50.f, 0.4f, 0.1f);
             likesLabel->setAnchorPoint({0.f, 0.5f});
-            likesLabel->setPosition({-25.f, 0.f});
+            likesLabel->setPosition({-55.f, -6.f});
             rateNode->addChild(likesLabel);
         }
 
         auto dislikesIconSpr = CCSprite::createWithSpriteFrameName("GJ_dislikesIcon_001.png");
         if (dislikesIconSpr) {
-            dislikesIconSpr->setPosition({15.f, 5.f});
+            dislikesIconSpr->setPosition({10.f, 8.f});
+            dislikesIconSpr->setAnchorPoint({0.f, 0.5f});
+            dislikesIconSpr->setScale(0.5f);
             rateNode->addChild(dislikesIconSpr);
         }
 
-        auto dislikesLabel = CCLabelBMFont::create(numToString(dislikes).c_str(), "bigFont.fnt");
+        auto dislikesLabel = CCLabelBMFont::create(GameToolbox::pointsToString(dislikes).c_str(), "bigFont.fnt");
         if (dislikesLabel) {
-            dislikesLabel->limitLabelWidth(80.f, 0.7f, 0.5f);
+            dislikesLabel->limitLabelWidth(50.f, 0.4f, 0.1f);
             dislikesLabel->setAnchorPoint({0.f, 0.5f});
-            dislikesLabel->setPosition({35.f, 0.f});
+            dislikesLabel->setPosition({10.f, -6.f});
             rateNode->addChild(dislikesLabel);
         }
     }

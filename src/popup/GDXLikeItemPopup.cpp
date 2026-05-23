@@ -20,7 +20,7 @@ GDXLikeItemPopup* GDXLikeItemPopup::create(const matjson::Value& gauntlet) {
 }
 
 bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
-    if (!Popup::init(284.f, 160.f, "GJ_square01.png")) {
+    if (!Popup::init(200.f, 115.f, "GJ_square01.png")) {
         return false;
     }
 
@@ -28,8 +28,10 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
     m_gauntletIndex = gauntlet["id"].asInt().unwrapOr(gauntlet["index"].asInt().unwrapOr(0));
 
     auto gauntletName = gauntlet["name"].asString().unwrapOr("Gauntlet");
-    this->setTitle(fmt::format("Vote on {}", gauntletName).c_str());
-    m_title->setPositionY(m_title->getPositionY() - 5.f);
+    this->setTitle(gauntletName.c_str());
+    m_title->limitLabelWidth(m_mainLayer->getContentWidth() - 20.f, 0.5f, 0.1f);
+    m_title->setPositionY(m_title->getPositionY() - 2.f);
+    m_title->setFntFile("bigFont.fnt");
 
     auto buttonMenu = CCMenu::create();
     if (!buttonMenu) {
@@ -37,12 +39,12 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
     }
     buttonMenu->setPosition({0.f, 0.f});
     buttonMenu->setContentWidth(m_mainLayer->getContentSize().width - 10);
-    buttonMenu->setLayout(RowLayout::create()->setGap(40.f)->setAxisAlignment(AxisAlignment::Center));
+    buttonMenu->setLayout(RowLayout::create()->setGap(20.f)->setAxisAlignment(AxisAlignment::Center));
     m_mainLayer->addChildAtPosition(buttonMenu, Anchor::Center, {0.f, -10.f}, false);
 
     auto likeSprite = CCSprite::createWithSpriteFrameName("GJ_likeBtn_001.png");
     if (likeSprite) {
-        likeSprite->setScale(1.6f);
+        likeSprite->setScale(1.2f);
         m_likeButton = CCMenuItemSpriteExtra::create(likeSprite, this, menu_selector(GDXLikeItemPopup::onLike));
         if (m_likeButton) {
             buttonMenu->addChild(m_likeButton);
@@ -51,7 +53,7 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
 
     auto dislikeSprite = CCSprite::createWithSpriteFrameName("GJ_dislikeBtn_001.png");
     if (dislikeSprite) {
-        dislikeSprite->setScale(1.6f);
+        dislikeSprite->setScale(1.2f);
         m_dislikeButton = CCMenuItemSpriteExtra::create(dislikeSprite, this, menu_selector(GDXLikeItemPopup::onDislike));
         if (m_dislikeButton) {
             buttonMenu->addChild(m_dislikeButton);
@@ -70,22 +72,12 @@ void GDXLikeItemPopup::onDislike(CCObject* sender) {
     sendFeedback("dislike");
 }
 
-void GDXLikeItemPopup::setButtonsEnabled(bool enabled) {
-    if (m_likeButton) {
-        m_likeButton->setEnabled(enabled);
-    }
-    if (m_dislikeButton) {
-        m_dislikeButton->setEnabled(enabled);
-    }
-}
-
 void GDXLikeItemPopup::sendFeedback(const std::string& type) {
     if (m_isSending || !m_gauntlet.isObject()) {
         return;
     }
 
     m_isSending = true;
-    setButtonsEnabled(false);
 
     auto upopup = UploadActionPopup::create(nullptr, "Sending feedback...");
     if (upopup) {
@@ -100,13 +92,13 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
     body["index"] = m_gauntletIndex;
     body["type"] = type;
 
+    m_selfHold = this;
     auto self = geode::Ref<GDXLikeItemPopup>(this);
     m_requestTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([self, upopup]() {
                 self->m_isSending = false;
-                self->setButtonsEnabled(true);
                 if (upopup) {
                     upopup->showFailMessage("Authentication failed.");
                 }
@@ -124,7 +116,6 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         if (response.error() || response.cancelled() || !response.ok()) {
             co_await geode::async::waitForMainThread([self, upopup, response]() {
                 self->m_isSending = false;
-                self->setButtonsEnabled(true);
                 if (upopup) {
                     upopup->showFailMessage(gdx::getResponseMessage(response, "Failed to send feedback."));
                 }
@@ -136,7 +127,6 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([self, upopup]() {
                 self->m_isSending = false;
-                self->setButtonsEnabled(true);
                 if (upopup) {
                     upopup->showFailMessage("Failed to parse response.");
                 }
@@ -148,7 +138,6 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         if (!result["success"].asBool().unwrapOr(false)) {
             co_await geode::async::waitForMainThread([self, upopup, response]() {
                 self->m_isSending = false;
-                self->setButtonsEnabled(true);
                 if (upopup) {
                     upopup->showFailMessage(gdx::getResponseMessage(response, "Request was not successful."));
                 }
@@ -158,7 +147,6 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
         co_await geode::async::waitForMainThread([self, upopup]() {
             self->m_isSending = false;
-            self->setButtonsEnabled(true);
             if (upopup) {
                 upopup->showSuccessMessage("Feedback sent.");
             }
