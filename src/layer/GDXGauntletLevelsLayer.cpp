@@ -15,17 +15,17 @@
 using namespace geode::prelude;
 
 namespace {
-    static asp::fs::path getCompletedGauntletLevelsPath() {
+    static asp::fs::path getCompletedGauntletLevelsPath(bool local) {
         auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
         }
-        return dir / "completed_gauntlet_levels.json";
+        return dir / (local ? "completed_gauntlet_levels_local.json" : "completed_gauntlet_levels.json");
     }
 
-    static std::unordered_set<int> loadCompletedGauntletLevels() {
+    static std::unordered_set<int> loadCompletedGauntletLevels(bool local = false) {
         std::unordered_set<int> out;
-        auto path = getCompletedGauntletLevelsPath();
+        auto path = getCompletedGauntletLevelsPath(local);
         if (!asp::fs::isFile(path).unwrapOr(false)) {
             return out;
         }
@@ -397,7 +397,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     std::vector<CCPoint> centers;
     bool showPath = true;
 
-    auto completedLevels = loadCompletedGauntletLevels();
+    auto completedLevels = loadCompletedGauntletLevels(localMode);
     for (auto i = 0u; i < m_levels.size(); ++i) {
         const auto& entry = m_levels[i];
         bool isCompleted = completedLevels.contains(entry.levelId);
@@ -649,7 +649,7 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
         return;
     }
 
-    auto completedLevels = loadCompletedGauntletLevels();
+    auto completedLevels = loadCompletedGauntletLevels(m_localMode);
     auto children = m_levelsMenu->getChildren();
     for (auto i = 0u; i < children->count(); ++i) {
         auto child = static_cast<CCNode*>(children->objectAtIndex(i));

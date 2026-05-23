@@ -1,6 +1,7 @@
 ## v1.0.7
 
 - Added **Likes and Dislikes** on Gauntlets. You can give a like or dislike to a gauntlet, and the total likes and dislikes will be displayed on the gauntlet info popup.
+- Fixed issue with the local gauntlet levels where beating the same level from the online gauntlet is also counted as beating the local gauntlet level.
 
 ## v1.0.6
 

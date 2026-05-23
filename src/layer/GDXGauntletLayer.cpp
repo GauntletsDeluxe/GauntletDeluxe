@@ -45,17 +45,17 @@ namespace {
         return encoded;
     }
 
-    static asp::fs::path getCompletedGauntletLevelsPath() {
+    static asp::fs::path getCompletedGauntletLevelsPath(bool local) {
         auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
         }
-        return dir / "completed_gauntlet_levels.json";
+        return dir / (local ? "completed_gauntlet_levels_local.json" : "completed_gauntlet_levels.json");
     }
 
-    static std::unordered_set<int> loadCompletedGauntletLevels() {
+    static std::unordered_set<int> loadCompletedGauntletLevels(bool local = false) {
         std::unordered_set<int> out;
-        auto path = getCompletedGauntletLevelsPath();
+        auto path = getCompletedGauntletLevelsPath(local);
         if (!asp::fs::isFile(path).unwrapOr(false)) {
             return out;
         }
@@ -92,8 +92,8 @@ namespace {
         return out;
     }
 
-    static bool saveCompletedGauntletLevels(std::unordered_set<int> const& levels) {
-        auto path = getCompletedGauntletLevelsPath();
+    static bool saveCompletedGauntletLevels(std::unordered_set<int> const& levels, bool local = false) {
+        auto path = getCompletedGauntletLevelsPath(local);
         matjson::Value array = matjson::Value::array();
         for (auto levelId : levels) {
             array.push(levelId);
@@ -106,10 +106,15 @@ namespace {
         return static_cast<bool>(res);
     }
 
-    static bool addCompletedGauntletLevel(int levelId) {
-        auto levels = loadCompletedGauntletLevels();
+    static bool addCompletedGauntletLevel(int levelId, bool local = false) {
+        auto levels = loadCompletedGauntletLevels(local);
         levels.insert(levelId);
-        return saveCompletedGauntletLevels(levels);
+        return saveCompletedGauntletLevels(levels, local);
+    }
+
+    // backward-compatible wrapper
+    static bool addCompletedGauntletLevel(int levelId) {
+        return addCompletedGauntletLevel(levelId, false);
     }
 
     static asp::fs::path getCompletedGauntletPath() {
@@ -790,7 +795,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     auto url = std::string(gdx::baseApiUrl()) + "/syncUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
-    body["argonToken"] = "";
+    body["argonToken"] = ""; // This line is unchanged, but included for context.
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
     m_syncAccountTask.spawn([self = std::move(self), upopup, url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
@@ -870,7 +875,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
             }
         }
 
-        auto existingLevels = loadCompletedGauntletLevels();
+        auto existingLevels = loadCompletedGauntletLevels(false);
         for (auto levelId : existingLevels) {
             completedLevels.insert(levelId);
         }
@@ -880,13 +885,13 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
             completedGauntlets.insert(gauntletId);
         }
 
-        auto levelsSaved = saveCompletedGauntletLevels(completedLevels);
+        auto levelsSaved = saveCompletedGauntletLevels(completedLevels, false);
         auto gauntletsSaved = saveCompletedGauntlets(completedGauntlets);
 
         co_await geode::async::waitForMainThread([self, upopup, levelsSaved, gauntletsSaved]() mutable {
             if (levelsSaved && gauntletsSaved) {
                 upopup->showSuccessMessage("Account synced successfully.");
-                self->m_completedGauntletLevels = loadCompletedGauntletLevels();
+                self->m_completedGauntletLevels = loadCompletedGauntletLevels(false);
                 self->m_claimedGauntlets = loadCompletedGauntlets();
             } else {
                 upopup->showFailMessage("Failed to save sync data.");
@@ -1756,7 +1761,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         m_gauntlets = gauntlets;
     }
 
-    m_completedGauntletLevels = loadCompletedGauntletLevels();
+    m_completedGauntletLevels = loadCompletedGauntletLevels(local);
     m_claimedGauntlets = loadCompletedGauntlets();
     auto& targetScroll = local ? m_localScrollLayer : m_scrollLayer;
     auto& targetButtons = local ? m_localGauntletButtons : m_gauntletButtons;
