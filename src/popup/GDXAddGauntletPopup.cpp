@@ -1064,6 +1064,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -1080,6 +1081,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to add gauntlet.");
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -1096,6 +1098,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
                     self->m_unsaved = false;
                     self->onClose(nullptr);
                 }
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showSuccessMessage(isEdit ? "Gauntlet updated successfully!" : "Gauntlet added successfully!");
             });
         }

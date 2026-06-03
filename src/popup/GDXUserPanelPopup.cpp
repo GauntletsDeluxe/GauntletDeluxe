@@ -145,6 +145,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to get access.");
             });
             co_return;
@@ -161,6 +162,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to update exclusion status");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -170,6 +172,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
         if (!jsonResult) {
             auto errMsg = gdx::getResponseMessage(response, "Invalid response");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -179,6 +182,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
         if (!data.isObject() || !data["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to update user");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -192,6 +196,7 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
                     self->m_loadingSpinner->setVisible(false);
                 }
             }
+            if (!upopupRef) return;
             if (upopupRef) {
                 std::string message = (self && self->m_isExcluded) ? "User excluded" : "User included";
                 upopupRef->showSuccessMessage(message);
@@ -319,7 +324,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
     body["isContributor"] = !m_isContributor;  // toggle
-    body["argonToken"] = "";   // Will be set later after fetching the token
+    body["argonToken"] = "";                   // Will be set later after fetching the token
 
     auto self = geode::Ref<GDXUserPanelPopup>(this);
     auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
@@ -327,6 +332,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to get access.");
             });
             co_return;
@@ -343,6 +349,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to update contributor status");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -351,6 +358,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
         auto jsonResult = response.json();
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Invalid response");
             });
             co_return;
@@ -360,6 +368,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
         if (!data.isObject() || !data["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to update user");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -373,6 +382,7 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
                     self->m_loadingSpinner->setVisible(false);
                 }
             }
+            if (!upopupRef) return;
             if (upopupRef) {
                 std::string message = (self && self->m_isContributor) ? "User promoted to contributor" : "User demoted from contributor";
                 upopupRef->showSuccessMessage(message);

@@ -718,6 +718,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
 
     auto upopup = UploadActionPopup::create(nullptr, "Getting access...");
     upopup->show();
+
     auto accountData = argon::getGameAccountData();
     auto url = std::string(gdx::baseApiUrl()) + "/getAccess";
     matjson::Value body = matjson::Value::object();
@@ -728,6 +729,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -743,6 +745,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to get access.");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -751,6 +754,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         auto jsonResult = response.json();
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to get access.");
             });
             co_return;
@@ -760,6 +764,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         bool success = result["success"].asBool().unwrapOr(false);
         if (!result.isObject() || !success) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to get access.");
             });
             co_return;
@@ -775,6 +780,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         if (!isManager && !isContributor) {
             auto errMsg = gdx::getResponseMessage(response, "Permissions Denied");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -782,6 +788,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
 
         if (gdx::isManager() || gdx::isContributor()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef)]() {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->onClose(nullptr);
                 GDXGauntletManagePopup::create()->show();
             });
@@ -798,7 +805,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
     auto url = std::string(gdx::baseApiUrl()) + "/syncUser";
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
-    body["argonToken"] = ""; // This line is unchanged, but included for context.
+    body["argonToken"] = "";  // This line is unchanged, but included for context.
 
     auto self = geode::Ref<GDXGauntletLayer>(this);
     auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
@@ -806,6 +813,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -821,6 +829,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to sync account.");
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -829,6 +838,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         auto jsonResult = response.json();
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to sync account.");
             });
             co_return;
@@ -838,6 +848,7 @@ void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
         bool success = result["success"].asBool().unwrapOr(false);
         if (!success) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to sync account.");
             });
             co_return;

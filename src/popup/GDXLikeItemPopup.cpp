@@ -100,6 +100,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         if (token.empty()) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
                 if (self) self->m_isSending = false;
+                if (!upopupRef) return;
                 if (upopupRef) {
                     upopupRef->showFailMessage("Authentication failed.");
                 }
@@ -118,6 +119,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to send feedback.");
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
                 if (self) self->m_isSending = false;
+                if (!upopupRef) return;
                 if (upopupRef) {
                     upopupRef->showFailMessage(errMsg);
                 }
@@ -129,6 +131,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
                 if (self) self->m_isSending = false;
+                if (!upopupRef) return;
                 if (upopupRef) {
                     upopupRef->showFailMessage("Failed to parse response.");
                 }
@@ -141,6 +144,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
             auto errMsg = gdx::getResponseMessage(response, "Request was not successful.");
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
                 if (self) self->m_isSending = false;
+                if (!upopupRef) return;
                 if (upopupRef) {
                     upopupRef->showFailMessage(errMsg);
                 }
@@ -150,6 +154,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
         co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
             if (self) self->m_isSending = false;
+            if (!upopupRef) return;
             if (upopupRef) {
                 upopupRef->showSuccessMessage("Feedback sent.");
             }

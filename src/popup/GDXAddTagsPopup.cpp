@@ -150,6 +150,7 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -164,6 +165,7 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Request failed.");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -172,6 +174,7 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
         auto jsonResult = response.json();
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to parse response.");
             });
             co_return;
@@ -181,6 +184,7 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
         if (!result["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Request was not successful.");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -188,6 +192,7 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
 
         co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
             if (self) {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showSuccessMessage(self->m_editIndex >= 0 ? "Tag updated." : "Tag added.");
                 if (self->m_parent) {
                     self->m_parent->refreshTags();

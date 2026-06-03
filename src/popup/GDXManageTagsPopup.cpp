@@ -415,6 +415,7 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
@@ -429,6 +430,7 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to delete tag.");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -437,6 +439,7 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
         auto jsonResult = response.json();
         if (!jsonResult) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to delete tag.");
             });
             co_return;
@@ -446,12 +449,14 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
         if (!result["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to delete tag.");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+                if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
         co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+            if (!upopupRef) return;
             if (upopupRef) upopupRef->showSuccessMessage("Tag deleted successfully.");
             if (self) self->fetchTags();
         });
