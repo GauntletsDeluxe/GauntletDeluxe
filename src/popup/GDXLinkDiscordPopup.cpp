@@ -106,9 +106,9 @@ bool GDXLinkDiscordPopup::init() {
 
     // info
     auto infoBtn = geode::Button::createWithSpriteFrameName("GJ_infoIcon_001.png", [this](geode::Button* sender) {
-        FLAlertLayer::create("Discord Account Linking",
-            "Linking your <cl>Discord account</c> to <cr>Gauntlets Deluxe</c> will allow you to <cg>submit gauntlets to the queue</c>, <cc>View your submission history</c>, <co>Track your contributions</c> and much more.\n"
-            "<cy>You can view all of these features through</c> <co>GauntletsHelper</c> <cy>discord bot on our server!</c>",
+        FLAlertLayer::create("Discord Linking",
+            "Linking your <cl>Discord account</c> allows you to <cg>submit gauntlets</c>, <cc>view your submission history</c>, and <co>track contributions</c> in <cr>Gauntlets Deluxe</c>.\n\n"
+            "<cy>Access all these features via the</c> <co>GauntletsHelper</c> <cy>Discord bot on our community server!</c>",
             "OK")
             ->show();
     });
@@ -341,7 +341,12 @@ void GDXLinkDiscordPopup::onLink(CCObject* sender) {
     }
 
     if (discordId.length() < 17 || discordId.length() > 20) {
-        Notification::create("Invalid Discord User ID (17-20 digits required).", NotificationIcon::Error)->show();
+        Notification::create("Invalid Discord User ID.", NotificationIcon::Error)->show();
+        return;
+    }
+
+    if (gdx::isHelperBotUserId(discordId)) {
+        Notification::create("Invalid Discord User ID.", NotificationIcon::Error)->show();
         return;
     }
 

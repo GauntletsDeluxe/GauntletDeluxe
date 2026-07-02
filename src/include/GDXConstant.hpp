@@ -99,6 +99,10 @@ namespace gdx {
         cache[url] = texture;
     }
 
+    inline bool isHelperBotUserId(const std::string& id) {
+        return id == "1521546288041299999";
+    }
+
     inline void onManagerBadge() {
         FLAlertLayer::create("Gauntlet Manager", "This user has the same ability as <cl>contributor</c> but can also <cg>create online gauntlets</c> and <cc>create gauntlet tags</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
     }
