@@ -781,11 +781,13 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
         // get those roles lol
         bool isContributor = result["isContributor"].asBool().unwrapOr(false);
         bool isManager = result["isManager"].asBool().unwrapOr(false);
+        bool isLeaderboardMod = result["isLeaderboardMod"].asBool().unwrapOr(false);
 
         Mod::get()->setSavedValue("isContributor", isContributor);
         Mod::get()->setSavedValue("isManager", isManager);
+        Mod::get()->setSavedValue("isLeaderboardMod", isLeaderboardMod);
 
-        if (!isManager && !isContributor) {
+        if (!isManager && !isContributor && !isLeaderboardMod) {
             auto errMsg = gdx::getResponseMessage(response, "Permissions Denied");
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
@@ -794,7 +796,7 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
             co_return;
         }
 
-        if (gdx::isManager() || gdx::isContributor()) {
+        if (gdx::isManager() || gdx::isContributor() || gdx::isLeaderboardMod()) {
             co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef)]() {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->onClose(nullptr);

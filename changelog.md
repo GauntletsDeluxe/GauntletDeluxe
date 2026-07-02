@@ -1,6 +1,7 @@
 ## v1.0.8
 
 - Added **Discord Linking** in the gauntlet layer
+- Added **Gauntlet Leaderboard Mod** role
 
 ## v1.0.7
 

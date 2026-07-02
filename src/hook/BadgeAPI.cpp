@@ -47,8 +47,9 @@ class $modify(GDXHookProfilePage, ProfilePage) {
 
             bool isManager = userData["isManager"].asBool().unwrapOr(false);
             bool isContributor = userData["isContributor"].asBool().unwrapOr(false);
+            bool isLeaderboardMod = userData["isLeaderboardMod"].asBool().unwrapOr(false);
 
-            co_await geode::async::waitForMainThread([menuRef, isManager, isContributor]() {
+            co_await geode::async::waitForMainThread([menuRef, isManager, isContributor, isLeaderboardMod]() {
                 if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
                     auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
@@ -59,6 +60,12 @@ class $modify(GDXHookProfilePage, ProfilePage) {
                     auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
                     auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
                     badgeBtn->setID("GDX-contributor-badge:101"_spr);
+                    menuRef->addChild(badgeBtn);
+                }
+                if (isLeaderboardMod && !menuRef->getChildByIDRecursive("GDX-leaderboard-badge:101"_spr)) {
+                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_leaderboard_badge.png"_spr);
+                    auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onLeaderboardModBadge));
+                    badgeBtn->setID("GDX-leaderboardmod-badge:101"_spr);
                     menuRef->addChild(badgeBtn);
                 }
                 menuRef->updateLayout();
@@ -72,6 +79,9 @@ class $modify(GDXHookProfilePage, ProfilePage) {
     }
     void onManagerBadge(CCObject* sender) {
         gdx::onManagerBadge();
+    }
+    void onLeaderboardModBadge(CCObject* sender) {
+        gdx::onLeaderboardModBadge();
     }
 };
 

@@ -41,6 +41,10 @@ namespace gdx {
         return Mod::get()->getSavedValue<bool>("isContributor");
     }
 
+    inline bool isLeaderboardMod() {
+        return Mod::get()->getSavedValue<bool>("isLeaderboardMod");
+    }
+
     inline extern const std::string featuredParticle = "30,2065,2,435,3,135,155,1,156,2,145,30a-1a3a0.3a1a90a90a0a0a70a100a0a0a4a0a0a0a24a1a0a0a1a0a0.823529a0a0.227451a0a1a0a0a1a0a190a1a0a0.996078a0a0.980392a0a1a0a0.4a0a0.3a0a0a0a0a0a0a0a0a2a1a0a0a0a27a0a0a0a0a0a0a0a0a0a0a0a0a0a0;";
 
     inline bool g_isPlayingGauntletLevel = false;
@@ -101,5 +105,9 @@ namespace gdx {
 
     inline void onContributorBadge() {
         FLAlertLayer::create("Gauntlet Contributor", "This user has the ability to <cl>edit created gauntlets</c>, <co>manage the leaderboard</c> is the one <cg>in charge of looking over gauntlet ideas</c> from <cy>other users</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
+    }
+
+    inline void onLeaderboardModBadge() {
+        FLAlertLayer::create("Gauntlet Leaderboard Mod", "This users have the ability to <cg>manage the leaderboards</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
     }
 }

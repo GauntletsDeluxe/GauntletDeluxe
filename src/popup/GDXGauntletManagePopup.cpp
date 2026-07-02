@@ -211,6 +211,14 @@ bool GDXGauntletManagePopup::init() {
             actionMenu->addChild(addBtn);
         }
 
+        if (gdx::isLeaderboardMod()) {
+            auto userBtn = CCMenuItemSpriteExtra::create(
+                ButtonSprite::create("User Panel", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+                this,
+                menu_selector(GDXGauntletManagePopup::onUserPanel));
+            actionMenu->addChild(userBtn);
+        }
+
         // manager and contributor
         if (gdx::isManager() || gdx::isContributor()) {
             auto showTagsBtn = CCMenuItemSpriteExtra::create(
@@ -224,12 +232,6 @@ bool GDXGauntletManagePopup::init() {
                 this,
                 menu_selector(GDXGauntletManagePopup::onManageAssets));
             actionMenu->addChild(openManageBtn);
-
-            auto userBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("User Panel", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
-                this,
-                menu_selector(GDXGauntletManagePopup::onUserPanel));
-            actionMenu->addChild(userBtn);
         }
     }
 
