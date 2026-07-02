@@ -1,14 +1,15 @@
 #include "GDXLinkDiscordPopup.hpp"
 #include "../include/GDXConstant.hpp"
 #include "Geode/cocos/cocoa/CCGeometry.h"
+#include "Geode/ui/MDPopup.hpp"
 #include "Geode/ui/NineSlice.hpp"
 #include "Geode/ui/TextArea.hpp"
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/binding/FLAlertLayer.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/General.hpp>
+#include <Geode/ui/Button.hpp>
 #include <Geode/ui/Notification.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/utils/general.hpp>
@@ -38,11 +39,13 @@ bool GDXLinkDiscordPopup::init() {
     m_discordIdInput->setLabel("Discord User ID");
     m_discordIdInput->setCommonFilter(CommonFilter::Int);
     m_mainLayer->addChildAtPosition(m_discordIdInput, Anchor::Center, {0.f, 30.f});
+    m_discordIdInput->setVisible(false);
 
     m_usernameInput = TextInput::create(240.f, "Discord Username", "bigFont.fnt");
     m_usernameInput->setLabel("Discord Username");
     m_usernameInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_usernameInput, Anchor::Center, {0.f, -20.f});
+    m_usernameInput->setVisible(false);
 
     m_statusLabel = SimpleTextArea::create("", "bigFont.fnt", 0.5f, m_mainLayer->getContentWidth() - 10.f);
     m_statusLabel->setAlignment(CCTextAlignment::kCCTextAlignmentCenter);
@@ -58,6 +61,7 @@ bool GDXLinkDiscordPopup::init() {
     auto linkSprite = ButtonSprite::create("Link", "goldFont.fnt", "GJ_button_01.png");
     m_linkBtn = CCMenuItemSpriteExtra::create(linkSprite, this, menu_selector(GDXLinkDiscordPopup::onLink));
     m_buttonMenu->addChildAtPosition(m_linkBtn, Anchor::Bottom, {0.f, 35.f});
+    m_linkBtn->setVisible(false);
 
     auto unlinkSprite = ButtonSprite::create("Unlink", "goldFont.fnt", "GJ_button_06.png");
     m_unlinkBtn = CCMenuItemSpriteExtra::create(unlinkSprite, this, menu_selector(GDXLinkDiscordPopup::onUnlink));
@@ -99,6 +103,16 @@ bool GDXLinkDiscordPopup::init() {
     m_linkedStatusLabel->setScale(0.5f);
     m_mainLayer->addChildAtPosition(m_linkedStatusLabel, Anchor::Center, {0.f, -25.f});
     m_linkedStatusLabel->setVisible(false);
+
+    // info
+    auto infoBtn = geode::Button::createWithSpriteFrameName("GJ_infoIcon_001.png", [this](geode::Button* sender) {
+        FLAlertLayer::create("Discord Account Linking",
+            "Linking your <cl>Discord account</c> to <cr>Gauntlets Deluxe</c> will allow you to <cg>submit gauntlets to the queue</c>, <cc>View your submission history</c>, <co>Track your contributions</c> and much more.\n"
+            "<cy>You can view all of these features through</c> <co>GauntletsHelper</c> <cy>discord bot on our server!</c>",
+            "OK")
+            ->show();
+    });
+    m_buttonMenu->addChildAtPosition(infoBtn, Anchor::BottomRight, {-25.f, 25.f});
 
     fetchDiscordStatus();
 
@@ -211,12 +225,8 @@ void GDXLinkDiscordPopup::onCopyCode(CCObject* sender) {
 }
 
 void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
-    Ref<UploadActionPopup> upopup = nullptr;
-    if (!silent) {
-        upopup = UploadActionPopup::create(nullptr, "Checking link status...");
-        if (upopup) {
-            upopup->show();
-        }
+    if (!silent && m_loadingCircle) {
+        m_loadingCircle->fadeIn();
     }
 
     auto accountData = argon::getGameAccountData();
@@ -226,14 +236,20 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
     body["argonToken"] = "";
 
     auto self = geode::Ref<GDXLinkDiscordPopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
 
-    m_checkStatusTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData), silent]() mutable -> arc::Future<> {
+    m_checkStatusTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData), silent]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             if (!silent) {
-                co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
-                    if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
+                co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                    if (self) {
+                        if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                        self->updateUI(false, "", "", false, "");
+                        if (self->m_statusLabel) {
+                            self->m_statusLabel->setText("Authentication failed.");
+                            self->m_statusLabel->setVisible(true);
+                        }
+                    }
                 });
             }
             co_return;
@@ -249,8 +265,15 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
         if (response.error() || response.cancelled() || !response.ok()) {
             if (!silent) {
                 auto errMsg = gdx::getResponseMessage(response, "Failed to fetch Discord status.");
-                co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
-                    if (upopupRef) upopupRef->showFailMessage(errMsg);
+                co_await geode::async::waitForMainThread([self = std::move(self), errMsg = std::move(errMsg)]() {
+                    if (self) {
+                        if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                        self->updateUI(false, "", "", false, "");
+                        if (self->m_statusLabel) {
+                            self->m_statusLabel->setText(errMsg.c_str());
+                            self->m_statusLabel->setVisible(true);
+                        }
+                    }
                 });
             }
             co_return;
@@ -259,8 +282,15 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
         auto jsonResult = response.json();
         if (!jsonResult) {
             if (!silent) {
-                co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
-                    if (upopupRef) upopupRef->showFailMessage("Failed to parse response.");
+                co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                    if (self) {
+                        if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                        self->updateUI(false, "", "", false, "");
+                        if (self->m_statusLabel) {
+                            self->m_statusLabel->setText("Failed to parse response.");
+                            self->m_statusLabel->setVisible(true);
+                        }
+                    }
                 });
             }
             co_return;
@@ -270,8 +300,15 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
         if (!result["success"].asBool().unwrapOr(false)) {
             if (!silent) {
                 auto errMsg = result["message"].asString().unwrapOr(gdx::getResponseMessage(response, "Failed to check status."));
-                co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
-                    if (upopupRef) upopupRef->showFailMessage(errMsg);
+                co_await geode::async::waitForMainThread([self = std::move(self), errMsg = std::move(errMsg)]() {
+                    if (self) {
+                        if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                        self->updateUI(false, "", "", false, "");
+                        if (self->m_statusLabel) {
+                            self->m_statusLabel->setText(errMsg.c_str());
+                            self->m_statusLabel->setVisible(true);
+                        }
+                    }
                 });
             }
             co_return;
@@ -282,9 +319,9 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
         std::string discordId = result["discordId"].asString().unwrapOr("");
         std::string username = result["discordUsername"].asString().unwrapOr("");
 
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), isLinked, username = std::move(username), discordId = std::move(discordId), isVerified, silent]() {
-            if (upopupRef) upopupRef->onClose(nullptr);
+        co_await geode::async::waitForMainThread([self = std::move(self), isLinked, username = std::move(username), discordId = std::move(discordId), isVerified, silent]() {
             if (self) {
+                if (!silent && self->m_loadingCircle) self->m_loadingCircle->fadeOut();
                 if (!silent || isLinked) {
                     self->updateUI(isLinked, username, discordId, isVerified, "");
                 }
@@ -405,9 +442,11 @@ void GDXLinkDiscordPopup::onLink(CCObject* sender) {
 }
 
 void GDXLinkDiscordPopup::onUnlink(CCObject* sender) {
-    auto upopup = UploadActionPopup::create(nullptr, "Unlinking Discord...");
-    if (upopup) {
-        upopup->show();
+    if (m_loadingCircle) {
+        m_loadingCircle->fadeIn();
+    }
+    if (m_unlinkBtn) {
+        m_unlinkBtn->setEnabled(false);
     }
 
     auto accountData = argon::getGameAccountData();
@@ -417,13 +456,16 @@ void GDXLinkDiscordPopup::onUnlink(CCObject* sender) {
     body["argonToken"] = "";
 
     auto self = geode::Ref<GDXLinkDiscordPopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
 
-    m_unlinkTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_unlinkTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
-                if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                if (self) {
+                    if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                    if (self->m_unlinkBtn) self->m_unlinkBtn->setEnabled(true);
+                    FLAlertLayer::create("Error", "Authentication failed.", "OK")->show();
+                }
             });
             co_return;
         }
@@ -437,16 +479,24 @@ void GDXLinkDiscordPopup::onUnlink(CCObject* sender) {
 
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to unlink Discord account.");
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
-                if (upopupRef) upopupRef->showFailMessage(errMsg);
+            co_await geode::async::waitForMainThread([self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (self) {
+                    if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                    if (self->m_unlinkBtn) self->m_unlinkBtn->setEnabled(true);
+                    FLAlertLayer::create("Error", errMsg, "OK")->show();
+                }
             });
             co_return;
         }
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
-                if (upopupRef) upopupRef->showFailMessage("Failed to parse response.");
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                if (self) {
+                    if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                    if (self->m_unlinkBtn) self->m_unlinkBtn->setEnabled(true);
+                    FLAlertLayer::create("Error", "Failed to parse response.", "OK")->show();
+                }
             });
             co_return;
         }
@@ -454,17 +504,23 @@ void GDXLinkDiscordPopup::onUnlink(CCObject* sender) {
         auto result = std::move(jsonResult).unwrap();
         if (!result["success"].asBool().unwrapOr(false)) {
             auto errMsg = result["message"].asString().unwrapOr(gdx::getResponseMessage(response, "Failed to unlink Discord account."));
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
-                if (upopupRef) upopupRef->showFailMessage(errMsg);
+            co_await geode::async::waitForMainThread([self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (self) {
+                    if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                    if (self->m_unlinkBtn) self->m_unlinkBtn->setEnabled(true);
+                    FLAlertLayer::create("Error", errMsg, "OK")->show();
+                }
             });
             co_return;
         }
 
         std::string message = result["message"].asString().unwrapOr("Discord account unlinked successfully!");
 
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), message = std::move(message)]() {
-            if (upopupRef) upopupRef->showSuccessMessage(message);
+        co_await geode::async::waitForMainThread([self = std::move(self), message = std::move(message)]() {
             if (self) {
+                if (self->m_loadingCircle) self->m_loadingCircle->fadeOut();
+                if (self->m_unlinkBtn) self->m_unlinkBtn->setEnabled(true);
+                FLAlertLayer::create("Success", message, "OK")->show();
                 self->updateUI(false, "", "", false, "");
             }
         });

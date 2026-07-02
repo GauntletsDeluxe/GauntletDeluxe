@@ -669,7 +669,10 @@ void GDXGauntletLayer::keyBackClicked() {
 }
 
 void GDXGauntletLayer::onDiscord(CCObject* sender) {
-    utils::web::openLinkInBrowser("https://discord.gg/JBVDVcQN6R");
+    auto communityUrl = getMod()->getMetadata().getLinks().getCommunityURL();
+    if (communityUrl.has_value()) {
+        geode::utils::web::openLinkInBrowser(communityUrl.value());
+    }
 }
 
 void GDXGauntletLayer::onLink(CCObject* sender) {

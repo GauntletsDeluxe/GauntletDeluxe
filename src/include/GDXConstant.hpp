@@ -108,6 +108,6 @@ namespace gdx {
     }
 
     inline void onLeaderboardModBadge() {
-        FLAlertLayer::create("Gauntlet Leaderboard Mod", "This users have the ability to <cg>manage the leaderboards</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
+        FLAlertLayer::create("Gauntlet Leaderboard Mod", "This user has the ability to <cg>manage the leaderboards</c>, and <co>Ban/Unban users</c> in <cr>Gauntlets Deluxe</c>.", "OK")->show();
     }
 }
