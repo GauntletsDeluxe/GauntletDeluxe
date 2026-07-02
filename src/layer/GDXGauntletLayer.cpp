@@ -5,6 +5,7 @@
 #include "../popup/GDXLikeItemPopup.hpp"
 #include "../popup/GDXShowTagsPopup.hpp"
 #include "../popup/GDXTagsFiltersPopup.hpp"
+#include "../popup/GDXLinkDiscordPopup.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <algorithm>
@@ -522,12 +523,15 @@ bool GDXGauntletLayer::init() {
     auto tagFilterSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_searchTags.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_tagFilterBtn = CCMenuItemSpriteExtra::create(tagFilterSpr, this, menu_selector(GDXGauntletLayer::onFilterByTag));
 
+    auto linkIcon = CircleButtonSprite::createWithSpriteFrameName("GDX_linkIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_linkBtn = CCMenuItemSpriteExtra::create(linkIcon, this, menu_selector(GDXGauntletLayer::onLink));
+
     // top left menu
-    auto topLeftMenu = CCMenu::create(m_searchBtn, m_tagFilterBtn, nullptr);
-    topLeftMenu->setPosition({10, winSize.height - 50});
-    topLeftMenu->setContentHeight(70);
+    auto topLeftMenu = CCMenu::create(m_searchBtn, m_tagFilterBtn, m_linkBtn, nullptr);
+    topLeftMenu->setPosition({10, winSize.height - 45});
+    topLeftMenu->setContentWidth(80);
     topLeftMenu->setAnchorPoint({0.f, 1.f});
-    topLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::End)->setAxisReverse(true));
+    topLeftMenu->setLayout(RowLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true)->setCrossAxisReverse(false));
     this->addChild(topLeftMenu, 2);
 
     // info button
@@ -666,6 +670,10 @@ void GDXGauntletLayer::keyBackClicked() {
 
 void GDXGauntletLayer::onDiscord(CCObject* sender) {
     utils::web::openLinkInBrowser("https://discord.gg/JBVDVcQN6R");
+}
+
+void GDXGauntletLayer::onLink(CCObject* sender) {
+    GDXLinkDiscordPopup::create()->show();
 }
 
 void GDXGauntletLayer::onInfo(CCObject* sender) {

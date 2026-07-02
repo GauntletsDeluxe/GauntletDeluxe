@@ -1,3 +1,7 @@
+## v1.0.8
+
+- Added **Discord Linking** in the gauntlet layer
+
 ## v1.0.7
 
 - Added **Likes and Dislikes** on Gauntlets. You can give a like or dislike to a gauntlet, and the total likes and dislikes will be displayed on the gauntlet info popup.

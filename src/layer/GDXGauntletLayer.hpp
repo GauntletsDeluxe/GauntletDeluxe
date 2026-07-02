@@ -45,6 +45,7 @@ private:
     void onToggleRecent(CCObject* sender);
     void onToggleLocalMode(CCObject* sender);
     void onDiscord(CCObject* sender);
+    void onLink(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
     void onCompleteGauntlet(CCObject* sender);
@@ -79,6 +80,7 @@ private:
     CCMenuItemSpriteExtra* m_syncBtn = nullptr;
     CCMenuItemSpriteExtra* m_tagFilterBtn = nullptr;
     CCMenuItemSpriteExtra* m_searchBtn = nullptr;
+    CCMenuItemSpriteExtra* m_linkBtn = nullptr;
     CCMenuItemSpriteExtra* m_recentToggle = nullptr;
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
     bool m_recentFilter = false;
