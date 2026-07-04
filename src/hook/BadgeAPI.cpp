@@ -1,24 +1,32 @@
-
 #include <Geode/Geode.hpp>
 #include "../include/GDXConstant.hpp"
-#include "Geode/cocos/sprite_nodes/CCSprite.h"
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/cocos/sprite_nodes/CCSprite.h>
 #include <argon/argon.hpp>
-#include <Geode/modify/ProfilePage.hpp>
-#include <Geode/modify/CommentCell.hpp>
-#include <Geode/ui/Button.hpp>
+#include <alphalaneous.badgify/include/Badgify.hpp>
 
 using namespace geode::prelude;
 
-class $modify(GDXHookProfilePage, ProfilePage) {
-    void loadPageFromUserInfo(GJUserScore* a2) {
-        ProfilePage::loadPageFromUserInfo(a2);
-        auto layer = m_mainLayer;
-        CCMenu* usernameMenu = static_cast<CCMenu*>(layer->getChildByIDRecursive("username-menu"));
-        if (!usernameMenu) return;
+namespace {
+    struct UserRoles {
+        bool isManager = false;
+        bool isContributor = false;
+        bool isLeaderboardMod = false;
+        bool loaded = false;
+    };
 
-        auto menuRef = Ref<CCMenu>(usernameMenu);
-        int targetAccountId = a2 ? a2->m_accountID : 0;
+    void fetchUserRoles(int targetAccountId, geode::Function<void(const UserRoles&)> callback) {
+        static std::unordered_map<int, UserRoles> s_roleCache;
+        static std::unordered_map<int, std::vector<geode::Function<void(const UserRoles&)>>> s_pending;
+
+        if (auto it = s_roleCache.find(targetAccountId); it != s_roleCache.end() && it->second.loaded) {
+            callback(it->second);
+            return;
+        }
+
+        s_pending[targetAccountId].push_back(std::move(callback));
+        if (s_pending[targetAccountId].size() > 1) {
+            return;
+        }
 
         auto accountData = argon::getGameAccountData();
         auto url = std::string(gdx::baseApiUrl()) + "/getUser";
@@ -26,9 +34,16 @@ class $modify(GDXHookProfilePage, ProfilePage) {
         body["accountId"] = accountData.accountId;
         body["targetAccountId"] = targetAccountId;
 
-        geode::async::spawn([menuRef, url = std::move(url), body = std::move(body), accountData]() mutable -> arc::Future<> {
+        geode::async::spawn([targetAccountId, url = std::move(url), body = std::move(body), accountData]() mutable -> arc::Future<> {
             auto token = co_await gdx::argonToken(accountData);
-            if (token.empty()) co_return;
+            if (token.empty()) {
+                co_await geode::async::waitForMainThread([targetAccountId]() {
+                    auto pending = std::move(s_pending[targetAccountId]);
+                    s_pending.erase(targetAccountId);
+                    for (auto& cb : pending) cb(UserRoles{});
+                });
+                co_return;
+            }
             body["argonToken"] = std::move(token);
 
             auto response = co_await geode::utils::web::WebRequest()
@@ -37,118 +52,98 @@ class $modify(GDXHookProfilePage, ProfilePage) {
                                 .bodyJSON(body)
                                 .post(url);
 
-            if (response.error() || response.cancelled() || !response.ok()) co_return;
+            if (response.error() || response.cancelled() || !response.ok()) {
+                co_await geode::async::waitForMainThread([targetAccountId]() {
+                    auto pending = std::move(s_pending[targetAccountId]);
+                    s_pending.erase(targetAccountId);
+                    for (auto& cb : pending) cb(UserRoles{});
+                });
+                co_return;
+            }
 
             auto jsonResult = response.json();
-            if (!jsonResult) co_return;
+            if (!jsonResult) {
+                co_await geode::async::waitForMainThread([targetAccountId]() {
+                    auto pending = std::move(s_pending[targetAccountId]);
+                    s_pending.erase(targetAccountId);
+                    for (auto& cb : pending) cb(UserRoles{});
+                });
+                co_return;
+            }
 
             auto userData = std::move(jsonResult).unwrap();
-            if (!userData.isObject()) co_return;
+            if (!userData.isObject()) {
+                co_await geode::async::waitForMainThread([targetAccountId]() {
+                    auto pending = std::move(s_pending[targetAccountId]);
+                    s_pending.erase(targetAccountId);
+                    for (auto& cb : pending) cb(UserRoles{});
+                });
+                co_return;
+            }
 
-            bool isManager = userData["isManager"].asBool().unwrapOr(false);
-            bool isContributor = userData["isContributor"].asBool().unwrapOr(false);
-            bool isLeaderboardMod = userData["isLeaderboardMod"].asBool().unwrapOr(false);
+            UserRoles roles;
+            roles.isManager = userData["isManager"].asBool().unwrapOr(false);
+            roles.isContributor = userData["isContributor"].asBool().unwrapOr(false);
+            roles.isLeaderboardMod = userData["isLeaderboardMod"].asBool().unwrapOr(false);
+            roles.loaded = true;
 
-            co_await geode::async::waitForMainThread([menuRef, isManager, isContributor, isLeaderboardMod]() {
-                if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
-                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
-                    auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
-                    badge->setID("GDX-manager-badge:101"_spr);
-                    menuRef->addChild(badge);
+            co_await geode::async::waitForMainThread([targetAccountId, roles]() {
+                s_roleCache[targetAccountId] = roles;
+                auto pending = std::move(s_pending[targetAccountId]);
+                s_pending.erase(targetAccountId);
+                for (auto& cb : pending) {
+                    cb(roles);
                 }
-                if (isContributor && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
-                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
-                    auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
-                    badgeBtn->setID("GDX-contributor-badge:101"_spr);
-                    menuRef->addChild(badgeBtn);
-                }
-                if (isLeaderboardMod && !menuRef->getChildByIDRecursive("GDX-leaderboard-badge:101"_spr)) {
-                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_leaderboard_badge.png"_spr);
-                    auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onLeaderboardModBadge));
-                    badgeBtn->setID("GDX-leaderboardmod-badge:101"_spr);
-                    menuRef->addChild(badgeBtn);
-                }
-                menuRef->updateLayout();
             });
 
-            co_return; });
+            co_return;
+        });
     }
+}
 
-    void onContributorBadge(CCObject* sender) {
-        gdx::onContributorBadge();
-    }
-    void onManagerBadge(CCObject* sender) {
-        gdx::onManagerBadge();
-    }
-    void onLeaderboardModBadge(CCObject* sender) {
-        gdx::onLeaderboardModBadge();
-    }
-};
+$execute {
+    alpha::badgify::registerBadge(
+        "GDX-manager-badge"_spr,
+        "Gauntlet Manager",
+        "This user has the same ability as <cl>contributor</c> but can also <cg>create online gauntlets</c> and <cc>create gauntlet tags</c> in <cr>Gauntlets Deluxe</c>.",
+        [](const alpha::badgify::Badge& badge) {
+            int targetAccountId = badge.user ? badge.user->m_accountID : 0;
+            if (targetAccountId == 0) return;
 
-class $modify(GDXHookCommentCell, CommentCell) {
-    void loadFromComment(GJComment* p0) {
-        CommentCell::loadFromComment(p0);
-        auto layer = m_mainLayer;
-
-        CCMenu* usernameMenu = static_cast<CCMenu*>(layer->getChildByIDRecursive("username-menu"));
-        if (!usernameMenu) return;
-
-        auto menuRef = Ref<CCMenu>(usernameMenu);
-        int targetAccountId = p0 ? p0->m_accountID : 0;
-
-        auto accountData = argon::getGameAccountData();
-        auto url = std::string(gdx::baseApiUrl()) + "/getUser";
-        matjson::Value body = matjson::Value::object();
-        body["accountId"] = accountData.accountId;
-        body["targetAccountId"] = targetAccountId;
-
-        geode::async::spawn([menuRef, url = std::move(url), body = std::move(body), accountData]() mutable -> arc::Future<> {
-            auto token = co_await gdx::argonToken(accountData);
-            if (token.empty()) co_return;
-            body["argonToken"] = std::move(token);
-
-            auto response = co_await geode::utils::web::WebRequest()
-                                .url(url)
-                                .header("Content-Type", "application/json")
-                                .bodyJSON(body)
-                                .post(url);
-
-            if (response.error() || response.cancelled() || !response.ok()) co_return;
-
-            auto jsonResult = response.json();
-            if (!jsonResult) co_return;
-
-            auto userData = std::move(jsonResult).unwrap();
-            if (!userData.isObject()) co_return;
-
-            bool isManager = userData["isManager"].asBool().unwrapOr(false);
-            bool isContributor = userData["isContributor"].asBool().unwrapOr(false);
-
-            co_await geode::async::waitForMainThread([menuRef, isManager, isContributor]() {
-                if (isManager && !menuRef->getChildByIDRecursive("GDX-manager-badge:101"_spr)) {
-                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr);
-                    badgeSpr->setScale(0.7f);
-                    auto badge = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onManagerBadge));
-                    badge->setID("GDX-manager-badge:101"_spr);
-                    menuRef->addChild(badge);
+            fetchUserRoles(targetAccountId, [badge](const UserRoles& roles) {
+                if (roles.isManager) {
+                    alpha::badgify::showBadge(badge, CCSprite::createWithSpriteFrameName("GDX_manager_badge.png"_spr));
                 }
-                if (isContributor && !menuRef->getChildByIDRecursive("GDX-contributor-badge:101"_spr)) {
-                    auto badgeSpr = CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr);
-                    badgeSpr->setScale(0.7f);
-                    auto badgeBtn = CCMenuItemSpriteExtra::create(badgeSpr, menuRef, menu_selector(GDXHookProfilePage::onContributorBadge));
-                    badgeBtn->setID("GDX-contributor-badge:101"_spr);
-                    menuRef->addChild(badgeBtn);
-                }
-                menuRef->updateLayout();
             });
+        });
 
-            co_return; });
-    }
+    alpha::badgify::registerBadge(
+        "GDX-contributor-badge"_spr,
+        "Gauntlet Contributor",
+        "This user has the ability to <cl>edit created gauntlets</c>, <co>manage the leaderboard</c> is the one <cg>in charge of looking over gauntlet ideas</c> from <cy>other users</c> in <cr>Gauntlets Deluxe</c>.",
+        [](const alpha::badgify::Badge& badge) {
+            int targetAccountId = badge.user ? badge.user->m_accountID : 0;
+            if (targetAccountId == 0) return;
 
-    void onContributorBadge(CCObject* sender) {
-        gdx::onContributorBadge();
-    }
-    void onManagerBadge(CCObject* sender) {
-        gdx::onManagerBadge();
-    }
-};
+            fetchUserRoles(targetAccountId, [badge](const UserRoles& roles) {
+                if (roles.isContributor) {
+                    alpha::badgify::showBadge(badge, CCSprite::createWithSpriteFrameName("GDX_contributor_badge.png"_spr));
+                }
+            });
+        });
+
+    alpha::badgify::registerBadge(
+        "GDX-leaderboardmod-badge"_spr,
+        "Gauntlet Leaderboard Mod",
+        "This user has the ability to <cg>manage the leaderboards</c>, and <co>Ban/Unban users</c> in <cr>Gauntlets Deluxe</c>.",
+        [](const alpha::badgify::Badge& badge) {
+            int targetAccountId = badge.user ? badge.user->m_accountID : 0;
+            if (targetAccountId == 0) return;
+
+            fetchUserRoles(targetAccountId, [badge](const UserRoles& roles) {
+                if (roles.isLeaderboardMod) {
+                    alpha::badgify::showBadge(badge, CCSprite::createWithSpriteFrameName("GDX_leaderboard_badge.png"_spr));
+                }
+            });
+        });
+}

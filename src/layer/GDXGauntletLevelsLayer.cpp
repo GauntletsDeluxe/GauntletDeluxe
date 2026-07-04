@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
+#include <asp/time.hpp>
 #include <cue/RepeatingBackground.hpp>
 #include <asp/fs.hpp>
 #include "Geode/ui/Layout.hpp"
@@ -630,6 +631,20 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                 }
             }
         }
+    } else {
+        auto exportSprite = CircleButtonSprite::createWithSpriteFrameName("geode.loader/install.png");
+        if (exportSprite) {
+            exportSprite->setScale(0.8f);
+            auto exportBtn = CCMenuItemSpriteExtra::create(exportSprite, this, menu_selector(GDXGauntletLevelsLayer::onExportGauntlet));
+            if (exportBtn) {
+                exportBtn->setPosition({34.f, 34.f});
+                auto bottomLeftMenu = CCMenu::create(exportBtn, nullptr);
+                if (bottomLeftMenu) {
+                    bottomLeftMenu->setPosition({0.f, 0.f});
+                    this->addChild(bottomLeftMenu, 2);
+                }
+            }
+        }
     }
 
     this->setKeypadEnabled(true);
@@ -837,6 +852,75 @@ void GDXGauntletLevelsLayer::onLikeItem(CCObject* sender) {
     }
 
     GDXLikeItemPopup::create(m_gauntletData)->show();
+}
+
+void GDXGauntletLevelsLayer::onExportGauntlet(CCObject* sender) {
+    auto self = Ref(this);
+    geode::async::spawn([self = std::move(self)]() mutable -> arc::Future<> {
+        geode::utils::file::FilePickOptions options;
+        geode::utils::file::FilePickOptions::Filter filter;
+        filter.description = "JSON Files";
+        filter.files = {"*.json"};
+        options.filters.push_back(std::move(filter));
+
+        std::string safeName = self->m_gauntletTitle.empty() ? "gauntlet" : self->m_gauntletTitle;
+        for (char& c : safeName) {
+            if (c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|') {
+                c = '_';
+            }
+        }
+        options.defaultPath = fmt::format("{}.json", safeName);
+
+        auto result = co_await geode::utils::file::pick(
+            geode::utils::file::PickMode::SaveFile,
+            std::move(options));
+
+        if (!result) {
+            co_return;
+        }
+
+        auto maybePath = std::move(result).unwrap();
+        if (!maybePath.has_value()) {
+            co_return;
+        }
+
+        auto targetPath = maybePath.value();
+
+        matjson::Value body = self->m_gauntletData.isObject() ? self->m_gauntletData : matjson::Value::object();
+        body.erase("spritePath");  // nuh uh
+        body.erase("isFeatured");
+        body.erase("levelIds");
+        body.erase("index");
+        body.erase("accountId");
+        body.erase("argonToken");
+        body["exportDate"] = asp::time::SystemTime::now().toString();
+        body["name"] = self->m_gauntletTitle;
+        if (!body.contains("description") || !body["description"].isString()) {
+            body["description"] = self->m_gauntletData.isObject() ? self->m_gauntletData["description"].asString().unwrapOr("") : "";
+        }
+        body["levels"] = matjson::Value::array();
+        for (auto const& entry : self->m_levels) {
+            matjson::Value levelObj = matjson::Value::object();
+            levelObj["levelId"] = entry.levelId;
+            levelObj["levelName"] = entry.levelName;
+            levelObj["creatorName"] = entry.creatorName;
+            body["levels"].push(std::move(levelObj));
+        }
+
+        auto jsonString = body.dump();
+        auto writeRes = asp::fs::write(targetPath, jsonString.c_str(), jsonString.size());
+        bool success = static_cast<bool>(writeRes);
+
+        co_await geode::async::waitForMainThread([self = std::move(self), success]() {
+            if (success) {
+                Notification::create("Gauntlet exported successfully!", NotificationIcon::Success)->show();
+            } else {
+                Notification::create("Failed to save gauntlet file.", NotificationIcon::Error)->show();
+            }
+        });
+
+        co_return;
+    });
 }
 
 void GDXGauntletLevelsLayer::update(float dt) {

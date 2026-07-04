@@ -49,7 +49,7 @@ bool GDXUserPanelPopup::init() {
     // management button menu
     m_manageMenu = CCMenu::create();
     m_manageMenu->setLayout(RowLayout::create()
-            ->setGap(10.f)
+            ->setGap(5.f)
             ->setAxisAlignment(AxisAlignment::Center)
             ->setGrowCrossAxis(true)
             ->setCrossAxisOverflow(false));
@@ -115,6 +115,31 @@ void GDXUserPanelPopup::updatePromoteButton() {
     m_promoteBtn->setVisible(false);
     m_promoteBtn->toggle(m_isContributor);
     m_manageMenu->addChild(m_promoteBtn);
+}
+
+void GDXUserPanelPopup::updatePromoteModButton() {
+    if (m_promoteModBtn) {
+        auto offSprite = ButtonSprite::create("Promote to LB Mod", "goldFont.fnt", "GJ_button_05.png");
+        auto onSprite = ButtonSprite::create("Demote from LB Mod", "goldFont.fnt", "GJ_button_02.png");
+        if (m_promoteModBtn->m_offButton) {
+            m_promoteModBtn->m_offButton->setSprite(offSprite);
+            m_promoteModBtn->m_offButton->updateSprite();
+        }
+        if (m_promoteModBtn->m_onButton) {
+            m_promoteModBtn->m_onButton->setSprite(onSprite);
+            m_promoteModBtn->m_onButton->updateSprite();
+        }
+        m_promoteModBtn->toggle(m_isLeaderboardMod);
+        return;
+    }
+
+    auto offNode = ButtonSprite::create("Promote to LB Mod", "goldFont.fnt", "GJ_button_05.png");
+    auto onNode = ButtonSprite::create("Demote from LB Mod", "goldFont.fnt", "GJ_button_02.png");
+    m_promoteModBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onPromoteMod));
+    m_promoteModBtn->setScale(0.65f);
+    m_promoteModBtn->setVisible(false);
+    m_promoteModBtn->toggle(m_isLeaderboardMod);
+    m_manageMenu->addChild(m_promoteModBtn);
 }
 
 void GDXUserPanelPopup::onExclude(CCObject* sender) {
@@ -272,8 +297,9 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
         bool isExcluded = userData["isExcluded"].asBool().unwrapOr(false);
         std::string username = userData["username"].asString().unwrapOr("Unknown");
         bool isContributor = userData["isContributor"].asBool().unwrapOr(false);
+        bool isLeaderboardMod = userData["isLeaderboardMod"].asBool().unwrapOr(false);
 
-        co_await geode::async::waitForMainThread([self = std::move(self), isExcluded, username = std::move(username), isContributor]() {
+        co_await geode::async::waitForMainThread([self = std::move(self), isExcluded, username = std::move(username), isContributor, isLeaderboardMod]() {
             if (self) {
                 self->m_isExcluded = isExcluded;
                 self->updateExcludeButton();
@@ -284,6 +310,11 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
                 self->updatePromoteButton();
                 if (self->m_promoteBtn) {
                     self->m_promoteBtn->setVisible(gdx::isManager());
+                }
+                self->m_isLeaderboardMod = isLeaderboardMod;
+                self->updatePromoteModButton();
+                if (self->m_promoteModBtn) {
+                    self->m_promoteModBtn->setVisible(gdx::isManager());
                 }
                 if (self->m_manageMenu) {
                     self->m_manageMenu->updateLayout();
@@ -385,6 +416,94 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
             if (!upopupRef) return;
             if (upopupRef) {
                 std::string message = (self && self->m_isContributor) ? "User promoted to contributor" : "User demoted from contributor";
+                upopupRef->showSuccessMessage(message);
+            }
+        });
+
+        co_return; }, []() {});
+}
+
+void GDXUserPanelPopup::onPromoteMod(CCObject* sender) {
+    auto accountIdStr = m_accountIdInput->getString();
+    if (accountIdStr.empty()) {
+        Notification::create("Please enter an account ID")->show();
+        return;
+    }
+
+    if (m_loadingSpinner) {
+        m_loadingSpinner->setVisible(true);
+    }
+
+    auto upopup = UploadActionPopup::create(nullptr, "Updating user...");
+    upopup->show();
+
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::baseApiUrl()) + "/setUser";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
+    body["isLeaderboardMod"] = !m_isLeaderboardMod;  // toggle
+    body["argonToken"] = "";                         // Will be set later after fetching the token
+
+    auto self = geode::Ref<GDXUserPanelPopup>(this);
+    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    m_promoteModTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
+                if (!upopupRef) return;
+                if (upopupRef) upopupRef->showFailMessage("Failed to get access.");
+            });
+            co_return;
+        }
+
+        body["argonToken"] = std::move(token);
+
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            auto errMsg = gdx::getResponseMessage(response, "Failed to update leaderboard mod status");
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
+            });
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        if (!jsonResult) {
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
+                if (!upopupRef) return;
+                if (upopupRef) upopupRef->showFailMessage("Invalid response");
+            });
+            co_return;
+        }
+
+        auto data = std::move(jsonResult).unwrap();
+        if (!data.isObject() || !data["success"].asBool().unwrapOr(false)) {
+            auto errMsg = gdx::getResponseMessage(response, "Failed to update user");
+            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)]() {
+                if (!upopupRef) return;
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
+            });
+            co_return;
+        }
+
+        co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
+            if (self) {
+                self->m_isLeaderboardMod = !self->m_isLeaderboardMod;
+                self->updatePromoteModButton();
+                if (self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
+                }
+            }
+            if (!upopupRef) return;
+            if (upopupRef) {
+                std::string message = (self && self->m_isLeaderboardMod) ? "User promoted to Leaderboard Mod" : "User demoted from Leaderboard Mod";
                 upopupRef->showSuccessMessage(message);
             }
         });

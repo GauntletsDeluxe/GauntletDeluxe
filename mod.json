@@ -12,7 +12,8 @@
 	"developer": "ArcticWoof",
 	"description": "Community-run, fan-made Custom Gauntlets",
 	"dependencies": {
-		"geode.node-ids": ">=v1.23.3"
+		"geode.node-ids": ">=v1.23.3",
+		"alphalaneous.badgify": ">=v1.0.0"
 	},
 	"resources": {
 		"spritesheets": {

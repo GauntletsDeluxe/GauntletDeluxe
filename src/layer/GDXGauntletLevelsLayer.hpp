@@ -24,6 +24,7 @@ private:
     void onLevelClicked(CCObject* sender);
     void onGauntletInfo(CCObject* sender);
     void onLikeItem(CCObject* sender);
+    void onExportGauntlet(CCObject* sender);
     void refreshCompletionIcons();
 
     std::vector<GDXGauntletLevelEntry> m_levels;

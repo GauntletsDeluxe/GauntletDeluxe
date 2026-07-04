@@ -201,6 +201,12 @@ bool GDXGauntletManagePopup::init() {
             this,
             menu_selector(GDXGauntletManagePopup::onAdd));
         actionMenu->addChild(addBtn);
+
+        auto importBtn = CCMenuItemSpriteExtra::create(
+            ButtonSprite::create("Import Gauntlet", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+            this,
+            menu_selector(GDXGauntletManagePopup::onImport));
+        actionMenu->addChild(importBtn);
     } else {
         // manager only
         if (gdx::isManager()) {
@@ -248,10 +254,8 @@ bool GDXGauntletManagePopup::init() {
                         co_await geode::async::waitForMainThread([token]() {
                             geode::utils::clipboard::write(token);
                             Notification::create("Copied Argon Token!", NotificationIcon::Success)->show();
-                        });
-                    }, []() {});
-                }
-            );
+                        }); }, []() {});
+                });
             actionMenu->addChild(argonBtn);
         }
     }
@@ -263,13 +267,13 @@ bool GDXGauntletManagePopup::init() {
     return true;
 }
 
-    void GDXGauntletManagePopup::onUserPanel(CCObject * sender) {
-        GDXUserPanelPopup::create()->show();
-    }
+void GDXGauntletManagePopup::onUserPanel(CCObject* sender) {
+    GDXUserPanelPopup::create()->show();
+}
 
-    void GDXGauntletManagePopup::onManageAssets(CCObject * sender) {
-        auto accountData = argon::getGameAccountData();
-        m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
+void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
+    auto accountData = argon::getGameAccountData();
+    m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_return;
@@ -284,11 +288,11 @@ bool GDXGauntletManagePopup::init() {
             utils::web::openLinkInBrowser(url);
         });
         co_return; }, []() {});
-    }
+}
 
-    void GDXGauntletManagePopup::onManageTags(CCObject * sender) {
-        auto accountData = argon::getGameAccountData();
-        m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
+void GDXGauntletManagePopup::onManageTags(CCObject* sender) {
+    auto accountData = argon::getGameAccountData();
+    m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_return;
@@ -303,70 +307,142 @@ bool GDXGauntletManagePopup::init() {
             utils::web::openLinkInBrowser(url);
         });
         co_return; }, []() {});
+}
+
+void GDXGauntletManagePopup::onAdd(CCObject* sender) {
+    GDXAddGauntletPopup::create(this, m_localMode)->show();
+}
+
+void GDXGauntletManagePopup::onImport(CCObject* sender) {
+    auto self = Ref(this);
+    geode::async::spawn([self = std::move(self)]() mutable -> arc::Future<> {
+        geode::utils::file::FilePickOptions options;
+        geode::utils::file::FilePickOptions::Filter filter;
+        filter.description = "JSON Files";
+        filter.files = {"*.json"};
+        options.filters.push_back(std::move(filter));
+
+        auto result = co_await geode::utils::file::pick(
+            geode::utils::file::PickMode::OpenFile,
+            std::move(options));
+
+        if (!result) {
+            co_return;
+        }
+
+        auto maybePath = std::move(result).unwrap();
+        if (!maybePath.has_value()) {
+            co_return;
+        }
+
+        auto targetPath = maybePath.value();
+        auto contentRes = asp::fs::readToString(targetPath);
+        if (!contentRes) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                Notification::create("Failed to read JSON file.", NotificationIcon::Error)->show();
+            });
+            co_return;
+        }
+
+        auto jsonRes = matjson::parse(contentRes.unwrap());
+        if (!jsonRes) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                Notification::create("Invalid JSON format.", NotificationIcon::Error)->show();
+            });
+            co_return;
+        }
+
+        auto importedData = std::move(jsonRes).unwrap();
+        if (!importedData.isObject()) {
+            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+                Notification::create("Invalid gauntlet JSON file.", NotificationIcon::Error)->show();
+            });
+            co_return;
+        }
+
+        auto gauntlets = loadLocalGauntlets();
+        if (!gauntlets.isArray()) {
+            gauntlets = matjson::Value::array();
+        }
+
+        importedData["index"] = static_cast<int>(gauntlets.size());
+        if (!importedData.contains("levelIds") && importedData.contains("levels")) {
+            importedData["levelIds"] = importedData["levels"];
+        }
+        gauntlets.push(std::move(importedData));
+
+        bool success = saveLocalGauntlets(gauntlets);
+        co_await geode::async::waitForMainThread([self = std::move(self), success]() {
+            if (success) {
+                self->refreshList();
+                Notification::create("Imported 1 gauntlet!", NotificationIcon::Success)->show();
+            } else {
+                Notification::create("Failed to save imported gauntlet.", NotificationIcon::Error)->show();
+            }
+        });
+
+        co_return;
+    });
+}
+
+void GDXGauntletManagePopup::onShowTags(CCObject* sender) {
+    GDXManageTagsPopup::create()->show();
+}
+
+void GDXGauntletManagePopup::refreshList() {
+    refreshListItems();
+    fetchGauntlets();
+}
+
+void GDXGauntletManagePopup::clearListContent() {
+    if (!m_list) {
+        return;
     }
 
-    void GDXGauntletManagePopup::onAdd(CCObject * sender) {
-        GDXAddGauntletPopup::create(this, m_localMode)->show();
+    m_list->clear();
+    if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
+        m_list->getScrollLayer()->m_contentLayer->removeAllChildrenWithCleanup(true);
+    }
+    if (m_emptyLabel) {
+        m_emptyLabel->setVisible(false);
+    }
+}
+
+void GDXGauntletManagePopup::refreshListItems() {
+    if (!m_list) {
+        return;
     }
 
-    void GDXGauntletManagePopup::onShowTags(CCObject * sender) {
-        GDXManageTagsPopup::create()->show();
+    clearListContent();
+
+    auto cell = CCLayer::create();
+    cell->setContentSize(m_list->getListSize());
+
+    auto spinner = LoadingSpinner::create(60.f);
+    if (spinner) {
+        spinner->setAnchorPoint({0.5f, 0.5f});
+        spinner->setPosition({cell->getContentSize().width / 2.f, cell->getContentSize().height / 2.f});
+        cell->addChild(spinner);
     }
 
-    void GDXGauntletManagePopup::refreshList() {
-        refreshListItems();
-        fetchGauntlets();
+    m_list->addCell(cell);
+    if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
+        m_list->getScrollLayer()->m_contentLayer->updateLayout();
+    }
+    m_list->scrollToTop();
+}
+
+void GDXGauntletManagePopup::fetchGauntlets() {
+    if (m_localMode) {
+        auto gauntlets = loadLocalGauntlets();
+        m_allGauntlets = gauntlets;
+        rebuildGauntletList();
+        return;
     }
 
-    void GDXGauntletManagePopup::clearListContent() {
-        if (!m_list) {
-            return;
-        }
-
-        m_list->clear();
-        if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
-            m_list->getScrollLayer()->m_contentLayer->removeAllChildrenWithCleanup(true);
-        }
-        if (m_emptyLabel) {
-            m_emptyLabel->setVisible(false);
-        }
-    }
-
-    void GDXGauntletManagePopup::refreshListItems() {
-        if (!m_list) {
-            return;
-        }
-
-        clearListContent();
-
-        auto cell = CCLayer::create();
-        cell->setContentSize(m_list->getListSize());
-
-        auto spinner = LoadingSpinner::create(60.f);
-        if (spinner) {
-            spinner->setAnchorPoint({0.5f, 0.5f});
-            spinner->setPosition({cell->getContentSize().width / 2.f, cell->getContentSize().height / 2.f});
-            cell->addChild(spinner);
-        }
-
-        m_list->addCell(cell);
-        if (m_list->getScrollLayer() && m_list->getScrollLayer()->m_contentLayer) {
-            m_list->getScrollLayer()->m_contentLayer->updateLayout();
-        }
-        m_list->scrollToTop();
-    }
-
-    void GDXGauntletManagePopup::fetchGauntlets() {
-        if (m_localMode) {
-            auto gauntlets = loadLocalGauntlets();
-            m_allGauntlets = gauntlets;
-            rebuildGauntletList();
-            return;
-        }
-
-        auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
-        auto self = geode::Ref<GDXGauntletManagePopup>(this);
-        m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() mutable -> arc::Future<> {
+    auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
+    auto self = geode::Ref<GDXGauntletManagePopup>(this);
+    m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() mutable -> arc::Future<> {
         auto response = co_await geode::utils::web::WebRequest()
                             .get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
@@ -385,157 +461,148 @@ bool GDXGauntletManagePopup::init() {
             if (self) self->createGauntletList(gauntlets);
         });
         co_return; }, []() {});
+}
+
+void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets) {
+    m_allGauntlets = gauntlets;
+    rebuildGauntletList();
+}
+
+void GDXGauntletManagePopup::rebuildGauntletList() {
+    if (!m_list) {
+        return;
     }
 
-    void GDXGauntletManagePopup::createGauntletList(const matjson::Value& gauntlets) {
-        m_allGauntlets = gauntlets;
-        rebuildGauntletList();
-    }
+    auto filteredGauntlets = filterGauntletsByName(m_allGauntlets, m_searchFilter);
+    m_gauntlets = filteredGauntlets;
+    m_list->clear();
 
-    void GDXGauntletManagePopup::rebuildGauntletList() {
-        if (!m_list) {
-            return;
-        }
-
-        auto filteredGauntlets = filterGauntletsByName(m_allGauntlets, m_searchFilter);
-        m_gauntlets = filteredGauntlets;
-        m_list->clear();
-
-        if (!filteredGauntlets.isArray() || filteredGauntlets.size() == 0) {
-            if (!m_emptyLabel) {
-                m_emptyLabel = CCLabelBMFont::create("", "goldFont.fnt");
-                if (m_emptyLabel) {
-                    m_emptyLabel->setAnchorPoint({0.5f, 0.5f});
-                    m_emptyLabel->setScale(0.8f);
-                    m_list->addChild(m_emptyLabel);
-                }
-            }
+    if (!filteredGauntlets.isArray() || filteredGauntlets.size() == 0) {
+        if (!m_emptyLabel) {
+            m_emptyLabel = CCLabelBMFont::create("", "goldFont.fnt");
             if (m_emptyLabel) {
-                m_emptyLabel->setString(m_localMode ? "No local gauntlets saved." : "No gauntlets available.");
-                m_emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
-                m_emptyLabel->setVisible(true);
-            }
-            return;
-        }
-
-        for (auto i = 0u; i < filteredGauntlets.size(); ++i) {
-            auto const& gauntlet = filteredGauntlets[i];
-            if (!gauntlet.isObject()) {
-                continue;
-            }
-            auto cell = createGauntletCell(gauntlet, static_cast<int>(i));
-            if (cell) {
-                m_list->addCell(cell);
+                m_emptyLabel->setAnchorPoint({0.5f, 0.5f});
+                m_emptyLabel->setScale(0.8f);
+                m_list->addChild(m_emptyLabel);
             }
         }
         if (m_emptyLabel) {
-            m_emptyLabel->setVisible(false);
+            m_emptyLabel->setString(m_localMode ? "No local gauntlets saved." : "No gauntlets available.");
+            m_emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
+            m_emptyLabel->setVisible(true);
         }
-        m_list->getScrollLayer()->m_contentLayer->updateLayout();
-        m_list->scrollToTop();
+        return;
     }
 
-    void GDXGauntletManagePopup::update(float dt) {
-        geode::Popup::update(dt);
-        if (!m_searchInput) {
-            return;
+    for (auto i = 0u; i < filteredGauntlets.size(); ++i) {
+        auto const& gauntlet = filteredGauntlets[i];
+        if (!gauntlet.isObject()) {
+            continue;
         }
-
-        auto query = m_searchInput->getString();
-        if (query != m_searchFilter) {
-            m_searchFilter = query;
-            rebuildGauntletList();
+        auto cell = createGauntletCell(gauntlet, static_cast<int>(i));
+        if (cell) {
+            m_list->addCell(cell);
         }
     }
+    if (m_emptyLabel) {
+        m_emptyLabel->setVisible(false);
+    }
+    m_list->getScrollLayer()->m_contentLayer->updateLayout();
+    m_list->scrollToTop();
+}
 
-    CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet, int index) {
-        auto cell = CCLayer::create();
-        cell->setContentSize({356.f, 90.f});
+void GDXGauntletManagePopup::update(float dt) {
+    geode::Popup::update(dt);
+    if (!m_searchInput) {
+        return;
+    }
 
-        auto r = static_cast<int>(gauntlet["r"].asInt().unwrapOr(200));
-        auto g = static_cast<int>(gauntlet["g"].asInt().unwrapOr(120));
-        auto b = static_cast<int>(gauntlet["b"].asInt().unwrapOr(40));
-        auto startColor = cocos2d::ccColor4B{
-            static_cast<GLubyte>(std::clamp(r, 0, 255)),
-            static_cast<GLubyte>(std::clamp(g, 0, 255)),
-            static_cast<GLubyte>(std::clamp(b, 0, 255)),
-            255};
-        auto endColor = cocos2d::ccColor4B{
-            static_cast<GLubyte>(std::clamp(r / 2, 0, 255)),
-            static_cast<GLubyte>(std::clamp(g / 2, 0, 255)),
-            static_cast<GLubyte>(std::clamp(b / 2, 0, 255)),
-            255};
+    auto query = m_searchInput->getString();
+    if (query != m_searchFilter) {
+        m_searchFilter = query;
+        rebuildGauntletList();
+    }
+}
 
-        if (auto gradient = CCLayerGradient::create(startColor, endColor, {1.f, 0.f})) {
-            gradient->setContentSize(cell->getContentSize());
-            gradient->setAnchorPoint({0.f, 0.f});
-            gradient->setPosition({0.f, 0.f});
-            cell->addChild(gradient);
-        }
+CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntlet, int index) {
+    auto cell = CCLayer::create();
+    cell->setContentSize({356.f, 90.f});
 
-        auto name = gauntlet["name"].asString().unwrapOr("Unknown");
-        auto description = gauntlet["description"].asString().unwrapOr("");
-        auto reward = gauntlet["reward"].asInt().unwrapOr(0);
-        auto gauntletIndex = gauntlet["index"].asInt().unwrapOr(index);
+    auto r = static_cast<int>(gauntlet["r"].asInt().unwrapOr(200));
+    auto g = static_cast<int>(gauntlet["g"].asInt().unwrapOr(120));
+    auto b = static_cast<int>(gauntlet["b"].asInt().unwrapOr(40));
+    auto startColor = cocos2d::ccColor4B{
+        static_cast<GLubyte>(std::clamp(r, 0, 255)),
+        static_cast<GLubyte>(std::clamp(g, 0, 255)),
+        static_cast<GLubyte>(std::clamp(b, 0, 255)),
+        255};
+    auto endColor = cocos2d::ccColor4B{
+        static_cast<GLubyte>(std::clamp(r / 2, 0, 255)),
+        static_cast<GLubyte>(std::clamp(g / 2, 0, 255)),
+        static_cast<GLubyte>(std::clamp(b / 2, 0, 255)),
+        255};
 
-        auto cellMenu = CCMenu::create();
-        if (cellMenu) {
-            cellMenu->setPosition({cell->getContentSize().width - 30, cell->getContentSize().height / 2.f});
-            cellMenu->setContentSize({50, cell->getContentSize().height});
-            cellMenu->setLayout(ColumnLayout::create()
-                    ->setGap(10.f)
-                    ->setAxisAlignment(AxisAlignment::Center));
-            cell->addChild(cellMenu);
-        }
+    if (auto gradient = CCLayerGradient::create(startColor, endColor, {1.f, 0.f})) {
+        gradient->setContentSize(cell->getContentSize());
+        gradient->setAnchorPoint({0.f, 0.f});
+        gradient->setPosition({0.f, 0.f});
+        cell->addChild(gradient);
+    }
 
-        auto tagValue = m_localMode ? index : gauntletIndex;
+    auto name = gauntlet["name"].asString().unwrapOr("Unknown");
+    auto description = gauntlet["description"].asString().unwrapOr("");
+    auto reward = gauntlet["reward"].asInt().unwrapOr(0);
+    auto gauntletIndex = gauntlet["index"].asInt().unwrapOr(index);
 
-        if (m_localMode || gdx::isManager()) {
-            auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
-            deleteSpr->setScale(0.7f);
+    auto cellMenu = CCMenu::create();
+    if (cellMenu) {
+        cellMenu->setPosition({cell->getContentSize().width - 30, cell->getContentSize().height / 2.f});
+        cellMenu->setContentSize({50, cell->getContentSize().height});
+        cellMenu->setLayout(ColumnLayout::create()
+                ->setGap(10.f)
+                ->setAxisAlignment(AxisAlignment::Center));
+        cell->addChild(cellMenu);
+    }
 
-            auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
-            deleteBtn->setTag(tagValue);
-            cellMenu->addChild(deleteBtn);
-        }
+    auto tagValue = m_localMode ? index : gauntletIndex;
 
-        if (m_localMode || gdx::isManager() || gdx::isContributor()) {
-            auto editSpr = CCSprite::createWithSpriteFrameName("GJ_editBtn_001.png");
-            editSpr->setScale(0.4f);
-            auto editBtn = CCMenuItemSpriteExtra::create(editSpr, this, menu_selector(GDXGauntletManagePopup::onEdit));
-            editBtn->setTag(tagValue);
-            cellMenu->addChild(editBtn);
-        }
+    if (m_localMode || gdx::isManager()) {
+        auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+        deleteSpr->setScale(0.7f);
 
-        cellMenu->updateLayout();
+        auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
+        deleteBtn->setTag(tagValue);
+        cellMenu->addChild(deleteBtn);
+    }
 
-        auto const gauntletSpritePosition = ccp(40.f, cell->getContentSize().height / 2.f);
-        auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+    if (m_localMode || gdx::isManager() || gdx::isContributor()) {
+        auto editSpr = CCSprite::createWithSpriteFrameName("GJ_editBtn_001.png");
+        editSpr->setScale(0.4f);
+        auto editBtn = CCMenuItemSpriteExtra::create(editSpr, this, menu_selector(GDXGauntletManagePopup::onEdit));
+        editBtn->setTag(tagValue);
+        cellMenu->addChild(editBtn);
+    }
 
-        auto gauntletImage = LazySprite::create({50.f, 120.f}, false);
-        if (gauntletImage) {
-            gauntletImage->setAutoResize(true);
-            gauntletImage->setPosition(gauntletSpritePosition);
-            gauntletImage->setLoadCallback([fallbackSprite](geode::Result<> const& result) {
-                if (result && fallbackSprite) {
-                    fallbackSprite->removeFromParent();
-                }
-            });
+    cellMenu->updateLayout();
 
-            bool usedCache = false;
-            if (m_localMode && gauntlet["spritePath"].isString()) {
-                auto spritePath = gauntlet["spritePath"].asString().unwrapOr("");
-                if (!spritePath.empty()) {
-                    gauntletImage->loadFromFile(spritePath, CCImage::kFmtPng, true);
-                } else {
-                    auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
-                    auto cached = createCachedGauntletSprite(cell, imageUrl, gauntletSpritePosition, {50.f, 120.f}, 3);
-                    if (cached) {
-                        usedCache = true;
-                    } else {
-                        gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
-                    }
-                }
+    auto const gauntletSpritePosition = ccp(40.f, cell->getContentSize().height / 2.f);
+    auto fallbackSprite = CCSprite::createWithSpriteFrameName("GDX_gauntletUnknown.png"_spr);
+
+    auto gauntletImage = LazySprite::create({50.f, 120.f}, false);
+    if (gauntletImage) {
+        gauntletImage->setAutoResize(true);
+        gauntletImage->setPosition(gauntletSpritePosition);
+        gauntletImage->setLoadCallback([fallbackSprite](geode::Result<> const& result) {
+            if (result && fallbackSprite) {
+                fallbackSprite->removeFromParent();
+            }
+        });
+
+        bool usedCache = false;
+        if (m_localMode && gauntlet["spritePath"].isString()) {
+            auto spritePath = gauntlet["spritePath"].asString().unwrapOr("");
+            if (!spritePath.empty()) {
+                gauntletImage->loadFromFile(spritePath, CCImage::kFmtPng, true);
             } else {
                 auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
                 auto cached = createCachedGauntletSprite(cell, imageUrl, gauntletSpritePosition, {50.f, 120.f}, 3);
@@ -545,163 +612,172 @@ bool GDXGauntletManagePopup::init() {
                     gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
                 }
             }
-
-            if (!usedCache) {
-                cell->addChild(gauntletImage, 1);
-                if (fallbackSprite) {
-                    fallbackSprite->setScale(0.65f);
-                    fallbackSprite->setPosition(gauntletSpritePosition);
-                    cell->addChild(fallbackSprite, 2);
-                }
-            } else if (fallbackSprite) {
-                fallbackSprite->removeFromParent();
+        } else {
+            auto imageUrl = std::string(gdx::baseApiUrl()) + "/gauntlet/gauntlet_" + numToString(gauntletIndex) + ".png?v2=true";
+            auto cached = createCachedGauntletSprite(cell, imageUrl, gauntletSpritePosition, {50.f, 120.f}, 3);
+            if (cached) {
+                usedCache = true;
+            } else {
+                gauntletImage->loadFromUrl(imageUrl, CCImage::kFmtPng, true);
             }
         }
 
-        auto nameLabel = CCLabelBMFont::create(name.c_str(), "goldFont.fnt");
-        nameLabel->setAnchorPoint({0.f, .5f});
-        nameLabel->setPosition({80.f, cell->getContentSize().height - 10.f});
-        nameLabel->limitLabelWidth(200.f, 0.8f, 0.35f);
-        cell->addChild(nameLabel);
-
-        if (gauntlet["isFeatured"].asBool().unwrapOr(false)) {
-            auto featuredLabel = CCLabelBMFont::create("Featured", "goldFont.fnt");
-            featuredLabel->setAnchorPoint({0.f, .5f});
-            featuredLabel->setScale(0.35f);
-            featuredLabel->setColor({255, 215, 0});
-            featuredLabel->setPosition({5.f, 5.f});
-            cell->addChild(featuredLabel, 2);
-        }
-
-        if (!description.empty()) {
-            auto descriptionLabel = SimpleTextArea::create(
-                description,
-                "chatFont.fnt",
-                .5f,
-                200.f);
-            if (descriptionLabel) {
-                descriptionLabel->setAnchorPoint({0.f, 1.f});
-                descriptionLabel->setPosition({85.f, cell->getContentSize().height - 30.f});
-                descriptionLabel->setMaxLines(4);
-                cell->addChild(descriptionLabel, 1);
+        if (!usedCache) {
+            cell->addChild(gauntletImage, 1);
+            if (fallbackSprite) {
+                fallbackSprite->setScale(0.65f);
+                fallbackSprite->setPosition(gauntletSpritePosition);
+                cell->addChild(fallbackSprite, 2);
             }
-            auto descriptionBg = NineSlice::create("square02_small.png");
-            descriptionBg->setContentSize({220, 40});
-            descriptionBg->setInsets({5, 5, 5, 5});
-            descriptionBg->setOpacity(100);
-
-            cell->addChildAtPosition(descriptionBg, Anchor::Center, {12.f, 0.f}, false);
+        } else if (fallbackSprite) {
+            fallbackSprite->removeFromParent();
         }
-
-        if (!m_localMode) {
-            auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
-            if (rewardSpr) {
-                rewardSpr->setScale(0.25f);
-                rewardSpr->setAnchorPoint({1.f, 0.5f});
-                rewardSpr->setPosition({95.f, 13.f});
-                cell->addChild(rewardSpr);
-            }
-
-            auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
-            rewardLabel->setAnchorPoint({0.f, 0.5f});
-            rewardLabel->setPosition({100.f, 13.f});
-            rewardLabel->limitLabelWidth(180.f, 0.35f, 0.2f);
-            cell->addChild(rewardLabel);
-        }
-
-        return cell;
     }
 
-    void GDXGauntletManagePopup::onDelete(CCObject * sender) {
-        auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
-        if (!btn) {
-            return;
-        }
+    auto nameLabel = CCLabelBMFont::create(name.c_str(), "goldFont.fnt");
+    nameLabel->setAnchorPoint({0.f, .5f});
+    nameLabel->setPosition({80.f, cell->getContentSize().height - 10.f});
+    nameLabel->limitLabelWidth(200.f, 0.8f, 0.35f);
+    cell->addChild(nameLabel);
 
-        auto gauntletIndex = btn->getTag();
-        createQuickPopup(
-            "Delete Gauntlet?",
-            fmt::format("Are you sure you want to <cr>delete this gauntlet</c>?"),
-            "No",
-            "Yes",
-            [this, gauntletIndex](auto, bool yes) {
-                if (!yes) {
-                    return;
-                }
-                this->deleteGauntletAtIndex(gauntletIndex);
-            });
+    if (gauntlet["isFeatured"].asBool().unwrapOr(false)) {
+        auto featuredLabel = CCLabelBMFont::create("Featured", "goldFont.fnt");
+        featuredLabel->setAnchorPoint({0.f, .5f});
+        featuredLabel->setScale(0.35f);
+        featuredLabel->setColor({255, 215, 0});
+        featuredLabel->setPosition({5.f, 5.f});
+        cell->addChild(featuredLabel, 2);
     }
 
-    void GDXGauntletManagePopup::onEdit(CCObject * sender) {
-        auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
-        if (!btn) {
-            return;
+    if (!description.empty()) {
+        auto descriptionLabel = SimpleTextArea::create(
+            description,
+            "chatFont.fnt",
+            .5f,
+            200.f);
+        if (descriptionLabel) {
+            descriptionLabel->setAnchorPoint({0.f, 1.f});
+            descriptionLabel->setPosition({85.f, cell->getContentSize().height - 30.f});
+            descriptionLabel->setMaxLines(4);
+            cell->addChild(descriptionLabel, 1);
+        }
+        auto descriptionBg = NineSlice::create("square02_small.png");
+        descriptionBg->setContentSize({220, 40});
+        descriptionBg->setInsets({5, 5, 5, 5});
+        descriptionBg->setOpacity(100);
+
+        cell->addChildAtPosition(descriptionBg, Anchor::Center, {12.f, 0.f}, false);
+    }
+
+    if (!m_localMode) {
+        auto rewardSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletPoint.png"_spr);
+        if (rewardSpr) {
+            rewardSpr->setScale(0.25f);
+            rewardSpr->setAnchorPoint({1.f, 0.5f});
+            rewardSpr->setPosition({95.f, 13.f});
+            cell->addChild(rewardSpr);
         }
 
-        auto gauntletIndex = btn->getTag();
-        if (!m_gauntlets.isArray()) {
-            return;
-        }
+        auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
+        rewardLabel->setAnchorPoint({0.f, 0.5f});
+        rewardLabel->setPosition({100.f, 13.f});
+        rewardLabel->limitLabelWidth(180.f, 0.35f, 0.2f);
+        cell->addChild(rewardLabel);
+    }
 
-        if (m_localMode) {
-            if (gauntletIndex < 0 || static_cast<size_t>(gauntletIndex) >= m_gauntlets.size()) {
+    return cell;
+}
+
+void GDXGauntletManagePopup::onDelete(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto gauntletIndex = btn->getTag();
+    createQuickPopup(
+        "Delete Gauntlet?",
+        fmt::format("Are you sure you want to <cr>delete this gauntlet</c>?"),
+        "No",
+        "Yes",
+        [this, gauntletIndex](auto, bool yes) {
+            if (!yes) {
                 return;
             }
-            auto const& gauntlet = m_gauntlets[static_cast<size_t>(gauntletIndex)];
-            auto popup = GDXAddGauntletPopup::create(this, gauntlet, gauntletIndex, true);
+            this->deleteGauntletAtIndex(gauntletIndex);
+        });
+}
+
+void GDXGauntletManagePopup::onEdit(CCObject* sender) {
+    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) {
+        return;
+    }
+
+    auto gauntletIndex = btn->getTag();
+    if (!m_gauntlets.isArray()) {
+        return;
+    }
+
+    if (m_localMode) {
+        if (gauntletIndex < 0 || static_cast<size_t>(gauntletIndex) >= m_gauntlets.size()) {
+            return;
+        }
+        auto const& gauntlet = m_gauntlets[static_cast<size_t>(gauntletIndex)];
+        auto popup = GDXAddGauntletPopup::create(this, gauntlet, gauntletIndex, true);
+        if (popup) {
+            popup->show();
+        }
+        return;
+    }
+
+    for (auto i = 0u; i < m_gauntlets.size(); ++i) {
+        auto const& gauntlet = m_gauntlets[i];
+        if (!gauntlet.isObject()) {
+            continue;
+        }
+        auto index = gauntlet["index"].asInt().unwrapOr(static_cast<int>(i));
+        if (index == gauntletIndex) {
+            auto popup = GDXAddGauntletPopup::create(this, gauntlet, index);
             if (popup) {
                 popup->show();
             }
             return;
         }
-
-        for (auto i = 0u; i < m_gauntlets.size(); ++i) {
-            auto const& gauntlet = m_gauntlets[i];
-            if (!gauntlet.isObject()) {
-                continue;
-            }
-            auto index = gauntlet["index"].asInt().unwrapOr(static_cast<int>(i));
-            if (index == gauntletIndex) {
-                auto popup = GDXAddGauntletPopup::create(this, gauntlet, index);
-                if (popup) {
-                    popup->show();
-                }
-                return;
-            }
-        }
     }
+}
 
-    void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
-        if (m_localMode) {
-            auto gauntlets = loadLocalGauntlets();
-            if (!gauntlets.isArray() || index < 0 || static_cast<size_t>(index) >= gauntlets.size()) {
-                return;
-            }
-            matjson::Value updated = matjson::Value::array();
-            for (auto i = 0u; i < gauntlets.size(); ++i) {
-                if (static_cast<int>(i) == index) {
-                    continue;
-                }
-                updated.push(gauntlets[i]);
-            }
-            if (saveLocalGauntlets(updated)) {
-                refreshList();
-            }
+void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
+    if (m_localMode) {
+        auto gauntlets = loadLocalGauntlets();
+        if (!gauntlets.isArray() || index < 0 || static_cast<size_t>(index) >= gauntlets.size()) {
             return;
         }
+        matjson::Value updated = matjson::Value::array();
+        for (auto i = 0u; i < gauntlets.size(); ++i) {
+            if (static_cast<int>(i) == index) {
+                continue;
+            }
+            updated.push(gauntlets[i]);
+        }
+        if (saveLocalGauntlets(updated)) {
+            refreshList();
+        }
+        return;
+    }
 
-        auto accountData = argon::getGameAccountData();
-        auto url = std::string(gdx::baseApiUrl()) + "/deleteGauntlet";
-        matjson::Value body = matjson::Value::object();
-        body["accountId"] = accountData.accountId;
-        body["argonToken"] = "";
-        body["gauntletIndex"] = index;
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::baseApiUrl()) + "/deleteGauntlet";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+    body["argonToken"] = "";
+    body["gauntletIndex"] = index;
 
-        auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
-        upopup->show();
-        auto self = geode::Ref<GDXGauntletManagePopup>(this);
-        auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
-        m_deleteGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
+    upopup->show();
+    auto self = geode::Ref<GDXGauntletManagePopup>(this);
+    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    m_deleteGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
             co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
@@ -734,4 +810,4 @@ bool GDXGauntletManagePopup::init() {
             if (upopupRef) upopupRef->showSuccessMessage("Gauntlet deleted successfully.");
         });
         co_return; }, []() {});
-    }
+}
