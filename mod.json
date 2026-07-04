@@ -8,7 +8,7 @@
 	},
 	"id": "arcticwoof.gauntlets_deluxe",
 	"name": "Gauntlets Deluxe",
-	"version": "v1.0.7",
+	"version": "v1.0.8",
 	"developer": "ArcticWoof",
 	"description": "Community-run, fan-made Custom Gauntlets",
 	"dependencies": {
@@ -23,7 +23,7 @@
 		}
 	},
 	"links": {
-		"source": "https://github.com/DumbCaveSpider/GDGauntletDeluxe",
+		"source": "https://github.com/GauntletsDeluxe/GauntletDeluxe",
 		"homepage": "https://arcticwoof.xyz/",
 		"community": "https://discord.gg/JBVDVcQN6R"
 	},
