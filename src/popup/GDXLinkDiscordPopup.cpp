@@ -476,7 +476,7 @@ void GDXLinkDiscordPopup::onUnlink(CCObject* sender) {
         }
 
         body["argonToken"] = std::move(token);
-        std::string modVer = geode::VersionInfo::getVersion();
+        std::string modVer = geode::Mod::getVersion();
         auto response = co_await geode::utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
