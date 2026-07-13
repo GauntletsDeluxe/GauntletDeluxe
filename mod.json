@@ -9,7 +9,10 @@
 	"id": "arcticwoof.gauntlets_deluxe",
 	"name": "Gauntlets Deluxe",
 	"version": "v1.0.8",
-	"developer": "ArcticWoof",
+	"developers": [
+		"ArcticWoof",
+		"Supernova3339"
+	],
 	"description": "Community-run, fan-made Custom Gauntlets",
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3",

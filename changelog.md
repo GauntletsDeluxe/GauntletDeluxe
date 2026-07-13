@@ -5,6 +5,7 @@
 - Replaced the old badge system to use the **[Badgify API](mod:alphalaneous.badgify)** instead
 - Added **Export Gauntlet** in the local gauntlets levels selection
 - Added **Import Gauntlet** in the local manage gauntlets popup
+- Updated Credits
 
 ## v1.0.7
 
