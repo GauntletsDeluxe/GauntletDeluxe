@@ -52,7 +52,7 @@
 ### Credits
 
 - <cg>**Geode Mod Developer**</c>: [ArcticWoof](user:7689052)
-- <cg>**Bot/Backend Developer**</c>: [bonneville1](user:4882817)
+- <cg>**Bot/Backend Developer**</c>: [Supernova3339](user:4882817)
 - <cg>**Geode Mod Design and Logo**</c>: [DaRealSkellyGuy](user:29960249)
 - <cg>**Gauntlet Managers/Maintainers**</c>: [DaRealSkellyGuy](user:29960249), [Niki2025](user:26209086) & [bonneville1](user:4882817)
 
