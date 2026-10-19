@@ -8,6 +8,9 @@
 - Added Animated Gauntlet Islands
 - Added Favorite Gauntlets
 - Added Colored Background on Level Info Layer when playing a Gauntlet Level
+- Added Likes/Dislike counter on the Feedback Popup
+- Fixed bug where entering a level that isn't a gauntlet level would still treat it as a gauntlet level
+- GeeHee...
 
 ## v1.0.9
 

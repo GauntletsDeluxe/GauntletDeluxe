@@ -38,6 +38,9 @@ private:
 
     CCMenu* m_levelsMenu = nullptr;
     CCMenuItemSpriteExtra* m_favoriteBtn = nullptr;
+    CCMenuItemSpriteExtra* m_feedbackBtn = nullptr;
+    CCMenuItemSpriteExtra* m_safeBtn = nullptr;
+    bool m_gauntletCompleted = false;
     LoadingSpinner* m_pendingSpinner = nullptr;
     std::string m_pendingKey;
     int m_pendingLevelId = -1;

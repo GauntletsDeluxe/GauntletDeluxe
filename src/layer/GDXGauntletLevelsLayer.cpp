@@ -615,10 +615,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         const float baseOffsetX = 27.f;
         const float baseOffsetY = -2.f;
         for (auto j = 0u; j + 1 < centers.size(); ++j) {
-            // a path only leads to a level that has been reached
-            if (!centersUnlocked[j + 1]) {
-                continue;
-            }
+            bool pathUnlocked = centersUnlocked[j + 1];
             auto a = centers[j];
             auto b = centers[j + 1];
             auto lower = a.y < b.y ? a : b;
@@ -634,6 +631,9 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                 float x = lower.x + direction * (baseOffsetX + pathDots[d].x) * scaleX;
                 float y = lower.y + (baseOffsetY + pathDots[d].y) * scaleY;
                 dot->setPosition({x, y});
+                dot->setID("path-dot");
+                dot->setTag(static_cast<int>(j + 1));  // index of the level this path leads to
+                dot->setVisible(pathUnlocked);
                 int lift = rand() % 20;  // each dot is a slightly lighter shade of the background color
                 dot->setColor({static_cast<GLubyte>(std::min(m_backgroundColor.r + lift, 255)),
                     static_cast<GLubyte>(std::min(m_backgroundColor.g + lift, 255)),
@@ -648,6 +648,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     bool hasCompletedGauntlet = !m_levels.empty() && std::all_of(m_levels.begin(), m_levels.end(), [&completedLevels](auto const& entry) {
         return completedLevels.contains(entry.levelId);
     });
+    m_gauntletCompleted = hasCompletedGauntlet;
 
     auto bottomLeftMenu = CCMenu::create();
     if (bottomLeftMenu) {
@@ -663,6 +664,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             feedbackSprite->setScale(0.8f);
             auto feedbackBtn = CCMenuItemSpriteExtra::create(feedbackSprite, this, menu_selector(GDXGauntletLevelsLayer::onLikeItem));
             if (feedbackBtn) {
+                m_feedbackBtn = feedbackBtn;
                 feedbackBtn->setPosition({25.f, 25.f});
                 if (bottomLeftMenu) {
                     bottomLeftMenu->addChild(feedbackBtn);
@@ -680,11 +682,11 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         if (safeSprite) {
             auto safeMenuItem = CCMenuItemSpriteExtra::create(safeSprite, this, menu_selector(GDXGauntletLevelsLayer::onSafeItem));
             if (safeMenuItem) {
+                m_safeBtn = safeMenuItem;
                 safeMenuItem->setPosition(winSize.width - 34.f, winSize.height - 34.f);
                 if (bottomLeftMenu) {
                     bottomLeftMenu->addChild(safeMenuItem);
                 }
-                // Add the safe button to the menu
             }
         }
     } else {
@@ -766,11 +768,44 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
     }
 
     auto completedLevels = loadCompletedGauntletLevels(m_localMode);
+
+    // swap the safe (and like button) sprites once every level has been beaten
+    bool hasCompletedGauntlet = !m_levels.empty() && std::all_of(m_levels.begin(), m_levels.end(), [&completedLevels](auto const& entry) {
+        return completedLevels.contains(entry.levelId);
+    });
+    if (hasCompletedGauntlet != m_gauntletCompleted) {
+        m_gauntletCompleted = hasCompletedGauntlet;
+        if (m_safeBtn) {
+            if (auto safeSprite = CCSprite::createWithSpriteFrameName(hasCompletedGauntlet ? "GDX_safeBtn_open_001.png"_spr : "GDX_safeBtn_closed_001.png"_spr)) {
+                m_safeBtn->setSprite(safeSprite);
+            }
+        }
+        if (m_feedbackBtn) {
+            if (auto feedbackSprite = CCSprite::createWithSpriteFrameName(hasCompletedGauntlet ? "GJ_like2Btn_001.png" : "GJ_like2Btn2_001.png")) {
+                feedbackSprite->setScale(0.8f);
+                m_feedbackBtn->setSprite(feedbackSprite);
+            }
+        }
+    }
+
     auto children = m_levelsMenu->getChildren();
     for (auto i = 0u; i < children->count(); ++i) {
         auto child = static_cast<CCNode*>(children->objectAtIndex(i));
         auto button = typeinfo_cast<CCMenuItemSpriteExtra*>(child);
         if (!button) {
+            if (child && child->getID() == "path-dot") {
+                auto targetIndex = static_cast<std::size_t>(child->getTag());
+                bool pathUnlocked = targetIndex < m_levels.size() && isLevelUnlocked(targetIndex, m_levels, completedLevels);
+                if (pathUnlocked && !child->isVisible()) {
+                    child->setVisible(true);
+                    if (auto dotSprite = typeinfo_cast<CCSprite*>(child)) {
+                        dotSprite->setOpacity(0);
+                        dotSprite->runAction(CCFadeIn::create(0.5f));
+                    }
+                } else if (!pathUnlocked) {
+                    child->setVisible(false);
+                }
+            }
             continue;
         }
 
@@ -906,9 +941,9 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
         auto level = static_cast<GJGameLevel*>(stored->objectAtIndex(0));
         if (level && level->m_levelID == entry.levelId) {
             if (m_localMode) {
-                gdx::setLocalPlayingGauntletLevel(true);
+                gdx::setLocalPlayingGauntletLevel(true, static_cast<int>(level->m_levelID));
             } else {
-                gdx::setPlayingGauntletLevel(true);
+                gdx::setPlayingGauntletLevel(true, static_cast<int>(level->m_levelID));
             }
             gdx::setGauntletColor(m_backgroundColor);
             auto scene = LevelInfoLayer::scene(level, false);
@@ -958,7 +993,7 @@ void GDXGauntletLevelsLayer::onLikeItem(CCObject* sender) {
         return completedLevels.contains(entry.levelId);
     });
     if (!hasCompletedGauntlet) {
-        FLAlertLayer::create("Unable to like gauntlet", "You must <cg>complete</c> the gauntlet before submitting a <cy>feedback</c> for it!", "OK")->show();
+        FLAlertLayer::create("Gauntlet Not Completed", "You must <cg>complete the gauntlet</c> before submitting a <cy>feedback</c> for it!", "OK")->show();
         return;
     }
 
@@ -1049,9 +1084,9 @@ void GDXGauntletLevelsLayer::update(float dt) {
         auto level = static_cast<GJGameLevel*>(stored->objectAtIndex(0));
         if (level && level->m_levelID == m_pendingLevelId) {
             if (m_localMode) {
-                gdx::setLocalPlayingGauntletLevel(true);
+                gdx::setLocalPlayingGauntletLevel(true, static_cast<int>(level->m_levelID));
             } else {
-                gdx::setPlayingGauntletLevel(true);
+                gdx::setPlayingGauntletLevel(true, static_cast<int>(level->m_levelID));
             }
             gdx::setGauntletColor(m_backgroundColor);
             auto scene = LevelInfoLayer::scene(level, false);

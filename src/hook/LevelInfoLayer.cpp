@@ -51,7 +51,7 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
     bool init(GJGameLevel* level, bool challenge) {
         if (!LevelInfoLayer::init(level, challenge)) return false;
 
-        if (gdx::isPlayingGauntletLevel()) {
+        if (gdx::isPlayingGauntletLevel(static_cast<int>(level->m_levelID))) {
             auto self = Ref<GDXLevelInfoLayer>(this);
             int levelId = static_cast<int>(level->m_levelID);
             auto accountData = argon::getGameAccountData();

@@ -98,7 +98,8 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
     void customSetup() override {
         EndLevelLayer::customSetup();
         if (m_playLayer->m_isPracticeMode) return;
-        if (gdx::isLocalPlayingGauntletLevel()) {
+        int playedLevelId = static_cast<int>(m_playLayer->m_level->m_levelID);
+        if (gdx::isLocalPlayingGauntletLevel(playedLevelId)) {
             if (m_playLayer->m_level->m_normalPercent >= 100) {
                 log::debug("local gauntlet level {} completed", m_playLayer->m_level->m_levelID);
                 if (this->m_listLayer) {
@@ -143,7 +144,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
             return;
         }
 
-        if (!gdx::isPlayingGauntletLevel()) {
+        if (!gdx::isPlayingGauntletLevel(playedLevelId)) {
             log::debug("Not a gauntlet level, skipping completion check");
             return;
         }

@@ -20,7 +20,7 @@ GDXLikeItemPopup* GDXLikeItemPopup::create(const matjson::Value& gauntlet) {
 }
 
 bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
-    if (!Popup::init(200.f, 115.f, "GJ_square01.png")) {
+    if (!Popup::init(200.f, 135.f, "GJ_square01.png")) {
         return false;
     }
 
@@ -40,7 +40,7 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
     buttonMenu->setPosition({0.f, 0.f});
     buttonMenu->setContentWidth(m_mainLayer->getContentSize().width - 10);
     buttonMenu->setLayout(RowLayout::create()->setGap(20.f)->setAxisAlignment(AxisAlignment::Center));
-    m_mainLayer->addChildAtPosition(buttonMenu, Anchor::Center, {0.f, -10.f}, false);
+    m_mainLayer->addChildAtPosition(buttonMenu, Anchor::Center, {0.f, 0.f}, false);
 
     auto likeSprite = CCSprite::createWithSpriteFrameName("GJ_likeBtn_001.png");
     if (likeSprite) {
@@ -61,6 +61,37 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
     }
 
     buttonMenu->updateLayout();
+
+    // total likes and dislikes of the gauntlet, shown under the buttons
+    auto feedback = gauntlet["feedback"];
+    int likes = feedback["likes"].asInt().unwrapOr(0);
+    int dislikes = feedback["dislikes"].asInt().unwrapOr(0);
+
+    auto statsMenu = CCMenu::create();
+    statsMenu->setContentWidth(m_mainLayer->getContentSize().width - 10);
+    statsMenu->setContentHeight(25.f);
+    statsMenu->setLayout(RowLayout::create()
+            ->setGap(10.f)
+            ->setAxisAlignment(AxisAlignment::Center)
+            ->setCrossAxisOverflow(false));
+
+    auto addStat = [statsMenu](char const* frameName, int count) {
+        auto icon = CCSprite::createWithSpriteFrameName(frameName);
+        if (icon) {
+            icon->setScale(0.6f);
+            statsMenu->addChild(icon);
+        }
+        auto label = CCLabelBMFont::create(GameToolbox::pointsToString(count).c_str(), "bigFont.fnt");
+        if (label) {
+            label->limitLabelWidth(100.f, 0.4f, 0.35f);
+            statsMenu->addChild(label);
+        }
+    };
+    addStat("GJ_likesIcon_001.png", likes);
+    addStat("GJ_dislikesIcon_001.png", dislikes);
+
+    m_mainLayer->addChildAtPosition(statsMenu, Anchor::Bottom, {0.f, 20.f}, false);
+    statsMenu->updateLayout();
     return true;
 }
 

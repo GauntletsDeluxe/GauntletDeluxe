@@ -1,5 +1,6 @@
 #include "GDXLeaderboardLayer.hpp"
 #include "../include/GDXConstant.hpp"
+#include <Geode/ui/Popup.hpp>
 #include "../popup/GDXLinkDiscordPopup.hpp"
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
@@ -99,7 +100,7 @@ bool GDXLeaderboardLayer::init() {
     m_bottomLeftMenu = CCMenu::create();
     m_bottomLeftMenu->setPosition({10, 10});
     m_bottomLeftMenu->setAnchorPoint({0.f, 0.f});
-    m_bottomLeftMenu->setContentHeight(100);
+    m_bottomLeftMenu->setContentHeight(200);
     m_bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true)->setCrossAxisReverse(true));
     this->addChild(m_bottomLeftMenu, 2);
 
@@ -109,6 +110,10 @@ bool GDXLeaderboardLayer::init() {
     // @geode-ignore(unknown-resource)
     auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_syncButton.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXLeaderboardLayer::onSyncAccount)));
+
+    auto comicSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_comicIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(comicSpr, this, menu_selector(GDXLeaderboardLayer::onComic)));
+
     m_bottomLeftMenu->updateLayout();
 
     auto listSize = CCSizeMake(356.f, 220.f);
@@ -194,6 +199,20 @@ void GDXLeaderboardLayer::onTabSelected(CCObject* sender) {
 
 void GDXLeaderboardLayer::onLink(CCObject* sender) {
     GDXLinkDiscordPopup::create()->show();
+}
+
+void GDXLeaderboardLayer::onComic(CCObject* sender) {
+    geode::createQuickPopup(
+        "GeeHee's OS Troubles",
+        fmt::format("Do you want to turn on <cr>gdx</c><cy>OS</c>?\n<co>This will open a webcomic in your browser.</c>"),
+        "Leave it off",
+        "Boot Up OS",
+        [](auto, bool yes) {
+            if (!yes) return;
+
+            geode::utils::web::openLinkInBrowser("https://www.newgrounds.com/art/view/darktimeworks/geehee-s-os-troubles-00-startup");
+            Notification::create("Opened link in browser.", NotificationIcon::Info)->show();
+        });
 }
 
 void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
@@ -434,7 +453,5 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 self->m_loadingSpinner->setVisible(false);
             }
         });
-        co_return;
-    }, []() {});
+        co_return; }, []() {});
 }
-

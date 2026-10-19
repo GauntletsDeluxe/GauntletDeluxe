@@ -19,6 +19,7 @@ private:
     void onTabSelected(CCObject* sender);
     void onSyncAccount(CCObject* sender);
     void onLink(CCObject* sender);
+    void onComic(CCObject* sender);
 
     cue::ListNode* m_list = nullptr;
     CCMenu* m_bottomLeftMenu = nullptr;

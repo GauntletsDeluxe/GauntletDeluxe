@@ -50,13 +50,19 @@ namespace gdx {
     inline bool g_isPlayingGauntletLevel = false;
     inline bool g_isLocalPlayingGauntletLevel = false;
 
-    inline void setPlayingGauntletLevel(bool playing) {
-        log::debug("Setting playing gauntlet level to {}", playing);
+    inline int g_playingGauntletLevelId = 0;
+    inline int g_localPlayingGauntletLevelId = 0;
+
+    inline void setPlayingGauntletLevel(bool playing, int levelId = 0) {
+        log::debug("Setting playing gauntlet level to {} (level {})", playing, levelId);
         g_isPlayingGauntletLevel = playing;
+        g_playingGauntletLevelId = playing ? levelId : 0;
     }
 
-    inline bool isPlayingGauntletLevel() {
-        return g_isPlayingGauntletLevel;
+    // pass the level id to make sure the level being checked is the gauntlet level that was opened
+    inline bool isPlayingGauntletLevel(int levelId = 0) {
+        if (!g_isPlayingGauntletLevel) return false;
+        return levelId == 0 || levelId == g_playingGauntletLevelId;
     }
 
     // the color scheme of the gauntlet whose level is being opened, used to tint the level page
@@ -70,13 +76,15 @@ namespace gdx {
         return g_gauntletColor;
     }
 
-    inline void setLocalPlayingGauntletLevel(bool playing) {
-        log::debug("Setting local playing gauntlet level to {}", playing);
+    inline void setLocalPlayingGauntletLevel(bool playing, int levelId = 0) {
+        log::debug("Setting local playing gauntlet level to {} (level {})", playing, levelId);
         g_isLocalPlayingGauntletLevel = playing;
+        g_localPlayingGauntletLevelId = playing ? levelId : 0;
     }
 
-    inline bool isLocalPlayingGauntletLevel() {
-        return g_isLocalPlayingGauntletLevel;
+    inline bool isLocalPlayingGauntletLevel(int levelId = 0) {
+        if (!g_isLocalPlayingGauntletLevel) return false;
+        return levelId == 0 || levelId == g_localPlayingGauntletLevelId;
     }
 
     inline std::unordered_map<std::string, CCTexture2D*>& gauntletTextureCache() {
