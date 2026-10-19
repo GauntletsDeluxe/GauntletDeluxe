@@ -56,5 +56,5 @@ private:
 
     int m_page = 0;
     float m_slideThreshold = 20.f;
-    float m_scrollbarLength = 240.f;
+    float m_scrollbarLength = 300.f;
 };

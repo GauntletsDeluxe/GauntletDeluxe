@@ -675,8 +675,22 @@ void GDXGauntletLevelsLayer::onEnter() {
 }
 
 void GDXGauntletLevelsLayer::onSafeItem(CCObject* sender) {
-    // auto search = GJSearchObject::create(SearchType::Type26, m_gauntletData["gauntletId"].asInt().unwrapOr(0));
-    // auto scene = LevelBrowserLayer::create(search);
+    std::string levelIds;
+    for (auto const& entry : m_levels) {
+        if (entry.levelId <= 0) continue;
+        if (!levelIds.empty()) levelIds += ",";
+        levelIds += numToString(entry.levelId);
+    }
+
+    if (levelIds.empty()) {
+        Notification::create("This gauntlet has no levels.", NotificationIcon::Warning)->show();
+        return;
+    }
+
+    auto searchObj = GJSearchObject::create(SearchType::Type19, levelIds);
+    auto scene = CCScene::create();
+    scene->addChild(LevelBrowserLayer::create(searchObj));
+    CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 }
 
 void GDXGauntletLevelsLayer::refreshCompletionIcons() {

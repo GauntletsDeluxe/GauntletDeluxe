@@ -81,6 +81,8 @@ private:
     CCMenuItemSpriteExtra* m_searchBtn = nullptr;
     CCMenuItemSpriteExtra* m_recentToggle = nullptr;
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
+    CCMenuItemSpriteExtra* m_favoriteToggle = nullptr;
+    bool m_favoriteFilter = false;
     bool m_recentFilter = false;
     bool m_localMode = false;
     std::string m_tagFilter;
@@ -94,6 +96,7 @@ private:
     CCSprite* m_gauntletPointsSpr = nullptr;
     CCCounterLabel* m_levelPointsCounter = nullptr;
     CCCounterLabel* m_gauntletPointsCounter = nullptr;
+    CCLabelBMFont* m_emptyStateLabel = nullptr;
     matjson::Value m_gauntlets;
     std::unordered_set<int> m_completedGauntletLevels;
     std::unordered_set<int> m_claimedGauntlets;

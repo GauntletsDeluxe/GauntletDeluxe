@@ -3,6 +3,7 @@
 - Bumped to Geode v6
 - Overhauled the User Interface
 - Moved Sync and Link Discord buttons to the Leaderboard Layer
+- Added Gauntlet Safe in the Gauntlet Levels Layer
 
 ## v1.0.9
 

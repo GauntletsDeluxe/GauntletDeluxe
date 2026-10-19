@@ -512,16 +512,24 @@ bool GDXGauntletLayer::init() {
     bg->setColor({50, 50, 50});
     this->addChild(bg, -5);
 
+    // empty state label
+    m_emptyStateLabel = CCLabelBMFont::create("No gauntlets found.", "goldFont.fnt");
+    m_emptyStateLabel->setScale(0.6f);
+    m_emptyStateLabel->setPosition({winSize.width / 2.f, winSize.height / 2.f});
+    m_emptyStateLabel->setVisible(false);
+    m_emptyStateLabel->setAlignment(kCCTextAlignmentCenter);
+    this->addChild(m_emptyStateLabel, 1);
+
     // search button
     // @geode-ignore(unknown-resource)
     auto searchSpr = CircleButtonSprite::createWithSpriteFrameName(
         "GDX_searchIcon.png"_spr,
-        1.f,
+        1.2f,
         m_searchQuery.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
         CircleBaseSize::Small);
     m_searchBtn = CCMenuItemSpriteExtra::create(searchSpr, this, menu_selector(GDXGauntletLayer::onSearchGauntlets));
 
-    auto tagFilterSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_searchTags.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto tagFilterSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_searchTags.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_tagFilterBtn = CCMenuItemSpriteExtra::create(tagFilterSpr, this, menu_selector(GDXGauntletLayer::onFilterByTag));
 
     // top left menu
@@ -556,7 +564,7 @@ bool GDXGauntletLayer::init() {
     bottomLeftMenu->addChild(m_discordBtn);
 
     // @geode-ignore(unknown-resource)
-    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName("GDX_pencil.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto manageLabel = CircleButtonSprite::createWithSpriteFrameName(m_localMode ? "GDX_editButton.png"_spr : "GDX_editButton_02.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     auto manageBtn = CCMenuItemSpriteExtra::create(manageLabel, this, menu_selector(GDXGauntletLayer::onManageGauntlets));
     bottomLeftMenu->addChild(manageBtn);
 
@@ -574,11 +582,16 @@ bool GDXGauntletLayer::init() {
     m_recentToggle = CCMenuItemSpriteExtra::create(createRecentToggleSprite(m_recentFilter), this, menu_selector(GDXGauntletLayer::onToggleRecent));
     updateRecentToggleState();
 
+    // favorite toggle
+    m_favoriteToggle = CCMenuItemSpriteExtra::create(createFavoriteToggleSprite(m_favoriteFilter), this, menu_selector(GDXGauntletLayer::onToggleFavorite));
+    updateFavoriteToggleState();
+
     m_localToggle = CCMenuItemSpriteExtra::create(createLocalToggleSprite(m_localMode), this, menu_selector(GDXGauntletLayer::onToggleLocalMode));
     updateLocalToggleState();
     updateRecentToggleState();
+    updateFavoriteToggleState();
 
-    auto bottomRightMenu = CCMenu::create(refreshBtn, m_localToggle, m_recentToggle, nullptr);
+    auto bottomRightMenu = CCMenu::create(refreshBtn, m_localToggle, m_recentToggle, m_favoriteToggle, nullptr);
     if (bottomRightMenu) {
         bottomRightMenu->setPosition({winSize.width - 10, 10});
         bottomRightMenu->setContentHeight(100);
@@ -808,7 +821,9 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
                 m_localScrollLayer = nullptr;
             }
             m_localGauntletButtons.clear();
-            Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            //Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            m_emptyStateLabel->setVisible(true);
+            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
             updatePageButtons();
             return;
         }
@@ -867,7 +882,9 @@ void GDXGauntletLayer::setTextPopupClosed(SetTextPopup* popup, gd::string text) 
                 m_localScrollLayer = nullptr;
             }
             m_localGauntletButtons.clear();
-            Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            //Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            m_emptyStateLabel->setVisible(true);
+            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
             updatePageButtons();
             return;
         }
@@ -921,7 +938,9 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
                 m_localScrollLayer = nullptr;
             }
             m_localGauntletButtons.clear();
-            Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            //Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
+            m_emptyStateLabel->setVisible(true);
+            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
         } else {
             auto filtered = filterLocalGauntlets(m_localGauntlets, m_searchQuery);
             createGauntletPages(filtered, true);
@@ -1052,6 +1071,10 @@ void GDXGauntletLayer::fetchGauntlets() {
         m_loadingSpinner->setVisible(true);
     }
 
+    if (m_emptyStateLabel) {
+        m_emptyStateLabel->setVisible(false);
+    }
+
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
     bool hasQuery = false;
     if (!m_tagFilter.empty()) {
@@ -1098,7 +1121,9 @@ void GDXGauntletLayer::fetchGauntlets() {
                     self->m_loadingSpinner->setVisible(false);
                 }
                 if (gauntlets.isArray() && gauntlets.size() == 0) {
-                    Notification::create("No gauntlets were found.", NotificationIcon::Info)->show();
+                    //Notification::create("No gauntlets were found.", NotificationIcon::Info)->show();
+                    self->m_emptyStateLabel->setVisible(true);
+                    self->m_emptyStateLabel->setString("No gauntlets were found.");
                 }
                 self->m_onlineGauntlets = gauntlets;
                 self->createGauntletPages(self->m_onlineGauntlets, false);
@@ -1666,6 +1691,10 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         m_gauntlets = gauntlets;
     }
 
+    if (m_emptyStateLabel) {
+        m_emptyStateLabel->setVisible(gauntlets.isArray() && gauntlets.size() == 0);
+    }
+
     m_completedGauntletLevels = loadCompletedGauntletLevels(local);
     m_claimedGauntlets = loadCompletedGauntlets();
     auto& targetScroll = local ? m_localScrollLayer : m_scrollLayer;
@@ -1958,7 +1987,7 @@ void GDXGauntletLayer::updateSearchButtonState() {
     if (m_searchBtn) {
         auto sprite = CircleButtonSprite::createWithSpriteFrameName(
             "GDX_searchIcon.png"_spr,
-            1.f,
+            1.2f,
             m_searchQuery.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
             CircleBaseSize::Small);
         if (sprite) {
@@ -1970,7 +1999,7 @@ void GDXGauntletLayer::updateSearchButtonState() {
     if (m_tagFilterBtn) {
         auto tagSprite = CircleButtonSprite::createWithSpriteFrameName(
             "GDX_searchTags.png"_spr,
-            1.f,
+            1.2f,
             m_tagFilter.empty() ? CircleBaseColor::Green : CircleBaseColor::Cyan,
             CircleBaseSize::Small);
         if (tagSprite) {
