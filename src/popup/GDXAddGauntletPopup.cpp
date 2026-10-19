@@ -318,7 +318,7 @@ bool GDXAddGauntletPopup::init() {
         m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 22});
     }
 
-    auto colorSpr = CCSprite::create("GJ_squareB_01.png");
+    auto colorSpr = CCSprite::create("GDX_gauntletSquare_01.png"_spr);
     colorSpr->setScale(0.4f);
     if (colorSpr) {
         colorSpr->setColor(m_selectedColor);

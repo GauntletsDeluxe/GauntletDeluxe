@@ -1,5 +1,10 @@
 #include "GDXLeaderboardLayer.hpp"
 #include "../include/GDXConstant.hpp"
+#include "../popup/GDXLinkDiscordPopup.hpp"
+#include <Geode/binding/UploadActionPopup.hpp>
+#include <Geode/ui/BasedButtonSprite.hpp>
+#include <asp/fs.hpp>
+#include <unordered_set>
 #include "Geode/ui/BasedButton.hpp"
 #include "Geode/ui/General.hpp"
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
@@ -14,6 +19,58 @@
 #include <cue/PlayerIcon.hpp>
 
 using namespace geode::prelude;
+
+namespace {
+    // the sync merges server progress into the same files GDXGauntletLayer reads when it builds its pages
+    asp::fs::path completedFilePath(char const* name) {
+        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        if (auto res = asp::fs::createDirAll(dir); !res) {
+            log::warn("Failed to create save directory: {}", res.unwrapErr().message());
+        }
+        return dir / name;
+    }
+
+    void insertIds(std::unordered_set<int>& out, matjson::Value const& data) {
+        if (!data.isArray()) return;
+        for (auto const& entry : data) {
+            if (entry.isNumber()) {
+                if (auto id = entry.asInt()) out.insert(static_cast<int>(id.unwrap()));
+            } else if (entry.isString()) {
+                if (auto id = numFromString<int>(entry.asString().unwrapOr(""))) out.insert(id.unwrap());
+            }
+        }
+    }
+
+    std::unordered_set<int> loadIds(char const* fileName, char const* objectKey) {
+        std::unordered_set<int> out;
+        auto path = completedFilePath(fileName);
+        if (!asp::fs::isFile(path).unwrapOr(false)) return out;
+
+        auto content = asp::fs::readToString(path);
+        if (!content) {
+            log::warn("Failed to read {}: {}", fileName, content.unwrapErr());
+            return out;
+        }
+        auto parsed = matjson::parse(content.unwrap());
+        if (!parsed) {
+            log::warn("Failed to parse {}: {}", fileName, parsed.unwrapErr());
+            return out;
+        }
+        auto data = std::move(parsed).unwrap();
+        if (data.isObject() && data[objectKey].isArray()) data = data[objectKey];
+        insertIds(out, data);
+        return out;
+    }
+
+    bool saveIds(char const* fileName, std::unordered_set<int> const& ids) {
+        matjson::Value array = matjson::Value::array();
+        for (auto id : ids) array.push(id);
+        auto data = array.dump();
+        auto res = asp::fs::write(completedFilePath(fileName), data.c_str(), data.size());
+        if (!res) log::warn("Failed to save {}: {}", fileName, res.unwrapErr());
+        return static_cast<bool>(res);
+    }
+}
 
 GDXLeaderboardLayer* GDXLeaderboardLayer::create() {
     auto ret = new GDXLeaderboardLayer();
@@ -38,6 +95,21 @@ bool GDXLeaderboardLayer::init() {
     auto bg = createLayerBG();
     bg->setColor({50, 50, 50});
     this->addChild(bg, -5);
+
+    m_bottomLeftMenu = CCMenu::create();
+    m_bottomLeftMenu->setPosition({10, 10});
+    m_bottomLeftMenu->setAnchorPoint({0.f, 0.f});
+    m_bottomLeftMenu->setContentHeight(100);
+    m_bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true)->setCrossAxisReverse(true));
+    this->addChild(m_bottomLeftMenu, 2);
+
+    auto linkSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_linkIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(linkSpr, this, menu_selector(GDXLeaderboardLayer::onLink)));
+
+    // @geode-ignore(unknown-resource)
+    auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_syncButton.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXLeaderboardLayer::onSyncAccount)));
+    m_bottomLeftMenu->updateLayout();
 
     auto listSize = CCSizeMake(356.f, 220.f);
     m_list = cue::ListNode::create(listSize, {191, 114, 62, 255}, cue::ListBorderStyle::SlimLevels);
@@ -118,6 +190,76 @@ void GDXLeaderboardLayer::onTabSelected(CCObject* sender) {
     m_type = selectedType;
     updateTabSelection();
     fetchLeaderboard();
+}
+
+void GDXLeaderboardLayer::onLink(CCObject* sender) {
+    GDXLinkDiscordPopup::create()->show();
+}
+
+void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
+    auto upopup = UploadActionPopup::create(nullptr, "Syncing account...");
+    upopup->show();
+
+    auto accountData = argon::getGameAccountData();
+    auto url = std::string(gdx::baseApiUrl()) + "/syncUser";
+    matjson::Value body = matjson::Value::object();
+    body["accountId"] = accountData.accountId;
+
+    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    m_syncAccountTask.spawn([upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken(accountData);
+        if (token.empty()) {
+            co_await geode::async::waitForMainThread([upopupRef] {
+                if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
+            });
+            co_return;
+        }
+
+        body["argonToken"] = std::move(token);
+        auto response = co_await geode::utils::web::WebRequest()
+                            .url(url)
+                            .header("Content-Type", "application/json")
+                            .bodyJSON(body)
+                            .post(url);
+
+        if (response.error() || response.cancelled() || !response.ok()) {
+            auto errMsg = gdx::getResponseMessage(response, "Failed to sync account.");
+            co_await geode::async::waitForMainThread([upopupRef, errMsg = std::move(errMsg)] {
+                if (upopupRef) upopupRef->showFailMessage(errMsg);
+            });
+            co_return;
+        }
+
+        auto jsonResult = response.json();
+        bool success = false;
+        matjson::Value result;
+        if (jsonResult) {
+            result = std::move(jsonResult).unwrap();
+            success = result["success"].asBool().unwrapOr(false);
+        }
+        if (!success) {
+            co_await geode::async::waitForMainThread([upopupRef] {
+                if (upopupRef) upopupRef->showFailMessage("Failed to sync account.");
+            });
+            co_return;
+        }
+
+        // keep whatever is already saved locally, and add what the server knows about
+        auto completedLevels = loadIds("completed_gauntlet_levels.json", "completedLevels");
+        auto completedGauntlets = loadIds("completed_gauntlets.json", "completedGauntlets");
+        insertIds(completedLevels, result["completedLevels"]);
+        insertIds(completedGauntlets, result["completedGauntlets"]);
+
+        auto levelsSaved = saveIds("completed_gauntlet_levels.json", completedLevels);
+        auto gauntletsSaved = saveIds("completed_gauntlets.json", completedGauntlets);
+
+        co_await geode::async::waitForMainThread([upopupRef, levelsSaved, gauntletsSaved] {
+            if (!upopupRef) return;
+            if (levelsSaved && gauntletsSaved) upopupRef->showSuccessMessage("Account synced successfully.");
+            else upopupRef->showFailMessage("Failed to save sync data.");
+        });
+
+        co_return; }, []() {});
 }
 
 void GDXLeaderboardLayer::onEnter() {

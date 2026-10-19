@@ -611,9 +611,16 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         return completedLevels.contains(entry.levelId);
     });
 
+    auto bottomLeftMenu = CCMenu::create();
+    if (bottomLeftMenu) {
+        bottomLeftMenu->setPosition({0.f, 0.f});
+        this->addChild(bottomLeftMenu, 2);
+    }
+
     if (!m_localMode) {
         auto feedbackSprite = CCSprite::createWithSpriteFrameName(
             hasCompletedGauntlet ? "GJ_like2Btn_001.png" : "GJ_like2Btn2_001.png");
+        auto safeBtn = CCSprite::createWithSpriteFrameName("GDX_safeBtn_open_001.png"_spr);
         if (feedbackSprite) {
             feedbackSprite->setScale(0.8f);
             auto feedbackBtn = CCMenuItemSpriteExtra::create(feedbackSprite, this, menu_selector(GDXGauntletLevelsLayer::onLikeItem));
@@ -623,12 +630,20 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                     feedbackBtn->setEnabled(false);
                     feedbackBtn->setOpacity(180);
                 }
-
-                auto bottomLeftMenu = CCMenu::create(feedbackBtn, nullptr);
                 if (bottomLeftMenu) {
-                    bottomLeftMenu->setPosition({0.f, 0.f});
-                    this->addChild(bottomLeftMenu, 2);
+                    bottomLeftMenu->addChild(feedbackBtn);
                 }
+            }
+        }
+        if (safeBtn) {
+            safeBtn->setScale(0.8f);
+            auto safeMenuItem = CCMenuItemSpriteExtra::create(safeBtn, this, menu_selector(GDXGauntletLevelsLayer::onSafeItem));
+            if (safeMenuItem) {
+                safeMenuItem->setPosition(winSize.width - 34.f, winSize.height - 34.f);
+                if (bottomLeftMenu) {
+                    bottomLeftMenu->addChild(safeMenuItem);
+                }
+                // Add the safe button to the menu
             }
         }
     } else {
@@ -657,6 +672,11 @@ void GDXGauntletLevelsLayer::onEnter() {
     CCLayer::onEnter();
     this->refreshCompletionIcons();
     gdx::setPlayingGauntletLevel(false);
+}
+
+void GDXGauntletLevelsLayer::onSafeItem(CCObject* sender) {
+    // auto search = GJSearchObject::create(SearchType::Type26, m_gauntletData["gauntletId"].asInt().unwrapOr(0));
+    // auto scene = LevelBrowserLayer::create(search);
 }
 
 void GDXGauntletLevelsLayer::refreshCompletionIcons() {
@@ -726,7 +746,6 @@ void GDXGauntletLevelsLayer::refreshCompletionIcons() {
                     gauntletContainer->addChild(lockSprite, 5);
                 }
             }
-            button->setEnabled(false);
             button->setOpacity(180);
         } else {
             if (lockIcon) {
@@ -848,6 +867,16 @@ void GDXGauntletLevelsLayer::onGauntletInfo(CCObject* sender) {
 
 void GDXGauntletLevelsLayer::onLikeItem(CCObject* sender) {
     if (!m_gauntletData.isObject()) {
+        return;
+    }
+
+    // if the gauntlet is not completed, show a notification instead of the popup
+    auto completedLevels = loadCompletedGauntletLevels(m_localMode);
+    bool hasCompletedGauntlet = !m_levels.empty() && std::all_of(m_levels.begin(), m_levels.end(), [&completedLevels](auto const& entry) {
+        return completedLevels.contains(entry.levelId);
+    });
+    if (!hasCompletedGauntlet) {
+        FLAlertLayer::create("Unable to like gauntlet", "You must <cg>complete</c> the gauntlet before submitting a <cy>feedback</c> for it!", "OK")->show();
         return;
     }
 

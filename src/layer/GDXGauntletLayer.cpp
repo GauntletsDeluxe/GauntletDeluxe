@@ -1,6 +1,7 @@
 #include "GDXGauntletLayer.hpp"
 #include "GDXGauntletLevelsLayer.hpp"
 #include "GDXLeaderboardLayer.hpp"
+#include "GDXScrollLayer.hpp"
 #include "../popup/GDXGauntletManagePopup.hpp"
 #include "../popup/GDXLikeItemPopup.hpp"
 #include "../popup/GDXShowTagsPopup.hpp"
@@ -523,11 +524,8 @@ bool GDXGauntletLayer::init() {
     auto tagFilterSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_searchTags.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_tagFilterBtn = CCMenuItemSpriteExtra::create(tagFilterSpr, this, menu_selector(GDXGauntletLayer::onFilterByTag));
 
-    auto linkIcon = CircleButtonSprite::createWithSpriteFrameName("GDX_linkIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    m_linkBtn = CCMenuItemSpriteExtra::create(linkIcon, this, menu_selector(GDXGauntletLayer::onLink));
-
     // top left menu
-    auto topLeftMenu = CCMenu::create(m_searchBtn, m_tagFilterBtn, m_linkBtn, nullptr);
+    auto topLeftMenu = CCMenu::create(m_searchBtn, m_tagFilterBtn, nullptr);
     topLeftMenu->setPosition({10, winSize.height - 45});
     topLeftMenu->setContentWidth(80);
     topLeftMenu->setAnchorPoint({0.f, 1.f});
@@ -548,7 +546,7 @@ bool GDXGauntletLayer::init() {
     bottomLeftMenu->addChild(infoIconBtn);
 
     // leaderboard button
-    auto leaderboardIconSpr = CircleButtonSprite::createWithSpriteFrameName("rankIcon_1_001.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto leaderboardIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_leaderboardIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_leaderboardBtn = CCMenuItemSpriteExtra::create(leaderboardIconSpr, this, menu_selector(GDXGauntletLayer::onLeaderboard));
     bottomLeftMenu->addChild(m_leaderboardBtn);
 
@@ -566,16 +564,11 @@ bool GDXGauntletLayer::init() {
 
     // refresh gauntlet
     // @geode-ignore(unknown-resource)
-    auto refreshSpr = CircleButtonSprite::createWithSpriteFrameName("geode.loader/reload.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto refreshSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_refreshIcon.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     auto refreshBtn = CCMenuItemSpriteExtra::create(
         refreshSpr,
         this,
         menu_selector(GDXGauntletLayer::onRefreshGauntlets));
-
-    // sync account
-    // @geode-ignore(unknown-resource)
-    auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("geode.loader/update.png", 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    m_syncBtn = CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXGauntletLayer::onSyncAccount));
 
     // recent toggle
     m_recentToggle = CCMenuItemSpriteExtra::create(createRecentToggleSprite(m_recentFilter), this, menu_selector(GDXGauntletLayer::onToggleRecent));
@@ -585,7 +578,7 @@ bool GDXGauntletLayer::init() {
     updateLocalToggleState();
     updateRecentToggleState();
 
-    auto bottomRightMenu = CCMenu::create(refreshBtn, m_syncBtn, m_recentToggle, m_localToggle, nullptr);
+    auto bottomRightMenu = CCMenu::create(refreshBtn, m_localToggle, m_recentToggle, nullptr);
     if (bottomRightMenu) {
         bottomRightMenu->setPosition({winSize.width - 10, 10});
         bottomRightMenu->setContentHeight(100);
@@ -602,7 +595,7 @@ bool GDXGauntletLayer::init() {
     // title styling
     auto title = CCSprite::createWithSpriteFrameName("GDX_title.png"_spr);
     title->setScale(0.8f);
-    this->addChildAtPosition(title, Anchor::Top, {0, -30}, false);
+    this->addChildAtPosition(title, Anchor::Top, {0, -25}, false);
 
     m_loadingSpinner = LoadingSpinner::create(60.f);
     if (m_loadingSpinner) {
@@ -673,10 +666,6 @@ void GDXGauntletLayer::onDiscord(CCObject* sender) {
     if (communityUrl.has_value()) {
         geode::utils::web::openLinkInBrowser(communityUrl.value());
     }
-}
-
-void GDXGauntletLayer::onLink(CCObject* sender) {
-    GDXLinkDiscordPopup::create()->show();
 }
 
 void GDXGauntletLayer::onInfo(CCObject* sender) {
@@ -806,127 +795,6 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
                 GDXGauntletManagePopup::create()->show();
             });
         }
-
-        co_return; }, []() {});
-}
-
-void GDXGauntletLayer::onSyncAccount(CCObject* sender) {
-    auto upopup = UploadActionPopup::create(nullptr, "Syncing account...");
-    upopup->show();
-
-    auto accountData = argon::getGameAccountData();
-    auto url = std::string(gdx::baseApiUrl()) + "/syncUser";
-    matjson::Value body = matjson::Value::object();
-    body["accountId"] = accountData.accountId;
-    body["argonToken"] = "";  // This line is unchanged, but included for context.
-
-    auto self = geode::Ref<GDXGauntletLayer>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
-    m_syncAccountTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
-        if (token.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
-                if (!upopupRef) return;
-                if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
-            });
-            co_return;
-        }
-
-        body["argonToken"] = std::move(token);
-        auto response = co_await geode::utils::web::WebRequest()
-                            .url(url)
-                            .header("Content-Type", "application/json")
-                            .bodyJSON(body)
-                            .post(url);
-
-        if (response.error() || response.cancelled() || !response.ok()) {
-            auto errMsg = gdx::getResponseMessage(response, "Failed to sync account.");
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
-                if (!upopupRef) return;
-                if (upopupRef) upopupRef->showFailMessage(errMsg);
-            });
-            co_return;
-        }
-
-        auto jsonResult = response.json();
-        if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
-                if (!upopupRef) return;
-                if (upopupRef) upopupRef->showFailMessage("Failed to sync account.");
-            });
-            co_return;
-        }
-
-        auto result = std::move(jsonResult).unwrap();
-        bool success = result["success"].asBool().unwrapOr(false);
-        if (!success) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
-                if (!upopupRef) return;
-                if (upopupRef) upopupRef->showFailMessage("Failed to sync account.");
-            });
-            co_return;
-        }
-
-        std::unordered_set<int> completedLevels;
-        if (result["completedLevels"].isArray()) {
-            for (auto const& entry : result["completedLevels"]) {
-                if (entry.isNumber()) {
-                    auto maybeId = entry.asInt();
-                    if (maybeId) {
-                        completedLevels.insert(static_cast<int>(maybeId.unwrap()));
-                    }
-                } else if (entry.isString()) {
-                    auto idString = entry.asString().unwrapOr("");
-                    auto maybeId = numFromString<int>(idString);
-                    if (maybeId) {
-                        completedLevels.insert(maybeId.unwrap());
-                    }
-                }
-            }
-        }
-
-        std::unordered_set<int> completedGauntlets;
-        if (result["completedGauntlets"].isArray()) {
-            for (auto const& entry : result["completedGauntlets"]) {
-                if (entry.isNumber()) {
-                    auto maybeId = entry.asInt();
-                    if (maybeId) {
-                        completedGauntlets.insert(static_cast<int>(maybeId.unwrap()));
-                    }
-                } else if (entry.isString()) {
-                    auto idString = entry.asString().unwrapOr("");
-                    auto maybeId = numFromString<int>(idString);
-                    if (maybeId) {
-                        completedGauntlets.insert(maybeId.unwrap());
-                    }
-                }
-            }
-        }
-
-        auto existingLevels = loadCompletedGauntletLevels(false);
-        for (auto levelId : existingLevels) {
-            completedLevels.insert(levelId);
-        }
-
-        auto existingGauntlets = loadCompletedGauntlets();
-        for (auto gauntletId : existingGauntlets) {
-            completedGauntlets.insert(gauntletId);
-        }
-
-        auto levelsSaved = saveCompletedGauntletLevels(completedLevels, false);
-        auto gauntletsSaved = saveCompletedGauntlets(completedGauntlets);
-
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), levelsSaved, gauntletsSaved]() mutable {
-            if (levelsSaved && gauntletsSaved) {
-                if (upopupRef) upopupRef->showSuccessMessage("Account synced successfully.");
-                if (self) {
-                    self->m_completedGauntletLevels = loadCompletedGauntletLevels(false);
-                    self->m_claimedGauntlets = loadCompletedGauntlets();
-                }
-            } else {
-                if (upopupRef) upopupRef->showFailMessage("Failed to save sync data.");
-            }
-        });
 
         co_return; }, []() {});
 }
@@ -1071,9 +939,6 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
         if (m_discordBtn) {
             m_discordBtn->setVisible(false);
         }
-        if (m_syncBtn) {
-            m_syncBtn->setVisible(false);
-        }
         if (m_bottomLeftMenu) {
             m_bottomLeftMenu->updateLayout();
         }
@@ -1095,9 +960,6 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     }
     if (m_discordBtn) {
         m_discordBtn->setVisible(true);
-    }
-    if (m_syncBtn) {
-        m_syncBtn->setVisible(true);
     }
     if (m_searchBtn) {
         m_searchBtn->setVisible(true);
@@ -1341,7 +1203,7 @@ GDXGauntletNode GDXGauntletNode::fromJson(const matjson::Value& gauntlet) {
     return node;
 }
 
-BoomScrollLayer* GDXGauntletLayer::getActiveScrollLayer() const {
+GDXScrollLayer* GDXGauntletLayer::getActiveScrollLayer() const {
     return m_localMode ? m_localScrollLayer : m_scrollLayer;
 }
 
@@ -1354,7 +1216,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
     int gauntletIndex = node.id;
     std::string gauntletName = node.name;
 
-    auto gauntletBg = NineSlice::create("GJ_squareB_01.png");
+    auto gauntletBg = NineSlice::createWithSpriteFrameName("GDX_gauntletSquare_01.png"_spr);
     if (!gauntletBg) {
         return nullptr;
     }
@@ -1364,7 +1226,7 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
         auto glow = NineSlice::createWithSpriteFrameName("GDX_featuredGlow.png"_spr);
         if (glow) {
             glow->setPosition({gauntletBg->getContentSize().width / 2.f, gauntletBg->getContentSize().height / 2.f});
-            glow->setContentSize(gauntletBg->getContentSize() + CCSize{5.f, 5.f});
+            glow->setContentSize(gauntletBg->getContentSize() + CCSize{15.f, 15.f});
             glow->setColor({255, 215, 0});
             glow->setScale(1.0f);
             glow->setOpacity(255);
@@ -1857,7 +1719,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
             page = CCLayer::create();
             page->setContentSize(winSize);
             pageMenu = CCMenu::create();
-            pageMenu->setLayout(RowLayout::create()->setGap(0.f)->setAxisAlignment(AxisAlignment::Center));
+            pageMenu->setLayout(RowLayout::create()->setGap(10.f)->setAxisAlignment(AxisAlignment::Center));
             pageMenu->setPosition({page->getContentSize().width / 2, page->getContentSize().height / 2 + 35.f});
             page->addChild(pageMenu);
             pages->addObject(page);
@@ -1878,7 +1740,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         return;
     }
 
-    targetScroll = BoomScrollLayer::create(pages, 0, false);
+    targetScroll = GDXScrollLayer::create(pages);
     if (!targetScroll) {
         return;
     }
@@ -1986,9 +1848,9 @@ void GDXGauntletLayer::update(float dt) {
         return;
     }
 
-    auto page = layer->pageNumberForPosition(layer->getPosition());
+    auto page = layer->pageNumberForPosition();
     if (page < 0 || page >= layer->getTotalPages()) {
-        page = layer->m_page;
+        page = layer->getCurrentPage();
     }
     if (page != m_currentPage) {
         m_currentPage = page;
@@ -2007,11 +1869,10 @@ void GDXGauntletLayer::onPrev(CCObject* sender) {
         return;
     }
 
-    auto page = layer->m_page;
+    auto page = layer->getCurrentPage();
     page = (page - 1 + total) % total;
 
     layer->moveToPage(page);
-    layer->updatePages();
     updatePageButtons();
 }
 
@@ -2026,11 +1887,10 @@ void GDXGauntletLayer::onNext(CCObject* sender) {
         return;
     }
 
-    auto page = layer->m_page;
+    auto page = layer->getCurrentPage();
     page = (page + 1) % total;
 
     layer->moveToPage(page);
-    layer->updatePages();
     updatePageButtons();
 }
 
@@ -2040,9 +1900,9 @@ void GDXGauntletLayer::updatePageButtons() {
         return;
     }
 
-    auto page = layer->pageNumberForPosition(layer->getPosition());
+    auto page = layer->pageNumberForPosition();
     if (page < 0 || page >= layer->getTotalPages()) {
-        page = layer->m_page;
+        page = layer->getCurrentPage();
     }
     auto totalPages = layer->getTotalPages();
     if (totalPages <= 1) {

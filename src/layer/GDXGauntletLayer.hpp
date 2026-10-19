@@ -4,6 +4,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "GDXScrollLayer.hpp"
+
 using namespace geode::prelude;
 
 struct GDXGauntletLevelInfo {
@@ -40,12 +42,10 @@ private:
     void onInfo(CCObject* sender);
     void onLeaderboard(CCObject* sender);
     void onManageGauntlets(CCObject* sender);
-    void onSyncAccount(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
     void onToggleRecent(CCObject* sender);
     void onToggleLocalMode(CCObject* sender);
     void onDiscord(CCObject* sender);
-    void onLink(CCObject* sender);
     void onPrev(CCObject* sender);
     void onNext(CCObject* sender);
     void onCompleteGauntlet(CCObject* sender);
@@ -65,10 +65,10 @@ private:
     void setTextPopupClosed(SetTextPopup* popup, gd::string text) override;
 
     CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local = false);
-    BoomScrollLayer* getActiveScrollLayer() const;
+    GDXScrollLayer* getActiveScrollLayer() const;
     const matjson::Value& getActiveGauntlets() const;
-    BoomScrollLayer* m_scrollLayer = nullptr;
-    BoomScrollLayer* m_localScrollLayer = nullptr;
+    GDXScrollLayer* m_scrollLayer = nullptr;
+    GDXScrollLayer* m_localScrollLayer = nullptr;
     CCMenu* m_gauntletsMenu = nullptr;
     CCMenu* m_bottomLeftMenu = nullptr;
     CCMenu* m_bottomRightMenu = nullptr;
@@ -77,10 +77,8 @@ private:
     CCMenu* m_pageNavMenu = nullptr;
     CCMenuItemSpriteExtra* m_leaderboardBtn = nullptr;
     CCMenuItemSpriteExtra* m_discordBtn = nullptr;
-    CCMenuItemSpriteExtra* m_syncBtn = nullptr;
     CCMenuItemSpriteExtra* m_tagFilterBtn = nullptr;
     CCMenuItemSpriteExtra* m_searchBtn = nullptr;
-    CCMenuItemSpriteExtra* m_linkBtn = nullptr;
     CCMenuItemSpriteExtra* m_recentToggle = nullptr;
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
     bool m_recentFilter = false;

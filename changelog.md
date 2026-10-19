@@ -1,3 +1,9 @@
+## v1.1.0
+
+- Bumped to Geode v6
+- Overhauled the User Interface
+- Moved Sync and Link Discord buttons to the Leaderboard Layer
+
 ## v1.0.9
 
 - Bumped to Geode v5.10.1.

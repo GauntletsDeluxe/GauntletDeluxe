@@ -17,12 +17,16 @@ private:
     void createTabs();
     void updateTabSelection();
     void onTabSelected(CCObject* sender);
+    void onSyncAccount(CCObject* sender);
+    void onLink(CCObject* sender);
 
     cue::ListNode* m_list = nullptr;
+    CCMenu* m_bottomLeftMenu = nullptr;
     geode::Scrollbar* m_scrollbar = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
     int m_type = 1;
     TabButton* m_levelPointsTabSprite = nullptr;
     TabButton* m_gauntletPointsTabSprite = nullptr;
     geode::async::TaskHolder<> m_leaderboardTask;
+    geode::async::TaskHolder<> m_syncAccountTask;
 };
