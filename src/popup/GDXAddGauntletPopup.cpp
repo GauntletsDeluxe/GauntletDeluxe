@@ -318,7 +318,7 @@ bool GDXAddGauntletPopup::init() {
         m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 22});
     }
 
-    auto colorSpr = CCSprite::create("GDX_gauntletSquare_01.png"_spr);
+    auto colorSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletSquare_01.png"_spr);
     colorSpr->setScale(0.4f);
     if (colorSpr) {
         colorSpr->setColor(m_selectedColor);
@@ -365,19 +365,19 @@ bool GDXAddGauntletPopup::init() {
     refreshLevelList();
 
     auto addLevelBtn = CCMenuItemSpriteExtra::create(
-        ButtonSprite::create("Add Level", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+        ButtonSprite::create("Add Level", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
         this,
         menu_selector(GDXAddGauntletPopup::onAddLevel));
 
     auto saveBtn = CCMenuItemSpriteExtra::create(
-        ButtonSprite::create("Save", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
+        ButtonSprite::create("Save", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
         this,
         menu_selector(GDXAddGauntletPopup::onSave));
 
     m_settingsMenu = CCMenu::create(addLevelBtn, saveBtn, nullptr);
     if (m_localMode) {
         auto addSpriteBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Add Sprite", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+            ButtonSprite::create("Add Sprite", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXAddGauntletPopup::onAddSprite));
         if (addSpriteBtn) {

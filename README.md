@@ -49,6 +49,10 @@
 
 ---
 
+### Recommended Mod
+
+<mod:dasshu.better-gauntlets>
+
 ### Credits
 
 - <cg>**Geode Mod Developer**</c>: [ArcticWoof](user:7689052)

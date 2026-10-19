@@ -28,7 +28,8 @@ private:
 
     // user list (right side)
     cue::ListNode* m_userList = nullptr;
-    geode::Scrollbar* m_userScrollbar = nullptr;
+    TextInput* m_usernameSearchInput = nullptr;
+    std::string m_searchQuery;
     LoadingSpinner* m_listSpinner = nullptr;
     CCLabelBMFont* m_pageInfoLabel = nullptr;
     geode::Button* m_prevPageBtn = nullptr;

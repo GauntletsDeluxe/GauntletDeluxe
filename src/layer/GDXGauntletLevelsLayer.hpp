@@ -25,6 +25,8 @@ private:
     void onGauntletInfo(CCObject* sender);
     void onLikeItem(CCObject* sender);
     void onSafeItem(CCObject* sender);
+    void onFavoriteItem(CCObject* sender);
+    int gauntletId() const;
     void onExportGauntlet(CCObject* sender);
     void refreshCompletionIcons();
 
@@ -35,6 +37,7 @@ private:
     matjson::Value m_gauntletData;
 
     CCMenu* m_levelsMenu = nullptr;
+    CCMenuItemSpriteExtra* m_favoriteBtn = nullptr;
     LoadingSpinner* m_pendingSpinner = nullptr;
     std::string m_pendingKey;
     int m_pendingLevelId = -1;

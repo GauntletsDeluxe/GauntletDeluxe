@@ -1,9 +1,13 @@
 ## v1.1.0
 
 - Bumped to Geode v6
-- Overhauled the User Interface
+- Updated Sprites <cy>(Thanks to [Darkore](user:3595559) for the new sprites!)</c>
+- Overhauled the UI Management Interface
 - Moved Sync and Link Discord buttons to the Leaderboard Layer
 - Added Gauntlet Safe in the Gauntlet Levels Layer
+- Added Animated Gauntlet Islands
+- Added Favorite Gauntlets
+- Added Colored Background on Level Info Layer when playing a Gauntlet Level
 
 ## v1.0.9
 

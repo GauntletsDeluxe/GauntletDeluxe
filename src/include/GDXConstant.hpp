@@ -59,6 +59,17 @@ namespace gdx {
         return g_isPlayingGauntletLevel;
     }
 
+    // the color scheme of the gauntlet whose level is being opened, used to tint the level page
+    inline cocos2d::ccColor3B g_gauntletColor = {0, 102, 255};
+
+    inline void setGauntletColor(cocos2d::ccColor3B const& color) {
+        g_gauntletColor = color;
+    }
+
+    inline cocos2d::ccColor3B gauntletColor() {
+        return g_gauntletColor;
+    }
+
     inline void setLocalPlayingGauntletLevel(bool playing) {
         log::debug("Setting local playing gauntlet level to {}", playing);
         g_isLocalPlayingGauntletLevel = playing;

@@ -12,8 +12,8 @@ using namespace geode::prelude;
 
 constexpr float kLeftColumnWidth = 160.f;
 constexpr float kRightColumnX = 350.f;
-constexpr float kListWidth = 310.f;
-constexpr float kListHeight = 160.f;
+constexpr float kListWidth = 280.f;
+constexpr float kListHeight = 170.f;
 constexpr float kCellHeight = 28.f;
 
 GDXUserPanelPopup* GDXUserPanelPopup::create() {
@@ -67,10 +67,11 @@ bool GDXUserPanelPopup::init() {
     m_mainLayer->addChildAtPosition(m_manageMenuBg, Anchor::Left, {kLeftColumnWidth / 2.f + 15.f, -10.f}, false);
 
     // right side: account id lookup and the list of every user
-    m_accountIdInput = TextInput::create(230.f, "Account ID", "chatFont.fnt");
+    m_accountIdInput = TextInput::create(110.f, "Account ID", "chatFont.fnt");
     m_accountIdInput->setLabel("Target Account ID");
     m_accountIdInput->setCommonFilter(CommonFilter::Int);
-    m_mainLayer->addChildAtPosition(m_accountIdInput, Anchor::BottomLeft, {kRightColumnX - 25.f, 220.f});
+    m_accountIdInput->setZOrder(2);
+    m_mainLayer->addChildAtPosition(m_accountIdInput, Anchor::BottomLeft, {kRightColumnX - 103.f, 215.f});
 
     // check button on the provided accountId
     auto findBtn = geode::Button::createWithSpriteFrameName("gj_findBtn_001.png");
@@ -78,6 +79,17 @@ bool GDXUserPanelPopup::init() {
         GDXUserPanelPopup::onFindAccountID(sender);
     });
     m_accountIdInput->addChildAtPosition(findBtn, Anchor::Right, {25.f, 0.f}, false);
+
+    // search the list by username, narrower than the left column so both inputs fit side by side
+    m_usernameSearchInput = TextInput::create(kLeftColumnWidth - 10.f, "Username", "chatFont.fnt");
+    m_usernameSearchInput->setLabel("Search Username");
+    m_usernameSearchInput->setMaxCharCount(20);
+    m_usernameSearchInput->setZOrder(2);
+    m_usernameSearchInput->setCallback([this](std::string const& text) {
+        m_searchQuery = text;
+        fetchUsers(1);
+    });
+    m_mainLayer->addChildAtPosition(m_usernameSearchInput, Anchor::BottomLeft, {kRightColumnX + 77.f, 215.f});
 
     m_userList = cue::ListNode::create({kListWidth, kListHeight}, {191, 114, 62, 255}, cue::ListBorderStyle::CommentsBlue);
     m_userList->setCellHeight(kCellHeight);
@@ -90,9 +102,6 @@ bool GDXUserPanelPopup::init() {
     }
     m_mainLayer->addChildAtPosition(m_userList, Anchor::BottomLeft, {kRightColumnX, 110.f});
 
-    m_userScrollbar = geode::Scrollbar::create(m_userList->getScrollLayer());
-    m_userList->addChildAtPosition(m_userScrollbar, Anchor::Right, {10.f, 0.f});
-
     m_listSpinner = LoadingSpinner::create(40.f);
     m_mainLayer->addChildAtPosition(m_listSpinner, Anchor::BottomLeft, {kRightColumnX, 125.f});
 
@@ -103,18 +112,18 @@ bool GDXUserPanelPopup::init() {
 
     auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
     prevSpr->setFlipX(true);
-    prevSpr->setScale(0.4f);
+    prevSpr->setScale(0.5f);
     m_prevPageBtn = geode::Button::createWithNode(prevSpr, [this](geode::Button*) {
         if (m_page > 1) fetchUsers(m_page - 1);
     });
-    m_mainLayer->addChildAtPosition(m_prevPageBtn, Anchor::BottomLeft, {kRightColumnX - 135.f, 18.f});
+    m_mainLayer->addChildAtPosition(m_prevPageBtn, Anchor::BottomLeft, {m_userList->getPositionX() - 150.f, m_userList->getPositionY()});
 
     auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
-    nextSpr->setScale(0.4f);
+    nextSpr->setScale(0.5f);
     m_nextPageBtn = geode::Button::createWithNode(nextSpr, [this](geode::Button*) {
         if (m_page < m_totalPages) fetchUsers(m_page + 1);
     });
-    m_mainLayer->addChildAtPosition(m_nextPageBtn, Anchor::BottomLeft, {kRightColumnX + 135.f, 18.f});
+    m_mainLayer->addChildAtPosition(m_nextPageBtn, Anchor::BottomLeft, {m_userList->getPositionX() + 150.f, m_userList->getPositionY()});
 
     m_manageMenu->updateLayout();
     updatePageInfo();
@@ -125,8 +134,8 @@ bool GDXUserPanelPopup::init() {
 
 void GDXUserPanelPopup::updateExcludeButton() {
     if (m_excludeBtn) {
-        auto offSprite = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
-        auto onSprite = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_02.png");
+        auto offSprite = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
+        auto onSprite = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_02.png");
         if (m_excludeBtn->m_offButton) {
             m_excludeBtn->m_offButton->setSprite(offSprite);
             m_excludeBtn->m_offButton->updateSprite();
@@ -140,8 +149,8 @@ void GDXUserPanelPopup::updateExcludeButton() {
     }
 
     // create toggle with off/on nodes
-    auto offNode = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
-    auto onNode = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_02.png");
+    auto offNode = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
+    auto onNode = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_02.png");
     m_excludeBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onExclude));
     m_excludeBtn->setVisible(false);
     m_excludeBtn->toggle(m_isExcluded);
@@ -150,8 +159,8 @@ void GDXUserPanelPopup::updateExcludeButton() {
 
 void GDXUserPanelPopup::updatePromoteButton() {
     if (m_promoteBtn) {
-        auto offSprite = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
-        auto onSprite = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
+        auto offSprite = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
+        auto onSprite = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
         if (m_promoteBtn->m_offButton) {
             m_promoteBtn->m_offButton->setSprite(offSprite);
             m_promoteBtn->m_offButton->updateSprite();
@@ -164,8 +173,8 @@ void GDXUserPanelPopup::updatePromoteButton() {
         return;
     }
 
-    auto offNode = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
-    auto onNode = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
+    auto offNode = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
+    auto onNode = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
     m_promoteBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onPromote));
     m_promoteBtn->setVisible(false);
     m_promoteBtn->toggle(m_isContributor);
@@ -174,8 +183,8 @@ void GDXUserPanelPopup::updatePromoteButton() {
 
 void GDXUserPanelPopup::updatePromoteModButton() {
     if (m_promoteModBtn) {
-        auto offSprite = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
-        auto onSprite = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
+        auto offSprite = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
+        auto onSprite = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
         if (m_promoteModBtn->m_offButton) {
             m_promoteModBtn->m_offButton->setSprite(offSprite);
             m_promoteModBtn->m_offButton->updateSprite();
@@ -188,8 +197,8 @@ void GDXUserPanelPopup::updatePromoteModButton() {
         return;
     }
 
-    auto offNode = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
-    auto onNode = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
+    auto offNode = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
+    auto onNode = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
     m_promoteModBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onPromoteMod));
     m_promoteModBtn->setVisible(false);
     m_promoteModBtn->toggle(m_isLeaderboardMod);
@@ -592,38 +601,62 @@ CCNode* GDXUserPanelPopup::createUserCell(matjson::Value const& entry, float wid
     auto idLabel = CCLabelBMFont::create(fmt::format("ID: {}", accountId).c_str(), "chatFont.fnt");
     idLabel->setAnchorPoint({0.f, 0.5f});
     idLabel->setScale(0.45f);
+    idLabel->setColor({0, 0, 0});
     idLabel->setPosition({10.f, 6.f});
     cell->addChild(idLabel);
 
-    std::vector<std::string> roles;
-    if (isManager) roles.push_back("Manager");
-    if (isContributor) roles.push_back("Contributor");
-    if (isLeaderboardMod) roles.push_back("LB Mod");
-    if (isExcluded) roles.push_back("Excluded");
-    if (!roles.empty()) {
-        std::string text;
-        for (auto const& role : roles) {
-            if (!text.empty()) text += ", ";
-            text += role;
+    // the user's points, each with its sprite on the left of the count
+    int gauntletPoints = entry["gauntletPoints"].asInt().unwrapOr(0);
+    int levelPoints = entry["levelPoints"].asInt().unwrapOr(0);
+
+    auto pointsMenu = CCMenu::create();
+    pointsMenu->setAnchorPoint({0.f, 0.5f});
+    pointsMenu->setContentSize({width - 90.f, 14.f});
+    pointsMenu->setPosition({80.f, 14.f});
+    pointsMenu->setLayout(RowLayout::create()
+            ->setGap(4.f)
+            ->setAxisAlignment(AxisAlignment::End)
+            ->setAutoScale(false));
+
+    auto addPoints = [pointsMenu](char const* spriteFrame, float spriteScale, int points) {
+        auto sprite = CCSprite::createWithSpriteFrameName(spriteFrame);
+        if (sprite) {
+            sprite->setScale(spriteScale);
+            pointsMenu->addChild(sprite);
         }
-        auto roleLabel = CCLabelBMFont::create(text.c_str(), "bigFont.fnt");
-        roleLabel->setAnchorPoint({1.f, 0.5f});
-        roleLabel->limitLabelWidth(width * 0.5f, 0.35f, 0.15f);
-        roleLabel->setPosition({width - 22.f, kCellHeight / 2.f});
-        if (isExcluded) {
-            roleLabel->setColor({255, 90, 90});
+        auto label = CCLabelBMFont::create(GameToolbox::pointsToString(points).c_str(), "bigFont.fnt");
+        label->setScale(0.3f);
+        pointsMenu->addChild(label);
+    };
+    addPoints("GDX_gauntletPoint.png"_spr, 0.2f, gauntletPoints);
+    addPoints("GDX_levelPoint.png"_spr, 0.15f, levelPoints);
+    pointsMenu->updateLayout();
+    cell->addChild(pointsMenu);
+
+    // the user's roles as badges, on the right side of the username
+    auto badgeMenu = CCMenu::create();
+    badgeMenu->setAnchorPoint({0.f, 0.5f});
+    badgeMenu->setContentSize({80.f, 14.f});
+    badgeMenu->setPosition({10.f + nameBtn->getScaledContentSize().width + 6.f, kCellHeight / 2.f + 5.f});
+    badgeMenu->setLayout(RowLayout::create()
+            ->setGap(3.f)
+            ->setAxisAlignment(AxisAlignment::Start)
+            ->setAutoScale(false));
+
+    auto addBadge = [badgeMenu](char const* spriteFrame) {
+        auto badge = CCSprite::createWithSpriteFrameName(spriteFrame);
+        if (!badge) {
+            return;
         }
-        else if (isManager) {
-            roleLabel->setColor({255, 200, 0});
-        }
-        else if (isContributor) {
-            roleLabel->setColor({125, 255, 125});
-        }
-        else {
-            roleLabel->setColor({125, 200, 255});
-        }
-        cell->addChild(roleLabel);
-    }
+        badge->setScale(14.f / badge->getContentHeight());
+        badgeMenu->addChild(badge);
+    };
+    if (isManager) addBadge("GDX_manager_badge.png"_spr);
+    if (isContributor) addBadge("GDX_contributor_badge.png"_spr);
+    if (isLeaderboardMod) addBadge("GDX_leaderboard_badge.png"_spr);
+    if (isExcluded) addBadge("GJ_deleteIcon_001.png");  // no badge of its own, so a delete icon marks excluded users
+    badgeMenu->updateLayout();
+    cell->addChild(badgeMenu);
 
     return cell;
 }
@@ -656,6 +689,7 @@ void GDXUserPanelPopup::fetchUsers(int page) {
     body["argonToken"] = "";
     body["page"] = page;
     body["perPage"] = kUsersPerPage;
+    body["search"] = m_searchQuery;
 
     auto self = geode::Ref<GDXUserPanelPopup>(this);
     m_fetchUsersTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {

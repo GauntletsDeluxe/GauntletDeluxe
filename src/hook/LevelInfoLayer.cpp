@@ -73,6 +73,11 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
                 this->addChild(loadingSpinner);
             }
 
+            auto gdxBg = typeinfo_cast<CCSprite*>(this->getChildByID("background"));
+            if (gdxBg) {
+                gdxBg->setColor(gdx::gauntletColor());  // color based of the gauntlet color scheme
+            }
+
             geode::async::spawn([self, difficultySpritePos, loadingSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {

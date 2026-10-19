@@ -1,6 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include "../include/GDXConstant.hpp"
+#include "../include/GDXFavorites.hpp"
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
@@ -61,6 +62,15 @@ namespace {
             }
         }
         return out;
+    }
+
+    // same sprite the favorite filter toggle on the gauntlet list uses, so the two read as one feature
+    CCSprite* createFavoriteSprite(bool on) {
+        return CircleButtonSprite::createWithSpriteFrameName(
+            on ? "gj_heartOn_001.png" : "gj_heartOff_001.png",
+            0.85f,
+            on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
+            CircleBaseSize::Small);
     }
 }
 
@@ -346,6 +356,28 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
     addBackButton(this, BackButtonStyle::Green);
 
+    CCSpriteGrayscale* grayscaleTL =
+        CCSpriteGrayscale::createWithSpriteFrameName("GJ_sideArt_001.png");
+    CCSpriteGrayscale* grayscaleTR =
+        CCSpriteGrayscale::createWithSpriteFrameName("GJ_sideArt_001.png");
+
+    grayscaleTL->setPosition(
+        {CCDirector::sharedDirector()->getScreenLeft() - 1, CCDirector::sharedDirector()->getScreenTop() + 1});
+    grayscaleTL->setAnchorPoint(ccp(0, 1));
+    grayscaleTL->setColor({static_cast<GLubyte>(m_backgroundColor.r), static_cast<GLubyte>(m_backgroundColor.g), static_cast<GLubyte>(m_backgroundColor.b)});
+    grayscaleTL->setFlipY(true);
+    grayscaleTL->setZOrder(-1);
+    this->addChild(grayscaleTL);
+
+    grayscaleTR->setPosition(
+        {CCDirector::sharedDirector()->getScreenRight() + 1, CCDirector::sharedDirector()->getScreenTop() + 1});
+    grayscaleTR->setAnchorPoint(ccp(1, 1));
+    grayscaleTR->setColor({static_cast<GLubyte>(m_backgroundColor.r), static_cast<GLubyte>(m_backgroundColor.g), static_cast<GLubyte>(m_backgroundColor.b)});
+    grayscaleTR->setFlipX(true);
+    grayscaleTR->setFlipY(true);
+    grayscaleTR->setZOrder(-1);
+    this->addChild(grayscaleTR);
+
     auto bgIndex = m_gauntletData.isObject() ? m_gauntletData["bgIndex"].asInt().unwrapOr(14) : 14;
     auto bgName = formatBackgroundName(bgIndex);
     auto bg = cue::RepeatingBackground::create(bgName.c_str(), 1.0f, cue::RepeatMode::X, CCDirector::sharedDirector()->getWinSize());
@@ -396,6 +428,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     const float availableWidth = winSize.width - leftMargin - rightMargin;
     const float stepX = m_levels.size() > 1 ? availableWidth / static_cast<float>(m_levels.size() - 1) : 0.f;
     std::vector<CCPoint> centers;
+    std::vector<bool> centersUnlocked;
     bool showPath = true;
 
     auto completedLevels = loadCompletedGauntletLevels(localMode);
@@ -408,6 +441,16 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         rowNode->setContentSize({90.f, 90.f});
         rowNode->setScale(0.8f);
         rowNode->setCascadeOpacityEnabled(true);
+
+        // a slow, slightly different hover for every level so they don't bob in sync
+        float randomMoveUp = 2.0f + static_cast<float>(std::rand() % 15) / 10.0f;
+        float randomMoveDown = 2.0f + static_cast<float>(std::rand() % 15) / 10.0f;
+        auto moveUp = CCMoveBy::create(randomMoveUp, ccp(0, 5));
+        auto moveDown = CCMoveBy::create(randomMoveDown, ccp(0, -5));
+        auto easeMoveUp = CCEaseInOut::create(moveUp, 2.0f);
+        auto easeMoveDown = CCEaseInOut::create(moveDown, 2.0f);
+        auto hoverSequence = CCSequence::create(easeMoveUp, easeMoveDown, nullptr);
+        rowNode->runAction(CCRepeatForever::create(hoverSequence));
 
         auto imageContainer = CCNodeRGBA::create();
         if (imageContainer) {
@@ -563,43 +606,38 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
         }
 
         centers.push_back(rowButton->getPosition());
+        centersUnlocked.push_back(isUnlocked);
     }
 
     if (showPath) {
-        // draw an outward-curving path between gauntlets
-        // i wanna commit die with this path math stuff frfr
-        // i kinda forgor what all of these means so sure comment it
-        const int dotCount = 5;
-        const float baseCurve = 0.25f;
+        static const CCPoint pathDots[8] = {
+            {10.f, 2.5f}, {21.f, 11.5f}, {25.f, 26.f}, {20.5f, 41.f}, {15.f, 56.f}, {10.5f, 71.f}, {14.5f, 85.5f}, {25.f, 96.f}};
+        const float baseOffsetX = 27.f;
+        const float baseOffsetY = -2.f;
         for (auto j = 0u; j + 1 < centers.size(); ++j) {
-            auto a = centers[j];                                       // point a
-            auto b = centers[j + 1];                                   // point b
-            float dx = b.x - a.x;                                      // vector from a to b
-            float dy = b.y - a.y;                                      // vector from a to b
-            float midX = (a.x + b.x) * 0.5f;                           // midpoint between a and b
-            float midY = (a.y + b.y) * 0.5f;                           // midpoint between a and b
-            float perpX = -dy;                                         // perpendicular vector to ab
-            float perpY = dx;                                          // perpendicular vector to ab
-            float perpLen = std::sqrt(perpX * perpX + perpY * perpY);  // length of the perpendicular vector
-            if (perpLen != 0.0f) {                                     // normalize the perpendicular vector
-                perpX /= perpLen;
-                perpY /= perpLen;
+            // a path only leads to a level that has been reached
+            if (!centersUnlocked[j + 1]) {
+                continue;
             }
-            float curveStrength = std::max(50.f, std::abs(dx) * baseCurve);  // curve strength based on distance, with a minimum value
-            float controlX = midX + perpX * curveStrength * 1;               // control point for the quadratic Bezier curve
-            float controlY = midY + perpY * curveStrength * 1;
-            // i could do different type of curves n stuff but this is fine
-            // leetcode questions ah moment am i right???
-            for (int k = 1; k <= dotCount; ++k) {
-                float t = static_cast<float>(k) / static_cast<float>(dotCount + 1);  // parameter from 0 to 1 along the curve
-                float inv = 1.f - t;                                                 // inverse of t for the Bezier formula
-                float x = inv * inv * a.x + 2.f * inv * t * controlX + t * t * b.x;  // quadratic Bezier formula for x coordinate
-                float y = inv * inv * a.y + 2.f * inv * t * controlY + t * t * b.y;  // quadratic Bezier formula for y coordinate
-                auto dot = CCSprite::createWithSpriteFrameName("uiDot_001.png");     // simple dot sprite for the path
+            auto a = centers[j];
+            auto b = centers[j + 1];
+            auto lower = a.y < b.y ? a : b;
+            auto upper = a.y < b.y ? b : a;
+            float direction = upper.x >= lower.x ? 1.f : -1.f;  // the path mirrors depending on which side the upper island is
+            float scaleX = std::abs(upper.x - lower.x) / 90.f;
+            float scaleY = (upper.y - lower.y) / 100.f;
+            for (auto d = 0u; d < 8; ++d) {
+                auto dot = CCSprite::createWithSpriteFrameName("uiDot_001.png");
                 if (!dot) {
                     continue;
                 }
+                float x = lower.x + direction * (baseOffsetX + pathDots[d].x) * scaleX;
+                float y = lower.y + (baseOffsetY + pathDots[d].y) * scaleY;
                 dot->setPosition({x, y});
+                int lift = rand() % 20;  // each dot is a slightly lighter shade of the background color
+                dot->setColor({static_cast<GLubyte>(std::min(m_backgroundColor.r + lift, 255)),
+                    static_cast<GLubyte>(std::min(m_backgroundColor.g + lift, 255)),
+                    static_cast<GLubyte>(std::min(m_backgroundColor.b + lift, 255))});
                 if (m_levelsMenu) {
                     m_levelsMenu->addChild(dot, -3);
                 }
@@ -620,24 +658,27 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
     if (!m_localMode) {
         auto feedbackSprite = CCSprite::createWithSpriteFrameName(
             hasCompletedGauntlet ? "GJ_like2Btn_001.png" : "GJ_like2Btn2_001.png");
-        auto safeBtn = CCSprite::createWithSpriteFrameName("GDX_safeBtn_open_001.png"_spr);
+        auto safeSprite = CCSprite::createWithSpriteFrameName(hasCompletedGauntlet ? "GDX_safeBtn_open_001.png"_spr : "GDX_safeBtn_closed_001.png"_spr);
         if (feedbackSprite) {
             feedbackSprite->setScale(0.8f);
             auto feedbackBtn = CCMenuItemSpriteExtra::create(feedbackSprite, this, menu_selector(GDXGauntletLevelsLayer::onLikeItem));
             if (feedbackBtn) {
-                feedbackBtn->setPosition({34.f, 34.f});
-                if (!hasCompletedGauntlet) {
-                    feedbackBtn->setEnabled(false);
-                    feedbackBtn->setOpacity(180);
-                }
+                feedbackBtn->setPosition({25.f, 25.f});
                 if (bottomLeftMenu) {
                     bottomLeftMenu->addChild(feedbackBtn);
                 }
             }
         }
-        if (safeBtn) {
-            safeBtn->setScale(0.8f);
-            auto safeMenuItem = CCMenuItemSpriteExtra::create(safeBtn, this, menu_selector(GDXGauntletLevelsLayer::onSafeItem));
+        auto favoriteSprite = createFavoriteSprite(gdx::isFavoriteGauntlet(gauntletId()));
+        if (favoriteSprite) {
+            m_favoriteBtn = CCMenuItemSpriteExtra::create(favoriteSprite, this, menu_selector(GDXGauntletLevelsLayer::onFavoriteItem));
+            if (m_favoriteBtn && bottomLeftMenu) {
+                m_favoriteBtn->setPosition({70.f, 25.f});
+                bottomLeftMenu->addChild(m_favoriteBtn);
+            }
+        }
+        if (safeSprite) {
+            auto safeMenuItem = CCMenuItemSpriteExtra::create(safeSprite, this, menu_selector(GDXGauntletLevelsLayer::onSafeItem));
             if (safeMenuItem) {
                 safeMenuItem->setPosition(winSize.width - 34.f, winSize.height - 34.f);
                 if (bottomLeftMenu) {
@@ -652,7 +693,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             exportSprite->setScale(0.8f);
             auto exportBtn = CCMenuItemSpriteExtra::create(exportSprite, this, menu_selector(GDXGauntletLevelsLayer::onExportGauntlet));
             if (exportBtn) {
-                exportBtn->setPosition({34.f, 34.f});
+                exportBtn->setPosition({25.f, 25.f});
                 auto bottomLeftMenu = CCMenu::create(exportBtn, nullptr);
                 if (bottomLeftMenu) {
                     bottomLeftMenu->setPosition({0.f, 0.f});
@@ -674,7 +715,33 @@ void GDXGauntletLevelsLayer::onEnter() {
     gdx::setPlayingGauntletLevel(false);
 }
 
+int GDXGauntletLevelsLayer::gauntletId() const {
+    if (m_gauntletData.isObject()) {
+        return m_gauntletData["id"].asInt().unwrapOr(m_gauntletData["index"].asInt().unwrapOr(m_gauntletIndex));
+    }
+    return m_gauntletIndex;
+}
+
+void GDXGauntletLevelsLayer::onFavoriteItem(CCObject* sender) {
+    bool nowFavorite = gdx::toggleFavoriteGauntlet(gauntletId());
+    if (m_favoriteBtn) {
+        if (auto sprite = createFavoriteSprite(nowFavorite)) {
+            m_favoriteBtn->setSprite(sprite);
+            m_favoriteBtn->updateSprite();
+        }
+    }
+    //Notification::create(nowFavorite ? "Added to favorites" : "Removed from favorites", NotificationIcon::Success)->show();
+}
+
 void GDXGauntletLevelsLayer::onSafeItem(CCObject* sender) {
+    auto completedLevels = loadCompletedGauntletLevels(m_localMode);
+    bool hasCompletedGauntlet = !m_levels.empty() && std::all_of(m_levels.begin(), m_levels.end(), [&completedLevels](auto const& entry) {
+        return completedLevels.contains(entry.levelId);
+    });
+    if (!hasCompletedGauntlet) {
+        FLAlertLayer::create("Gauntlet Not Completed", "You must <cg>complete all levels</c> in this gauntlet to <cy>unlock the safe.</c>", "OK")->show();
+        return;
+    }
     std::string levelIds;
     for (auto const& entry : m_levels) {
         if (entry.levelId <= 0) continue;
@@ -843,6 +910,7 @@ void GDXGauntletLevelsLayer::onLevelClicked(CCObject* sender) {
             } else {
                 gdx::setPlayingGauntletLevel(true);
             }
+            gdx::setGauntletColor(m_backgroundColor);
             auto scene = LevelInfoLayer::scene(level, false);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
             return;
@@ -985,6 +1053,7 @@ void GDXGauntletLevelsLayer::update(float dt) {
             } else {
                 gdx::setPlayingGauntletLevel(true);
             }
+            gdx::setGauntletColor(m_backgroundColor);
             auto scene = LevelInfoLayer::scene(level, false);
             CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
 

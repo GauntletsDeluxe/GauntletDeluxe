@@ -44,6 +44,7 @@ private:
     void onManageGauntlets(CCObject* sender);
     void onRefreshGauntlets(CCObject* sender);
     void onToggleRecent(CCObject* sender);
+    void onToggleFavorite(CCObject* sender);
     void onToggleLocalMode(CCObject* sender);
     void onDiscord(CCObject* sender);
     void onPrev(CCObject* sender);
@@ -57,6 +58,9 @@ private:
     void updatePageButtons();
     void updateLocalToggleState();
     void updateRecentToggleState();
+    void updateFavoriteToggleState();
+    void showOnlineGauntlets();
+    void updateEmptyStateLabel();
     void updateSearchButtonState();
     void onEnter() override;
     void onSearchGauntlets(CCObject* sender);
@@ -83,6 +87,9 @@ private:
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
     CCMenuItemSpriteExtra* m_favoriteToggle = nullptr;
     bool m_favoriteFilter = false;
+    bool m_onlineLoaded = false;  // the online request has answered, so an empty list really is empty
+    matjson::Value m_fetchedGauntlets;
+    std::unordered_set<int> m_appliedFavorites;
     bool m_recentFilter = false;
     bool m_localMode = false;
     std::string m_tagFilter;

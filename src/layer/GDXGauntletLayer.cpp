@@ -21,6 +21,7 @@
 #include <Geode/binding/SetTextPopup.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
+#include "../include/GDXFavorites.hpp"
 #include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
 #include "Geode/ui/LazySprite.hpp"
@@ -480,6 +481,32 @@ namespace {
             CircleBaseSize::Small);
     }
 
+    static CCSprite* createFavoriteToggleSprite(bool on) {
+        return CircleButtonSprite::createWithSpriteFrameName(
+            on ? "gj_heartOn_001.png" : "gj_heartOff_001.png",
+            0.85f,
+            on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
+            CircleBaseSize::Small);
+    }
+
+    // a gauntlet is identified by its id, falling back to its index like the rest of the layer
+    static int gauntletIdOf(matjson::Value const& gauntlet) {
+        return gauntlet["id"].asInt().unwrapOr(gauntlet["index"].asInt().unwrapOr(-1));
+    }
+
+    static matjson::Value filterFavoriteGauntlets(matjson::Value const& gauntlets, std::unordered_set<int> const& favorites) {
+        matjson::Value filtered = matjson::Value::array();
+        if (!gauntlets.isArray()) {
+            return filtered;
+        }
+        for (auto const& gauntlet : gauntlets) {
+            if (favorites.contains(gauntletIdOf(gauntlet))) {
+                filtered.push(gauntlet);
+            }
+        }
+        return filtered;
+    }
+
     static CCSprite* createLocalToggleSprite(bool on) {
         return CircleButtonSprite::createWithSpriteFrameName(
             "GDX_localGauntlet.png"_spr,
@@ -662,6 +689,10 @@ void GDXGauntletLayer::onEnter() {
     gdx::setPlayingGauntletLevel(false);
     this->scheduleUpdate();
     fetchUserData();
+
+    if (m_favoriteFilter && !m_localMode && m_appliedFavorites != gdx::loadFavoriteGauntlets()) {
+        showOnlineGauntlets();
+    }
 }
 
 void GDXGauntletLayer::onExit() {
@@ -813,6 +844,10 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
 }
 
 void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
+    if (m_emptyStateLabel) {
+        m_emptyStateLabel->setVisible(false);
+    }
+
     if (m_localMode) {
         m_localGauntlets = loadLocalGauntlets();
         if (!m_localGauntlets.isArray() || m_localGauntlets.size() == 0) {
@@ -822,8 +857,7 @@ void GDXGauntletLayer::onRefreshGauntlets(CCObject* sender) {
             }
             m_localGauntletButtons.clear();
             //Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
-            m_emptyStateLabel->setVisible(true);
-            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
+            updateEmptyStateLabel();
             updatePageButtons();
             return;
         }
@@ -845,6 +879,49 @@ void GDXGauntletLayer::onToggleRecent(CCObject* sender) {
         createGauntletPages(m_gauntlets);
         fetchGauntlets();
     }
+}
+
+void GDXGauntletLayer::onToggleFavorite(CCObject* sender) {
+    m_favoriteFilter = !m_favoriteFilter;
+    updateFavoriteToggleState();
+    if (!m_localMode) {
+        showOnlineGauntlets();
+    }
+}
+
+// builds the online pages from the last response, keeping only favorites while the favorite filter is on
+void GDXGauntletLayer::showOnlineGauntlets() {
+    if (!m_fetchedGauntlets.isArray()) {
+        return;
+    }
+
+    m_appliedFavorites = m_favoriteFilter ? gdx::loadFavoriteGauntlets() : std::unordered_set<int>{};
+    auto shown = m_favoriteFilter ? filterFavoriteGauntlets(m_fetchedGauntlets, m_appliedFavorites) : m_fetchedGauntlets;
+
+    m_onlineGauntlets = shown;
+    createGauntletPages(m_onlineGauntlets, false);
+}
+
+// the one place that decides the empty label: it follows the mode being shown, so the other mode can't leave it behind
+void GDXGauntletLayer::updateEmptyStateLabel() {
+    if (!m_emptyStateLabel) {
+        return;
+    }
+
+    bool show = false;
+    if (m_localMode) {
+        show = !m_localGauntlets.isArray() || m_localGauntlets.size() == 0;
+        if (show) {
+            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
+        }
+    } else {
+        // not while the request is still out, an empty list then just means nothing has arrived yet
+        show = m_onlineLoaded && (!m_onlineGauntlets.isArray() || m_onlineGauntlets.size() == 0);
+        if (show) {
+            m_emptyStateLabel->setString(m_favoriteFilter ? "You have no favorite gauntlets here." : "No gauntlets were found.");
+        }
+    }
+    m_emptyStateLabel->setVisible(show);
 }
 
 void GDXGauntletLayer::onSearchGauntlets(CCObject* sender) {
@@ -883,8 +960,7 @@ void GDXGauntletLayer::setTextPopupClosed(SetTextPopup* popup, gd::string text) 
             }
             m_localGauntletButtons.clear();
             //Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
-            m_emptyStateLabel->setVisible(true);
-            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
+            updateEmptyStateLabel();
             updatePageButtons();
             return;
         }
@@ -929,6 +1005,7 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     updateSearchButtonState();
     updateLocalToggleState();
     updateRecentToggleState();
+    updateFavoriteToggleState();
 
     if (m_localMode) {
         m_localGauntlets = loadLocalGauntlets();
@@ -939,8 +1016,7 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
             }
             m_localGauntletButtons.clear();
             //Notification::create("Local Gauntlet is empty. Please add one.", NotificationIcon::Info)->show();
-            m_emptyStateLabel->setVisible(true);
-            m_emptyStateLabel->setString("Local Gauntlet is empty.\nPlease add one.");
+            updateEmptyStateLabel();
         } else {
             auto filtered = filterLocalGauntlets(m_localGauntlets, m_searchQuery);
             createGauntletPages(filtered, true);
@@ -989,6 +1065,9 @@ void GDXGauntletLayer::onToggleLocalMode(CCObject* sender) {
     if (m_bottomRightMenu) {
         m_bottomRightMenu->updateLayout();
     }
+
+    // the label from the other mode must not stay behind
+    updateEmptyStateLabel();
 
     if (m_onlineGauntlets.isArray() && m_onlineGauntlets.size() > 0) {
         updatePageButtons();
@@ -1071,9 +1150,8 @@ void GDXGauntletLayer::fetchGauntlets() {
         m_loadingSpinner->setVisible(true);
     }
 
-    if (m_emptyStateLabel) {
-        m_emptyStateLabel->setVisible(false);
-    }
+    m_onlineLoaded = false;
+    updateEmptyStateLabel();
 
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
     bool hasQuery = false;
@@ -1120,13 +1198,9 @@ void GDXGauntletLayer::fetchGauntlets() {
                 if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
-                if (gauntlets.isArray() && gauntlets.size() == 0) {
-                    //Notification::create("No gauntlets were found.", NotificationIcon::Info)->show();
-                    self->m_emptyStateLabel->setVisible(true);
-                    self->m_emptyStateLabel->setString("No gauntlets were found.");
-                }
-                self->m_onlineGauntlets = gauntlets;
-                self->createGauntletPages(self->m_onlineGauntlets, false);
+                self->m_onlineLoaded = true;
+                self->m_fetchedGauntlets = gauntlets;
+                self->showOnlineGauntlets();
             }
         });
 
@@ -1280,7 +1354,9 @@ CCMenuItemSpriteExtra* GDXGauntletLayer::createGauntletButton(const matjson::Val
                 gauntletBg->addChildAtPosition(particle, Anchor::Center, {0, 0}, false);
                 particle->setZOrder(5);
                 particle->resetSystem();
-                particle->update(0.15f);
+                for (int i = 0; i < 5; ++i) {
+                    particle->update(0.15f);
+                }
             }
         }
     }
@@ -1691,9 +1767,7 @@ void GDXGauntletLayer::createGauntletPages(const matjson::Value& gauntlets, bool
         m_gauntlets = gauntlets;
     }
 
-    if (m_emptyStateLabel) {
-        m_emptyStateLabel->setVisible(gauntlets.isArray() && gauntlets.size() == 0);
-    }
+    updateEmptyStateLabel();
 
     m_completedGauntletLevels = loadCompletedGauntletLevels(local);
     m_claimedGauntlets = loadCompletedGauntlets();
@@ -2006,6 +2080,21 @@ void GDXGauntletLayer::updateSearchButtonState() {
             m_tagFilterBtn->setSprite(tagSprite);
             m_tagFilterBtn->updateSprite();
         }
+    }
+}
+
+void GDXGauntletLayer::updateFavoriteToggleState() {
+    if (m_favoriteToggle) {
+        auto sprite = createFavoriteToggleSprite(m_favoriteFilter);
+        if (sprite) {
+            m_favoriteToggle->setSprite(sprite);
+            m_favoriteToggle->updateSprite();
+        }
+        // favorites only exist for online gauntlets
+        m_favoriteToggle->setVisible(!m_localMode);
+    }
+    if (m_bottomRightMenu) {
+        m_bottomRightMenu->updateLayout();
     }
 }
 

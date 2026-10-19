@@ -197,13 +197,13 @@ bool GDXGauntletManagePopup::init() {
 
     if (m_localMode) {
         auto addBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Add Local Gauntlet", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
+            ButtonSprite::create("Add Local Gauntlet", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onAdd));
         actionMenu->addChild(addBtn);
 
         auto importBtn = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("Import Gauntlet", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+            ButtonSprite::create("Import Gauntlet", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
             this,
             menu_selector(GDXGauntletManagePopup::onImport));
         actionMenu->addChild(importBtn);
@@ -211,7 +211,7 @@ bool GDXGauntletManagePopup::init() {
         // manager only
         if (gdx::isManager()) {
             auto addBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("Add Gauntlet", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
+                ButtonSprite::create("Add Gauntlet", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onAdd));
             actionMenu->addChild(addBtn);
@@ -219,7 +219,7 @@ bool GDXGauntletManagePopup::init() {
 
         if (gdx::isLeaderboardMod()) {
             auto userBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("User Panel", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+                ButtonSprite::create("User Panel", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onUserPanel));
             actionMenu->addChild(userBtn);
@@ -228,13 +228,13 @@ bool GDXGauntletManagePopup::init() {
         // manager and contributor
         if (gdx::isManager() || gdx::isContributor()) {
             auto showTagsBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("View Tags", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+                ButtonSprite::create("View Tags", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onShowTags));
             actionMenu->addChild(showTagsBtn);
 
             auto openManageBtn = CCMenuItemSpriteExtra::create(
-                ButtonSprite::create("Asset Manager", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+                ButtonSprite::create("Asset Manager", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
                 this,
                 menu_selector(GDXGauntletManagePopup::onManageAssets));
             actionMenu->addChild(openManageBtn);
@@ -243,7 +243,7 @@ bool GDXGauntletManagePopup::init() {
         // argon token copyable
         if (gdx::isManager() || gdx::isContributor() || gdx::isLeaderboardMod()) {
             auto argonBtn = geode::Button::createWithNode(
-                ButtonSprite::create("Copy Token", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
+                ButtonSprite::create("Copy Token", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
                 [this](geode::Button* sender) {
                     auto accountData = argon::getGameAccountData();
                     m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
