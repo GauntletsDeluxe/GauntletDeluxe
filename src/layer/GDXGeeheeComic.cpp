@@ -1,5 +1,6 @@
 #include "GDXGeeheeComic.hpp"
 #include "GDXScrollLayer.hpp"
+#include "Geode/ui/TextArea.hpp"
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/utils/base64.hpp>
@@ -49,7 +50,7 @@ namespace {
         return decodeEntities(std::string(content));
     }
 
-    // the author's text from a description: every paragraph except the image and the "view it on Newgrounds" one
+    // the headings of a description, which carry the comic's own text
     std::string descriptionText(std::string_view html) {
         std::string out;
         size_t pos = 0;
@@ -61,7 +62,9 @@ namespace {
             if (pos == std::string_view::npos) pos = html.size();
             else ++pos;
 
-            if (block.find("<img") != std::string_view::npos || block.find("newgrounds.com") != std::string_view::npos) continue;
+            // only the headings (<h1>..<h6>) are wanted, not the paragraphs
+            auto heading = block.find("<h");
+            if (heading == std::string_view::npos || heading + 2 >= block.size() || block[heading + 2] < '1' || block[heading + 2] > '6') continue;
 
             std::string text;
             bool inTag = false;
@@ -310,14 +313,10 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
 
         auto view = PageView{.sprite = sprite};
         if (!entry.text.empty()) {
-            auto textWidth = imageSize.width - 40.f;
-            auto textHeight = imageSize.height - 20.f;
-            auto text = RichTextArea::create(entry.text, "chatFont.fnt", 0.8f, textWidth);
+            auto text = RichTextArea::create(entry.text, "chatFont.fnt", 0.8f, imageSize.width);
             text->setAnchorPoint({0.5f, 0.5f});
-            // shrink long posts until they fit over the image
-            for (auto scale = 0.7f; text->getHeight() > textHeight && scale >= 0.3f; scale -= 0.1f) {
-                text->setScale(scale);
-            }
+            text->setAlignment(cocos2d::kCCTextAlignmentCenter);
+            text->setWrappingMode(geode::WrappingMode::WORD_WRAP);
             text->setPosition(imagePos);
             text->setVisible(false);
             page->addChild(text, 1);
