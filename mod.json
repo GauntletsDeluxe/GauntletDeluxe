@@ -38,6 +38,7 @@
 		"enableLocalServer":{
 			"type": "bool",
 			"name": "Use Local Server",
+			"description": "For development only. <cy>If you unable to access the mod, disable this option to use the main server.</c> <cr>Only enable this if you are the developing the backend locally</c>",
 			"default": false
 		}
 	}

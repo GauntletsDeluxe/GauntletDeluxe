@@ -56,7 +56,8 @@
 ### Credits
 
 - <cg>**Geode Mod Developer**</c>: [ArcticWoof](user:7689052)
+- <cg>**Mod Backend Developer**</c>: [Supernova3339](user:4882817)
 - <cg>**Mod Design and Assets**</c>: [DaRealSkellyGuy](user:29960249) & [Darkore](user:3595559)
-- <cg>**Gauntlet Managers/Maintainers**</c>: [DaRealSkellyGuy](user:29960249), [Niki2025](user:26209086) & [bonneville1](user:4882817), [Supernova3339](user:4882817)
+- <cg>**Gauntlet Managers/Maintainers**</c>: [DaRealSkellyGuy](user:29960249), [Niki2025](user:26209086) & [Supernova3339](user:4882817)
 
 ![King Clawthorne](arcticwoof.rated_layouts/king.png)
