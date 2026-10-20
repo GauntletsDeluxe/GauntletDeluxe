@@ -25,7 +25,7 @@ using namespace geode::prelude;
 namespace {
     // the sync merges server progress into the same files GDXGauntletLayer reads when it builds its pages
     asp::fs::path completedFilePath(char const* name) {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create save directory: {}", res.unwrapErr().message());
         }
@@ -140,7 +140,7 @@ bool GDXLeaderboardLayer::init() {
         }
     }
 
-    m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
+    m_scrollbar = Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {25.f, 0.f});
     createTabs();
 
@@ -215,18 +215,18 @@ void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
 
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    auto upopupRef = Ref<UploadActionPopup>(upopup);
     m_syncAccountTask.spawn([upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([upopupRef] {
+            co_await async::waitForMainThread([upopupRef] {
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
             co_return;
         }
 
         body["argonToken"] = std::move(token);
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
@@ -234,7 +234,7 @@ void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
 
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to sync account.");
-            co_await geode::async::waitForMainThread([upopupRef, errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([upopupRef, errMsg = std::move(errMsg)] {
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
@@ -248,7 +248,7 @@ void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
             success = result["success"].asBool().unwrapOr(false);
         }
         if (!success) {
-            co_await geode::async::waitForMainThread([upopupRef] {
+            co_await async::waitForMainThread([upopupRef] {
                 if (upopupRef) upopupRef->showFailMessage("Failed to sync account.");
             });
             co_return;
@@ -263,7 +263,7 @@ void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
         auto levelsSaved = saveIds("completed_gauntlet_levels.json", completedLevels);
         auto gauntletsSaved = saveIds("completed_gauntlets.json", completedGauntlets);
 
-        co_await geode::async::waitForMainThread([upopupRef, levelsSaved, gauntletsSaved] {
+        co_await async::waitForMainThread([upopupRef, levelsSaved, gauntletsSaved] {
             if (!upopupRef) return;
             if (levelsSaved && gauntletsSaved) upopupRef->showSuccessMessage("Account synced successfully.");
             else upopupRef->showFailMessage("Failed to save sync data.");
@@ -297,22 +297,22 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     body["argonToken"] = "";
     body["type"] = m_type;
 
-    auto self = geode::Ref<GDXLeaderboardLayer>(this);
+    auto self = Ref<GDXLeaderboardLayer>(this);
     m_leaderboardTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
+            co_await async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         body["argonToken"] = std::move(token);
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 if (self && self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -322,7 +322,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 if (self && self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -331,7 +331,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
         }
 
         auto leaderboard = std::move(jsonResult).unwrap();
-        co_await geode::async::waitForMainThread([self = std::move(self), leaderboard = std::move(leaderboard)]() mutable {
+        co_await async::waitForMainThread([self = std::move(self), leaderboard = std::move(leaderboard)]() mutable {
             if (!self || !self->m_list) {
                 return;
             }
@@ -374,7 +374,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 playerIcon->setPosition({55.f, cell->getContentSize().height / 2.f});
                 cell->addChild(playerIcon);
 
-                auto usernameLabel = geode::Button::createWithLabel(userName.c_str(), "goldFont.fnt", [accountId](geode::Button* sender) {
+                auto usernameLabel = Button::createWithLabel(userName.c_str(), "goldFont.fnt", [accountId](Button* sender) {
                     ProfilePage::create(accountId, false)->show();
                 });
                 usernameLabel->setPosition({85.f, cell->getContentSize().height / 2.f});

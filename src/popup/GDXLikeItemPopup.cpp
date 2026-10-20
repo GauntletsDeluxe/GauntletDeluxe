@@ -124,12 +124,12 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
     body["type"] = type;
 
     m_selfHold = this;
-    auto self = geode::Ref<GDXLikeItemPopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    auto self = Ref<GDXLikeItemPopup>(this);
+    auto upopupRef = Ref<UploadActionPopup>(upopup);
     m_requestTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
                 if (self) self->m_isSending = false;
                 if (!upopupRef) return;
                 if (upopupRef) {
@@ -140,7 +140,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         }
 
         body["argonToken"] = std::move(token);
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
@@ -148,7 +148,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to send feedback.");
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
                 if (self) self->m_isSending = false;
                 if (!upopupRef) return;
                 if (upopupRef) {
@@ -160,7 +160,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
                 if (self) self->m_isSending = false;
                 if (!upopupRef) return;
                 if (upopupRef) {
@@ -173,7 +173,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
         auto result = std::move(jsonResult).unwrap();
         if (!result["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Request was not successful.");
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)]() {
                 if (self) self->m_isSending = false;
                 if (!upopupRef) return;
                 if (upopupRef) {
@@ -183,7 +183,7 @@ void GDXLikeItemPopup::sendFeedback(const std::string& type) {
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
+        co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)]() {
             if (self) self->m_isSending = false;
             if (!upopupRef) return;
             if (upopupRef) {

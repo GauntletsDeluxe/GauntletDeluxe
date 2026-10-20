@@ -16,7 +16,7 @@ struct GDXUserInfo {
     static GDXUserInfo fromJson(const matjson::Value& value);
 };
 
-class GDXGauntletCreditsPopup : public geode::Popup {
+class GDXGauntletCreditsPopup : public Popup {
 public:
     static GDXGauntletCreditsPopup* create(const matjson::Value& gauntlet);
 

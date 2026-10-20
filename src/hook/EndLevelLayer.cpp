@@ -13,7 +13,7 @@ using namespace geode::prelude;
 
 namespace {
     static asp::fs::path getCompletedGauntletLevelsPath(bool local) {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
         }
@@ -92,7 +92,7 @@ namespace {
 
 class $modify(GDXEndLevelLayer, EndLevelLayer) {
     struct Fields {
-        geode::async::TaskHolder<> m_requestTask;
+        async::TaskHolder<> m_requestTask;
     };
 
     void customSetup() override {
@@ -164,7 +164,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 body["time"] = static_cast<int>(this->m_playLayer->m_level->m_attemptTime);
                 body["jumps"] = static_cast<int>(this->m_playLayer->m_level->m_jumps);
 
-                auto self = geode::Ref<EndLevelLayer>(this);
+                auto self = Ref<EndLevelLayer>(this);
                 m_fields->m_requestTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
@@ -173,7 +173,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 }
 
                 body["argonToken"] = std::move(token);
-                auto response = co_await geode::utils::web::WebRequest()
+                auto response = co_await utils::web::WebRequest()
                                     .url(url)
                                     .header("Content-Type", "application/json")
                                     .bodyJSON(body)
@@ -197,7 +197,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
 
                 auto rewardValue = result["reward"].asInt().unwrapOr(0);
                 auto levelPointsValue = result["levelPoints"].asInt().unwrapOr(0);
-                co_await geode::async::waitForMainThread([self = std::move(self), rewardValue, levelPointsValue, levelId] {
+                co_await async::waitForMainThread([self = std::move(self), rewardValue, levelPointsValue, levelId] {
                     if (!self) return;
                     auto gdxSelf = static_cast<GDXEndLevelLayer*>(self.data());
                     auto completedLevels = loadCompletedGauntletLevels(false);

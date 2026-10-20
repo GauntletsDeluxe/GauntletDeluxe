@@ -16,7 +16,7 @@ private:
     TextInput* m_accountIdInput = nullptr;
     CCMenu* m_manageMenu = nullptr;
     NineSlice* m_manageMenuBg = nullptr;
-    geode::NineSlice* m_usernameBackground = nullptr;
+    NineSlice* m_usernameBackground = nullptr;
     CCLabelBMFont* m_usernameLabel = nullptr;
     CCMenuItemToggler* m_excludeBtn = nullptr;
     CCMenuItemToggler* m_promoteBtn = nullptr;
@@ -32,17 +32,17 @@ private:
     std::string m_searchQuery;
     LoadingSpinner* m_listSpinner = nullptr;
     CCLabelBMFont* m_pageInfoLabel = nullptr;
-    geode::Button* m_prevPageBtn = nullptr;
-    geode::Button* m_nextPageBtn = nullptr;
+    Button* m_prevPageBtn = nullptr;
+    Button* m_nextPageBtn = nullptr;
     int m_page = 1;
     int m_totalPages = 1;
     int m_totalUsers = 0;
 
-    geode::async::TaskHolder<> m_findAccountTask;
-    geode::async::TaskHolder<> m_excludeTask;
-    geode::async::TaskHolder<> m_promoteTask;
-    geode::async::TaskHolder<> m_promoteModTask;
-    geode::async::TaskHolder<> m_fetchUsersTask;
+    async::TaskHolder<> m_findAccountTask;
+    async::TaskHolder<> m_excludeTask;
+    async::TaskHolder<> m_promoteTask;
+    async::TaskHolder<> m_promoteModTask;
+    async::TaskHolder<> m_fetchUsersTask;
     void onExclude(CCObject* sender);
     void onPromote(CCObject* sender);
     void onPromoteMod(CCObject* sender);

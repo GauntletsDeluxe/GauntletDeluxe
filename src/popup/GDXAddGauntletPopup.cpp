@@ -21,7 +21,7 @@ using namespace geode::prelude;
 
 namespace {
     static asp::fs::path getLocalGauntletPath() {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
         }
@@ -605,20 +605,20 @@ void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
 }
 
 void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
-    auto self = geode::Ref<GDXAddGauntletPopup>(this);
+    auto self = Ref<GDXAddGauntletPopup>(this);
     m_addSpriteTask.spawn([self = std::move(self)]() mutable -> arc::Future<> {
-        geode::utils::file::FilePickOptions options;
-        geode::utils::file::FilePickOptions::Filter filter;
+        utils::file::FilePickOptions options;
+        utils::file::FilePickOptions::Filter filter;
         filter.description = "PNG Images";
         filter.files = {"*.png"};
         options.filters.push_back(std::move(filter));
 
-        auto result = co_await geode::utils::file::pick(
-            geode::utils::file::PickMode::OpenFile,
+        auto result = co_await utils::file::pick(
+            utils::file::PickMode::OpenFile,
             std::move(options));
 
         if (!result) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Sprite selection failed.", NotificationIcon::Error)->show();
             });
             co_return;
@@ -626,20 +626,20 @@ void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
 
         auto maybeThisIsThePath = std::move(result).unwrap();
         if (!maybeThisIsThePath.has_value()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
+            co_await async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         auto path = std::move(maybeThisIsThePath).value();
         if (path.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Sprite selection failed.", NotificationIcon::Error)->show();
             });
             co_return;
         }
 
-        auto pathString = geode::utils::string::pathToString(path);
-        co_await geode::async::waitForMainThread([self = std::move(self), pathString = std::move(pathString)]() {
+        auto pathString = utils::string::pathToString(path);
+        co_await async::waitForMainThread([self = std::move(self), pathString = std::move(pathString)]() {
             if (self) {
                 self->m_spritePath = std::move(pathString);
                 self->updateLocalSpriteNameLabel();
@@ -998,7 +998,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
             // ass ass ass ass
             std::string oldSpritePath = m_editMode ? m_editGauntlet["spritePath"].asString().unwrapOr("") : "";
             if (m_spritePath != oldSpritePath) {
-                auto savedDir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+                auto savedDir = dirs::getModsSaveDir() / Mod::get()->getID();
                 if (auto res = asp::fs::createDirAll(savedDir); !res) {
                     log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
                 }
@@ -1058,12 +1058,12 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         return;
     }
 
-    auto self = geode::Ref<GDXAddGauntletPopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upoup);
+    auto self = Ref<GDXAddGauntletPopup>(this);
+    auto upopupRef = Ref<UploadActionPopup>(upoup);
     m_addGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
@@ -1072,7 +1072,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
         body["argonToken"] = std::move(token);
 
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
@@ -1080,7 +1080,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to add gauntlet.");
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
@@ -1088,7 +1088,7 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
         }
 
         if (response.ok()) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
                 bool isEdit = false;
                 if (self) {
                     isEdit = self->m_editMode;

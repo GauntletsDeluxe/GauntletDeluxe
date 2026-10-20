@@ -46,7 +46,7 @@ static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& u
     sprite->setID("gauntlet-image");
     sprite->setAutoResize(true);
     sprite->setPosition(position);
-    sprite->setLoadCallback([sprite, url](geode::Result<> const& result) {
+    sprite->setLoadCallback([sprite, url](Result<> const& result) {
         if (!result) {
             return;
         }
@@ -61,7 +61,7 @@ static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& u
 
 namespace {
     static asp::fs::path getLocalGauntletPath() {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
         }
@@ -173,10 +173,10 @@ bool GDXGauntletManagePopup::init() {
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
     m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {60.f, -30.f});
-    m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
+    m_scrollbar = Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
 
-    m_searchInput = geode::TextInput::create(320.f, "Search gauntlets", "chatFont.fnt");
+    m_searchInput = TextInput::create(320.f, "Search gauntlets", "chatFont.fnt");
     if (m_searchInput) {
         m_searchInput->setAnchorPoint({0.5f, 1.f});
         m_mainLayer->addChildAtPosition(m_searchInput, Anchor::Top, {60.f, -35.f});
@@ -242,17 +242,17 @@ bool GDXGauntletManagePopup::init() {
 
         // argon token copyable
         if (gdx::isManager() || gdx::isContributor() || gdx::isLeaderboardMod()) {
-            auto argonBtn = geode::Button::createWithNode(
+            auto argonBtn = Button::createWithNode(
                 ButtonSprite::create("Copy Token", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-                [this](geode::Button* sender) {
+                [this](Button* sender) {
                     auto accountData = argon::getGameAccountData();
                     m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
                         auto token = co_await gdx::argonToken(accountData);
                         if (token.empty()) {
                             co_return;
                         }
-                        co_await geode::async::waitForMainThread([token]() {
-                            geode::utils::clipboard::write(token);
+                        co_await async::waitForMainThread([token]() {
+                            utils::clipboard::write(token);
                             Notification::create("Copied Argon Token!", NotificationIcon::Success)->show();
                         }); }, []() {});
                 });
@@ -284,7 +284,7 @@ void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
             std::string(gdx::baseApiUrl()),
             accountData.accountId,
             token);
-        co_await geode::async::waitForMainThread([url = std::move(url)]() {
+        co_await async::waitForMainThread([url = std::move(url)]() {
             utils::web::openLinkInBrowser(url);
         });
         co_return; }, []() {});
@@ -303,7 +303,7 @@ void GDXGauntletManagePopup::onManageTags(CCObject* sender) {
             std::string(gdx::baseApiUrl()),
             accountData.accountId,
             token);
-        co_await geode::async::waitForMainThread([url = std::move(url)]() {
+        co_await async::waitForMainThread([url = std::move(url)]() {
             utils::web::openLinkInBrowser(url);
         });
         co_return; }, []() {});
@@ -315,15 +315,15 @@ void GDXGauntletManagePopup::onAdd(CCObject* sender) {
 
 void GDXGauntletManagePopup::onImport(CCObject* sender) {
     auto self = Ref(this);
-    geode::async::spawn([self = std::move(self)]() mutable -> arc::Future<> {
-        geode::utils::file::FilePickOptions options;
-        geode::utils::file::FilePickOptions::Filter filter;
+    async::spawn([self = std::move(self)]() mutable -> arc::Future<> {
+        utils::file::FilePickOptions options;
+        utils::file::FilePickOptions::Filter filter;
         filter.description = "JSON Files";
         filter.files = {"*.json"};
         options.filters.push_back(std::move(filter));
 
-        auto result = co_await geode::utils::file::pick(
-            geode::utils::file::PickMode::OpenFile,
+        auto result = co_await utils::file::pick(
+            utils::file::PickMode::OpenFile,
             std::move(options));
 
         if (!result) {
@@ -338,7 +338,7 @@ void GDXGauntletManagePopup::onImport(CCObject* sender) {
         auto targetPath = maybePath.value();
         auto contentRes = asp::fs::readToString(targetPath);
         if (!contentRes) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Failed to read JSON file.", NotificationIcon::Error)->show();
             });
             co_return;
@@ -346,7 +346,7 @@ void GDXGauntletManagePopup::onImport(CCObject* sender) {
 
         auto jsonRes = matjson::parse(contentRes.unwrap());
         if (!jsonRes) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Invalid JSON format.", NotificationIcon::Error)->show();
             });
             co_return;
@@ -354,7 +354,7 @@ void GDXGauntletManagePopup::onImport(CCObject* sender) {
 
         auto importedData = std::move(jsonRes).unwrap();
         if (!importedData.isObject()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {
+            co_await async::waitForMainThread([self = std::move(self)]() {
                 Notification::create("Invalid gauntlet JSON file.", NotificationIcon::Error)->show();
             });
             co_return;
@@ -372,7 +372,7 @@ void GDXGauntletManagePopup::onImport(CCObject* sender) {
         gauntlets.push(std::move(importedData));
 
         bool success = saveLocalGauntlets(gauntlets);
-        co_await geode::async::waitForMainThread([self = std::move(self), success]() {
+        co_await async::waitForMainThread([self = std::move(self), success]() {
             if (success) {
                 self->refreshList();
                 Notification::create("Imported 1 gauntlet!", NotificationIcon::Success)->show();
@@ -441,23 +441,23 @@ void GDXGauntletManagePopup::fetchGauntlets() {
     }
 
     auto url = std::string(gdx::baseApiUrl()) + "/getGauntlets";
-    auto self = geode::Ref<GDXGauntletManagePopup>(this);
+    auto self = Ref<GDXGauntletManagePopup>(this);
     m_fetchGauntletsTask.spawn([self = std::move(self), url = std::move(url)]() mutable -> arc::Future<> {
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
+            co_await async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self)]() {});
+            co_await async::waitForMainThread([self = std::move(self)]() {});
             co_return;
         }
 
         auto gauntlets = std::move(jsonResult).unwrap();
-        co_await geode::async::waitForMainThread([self = std::move(self), gauntlets = std::move(gauntlets)]() mutable {
+        co_await async::waitForMainThread([self = std::move(self), gauntlets = std::move(gauntlets)]() mutable {
             if (self) self->createGauntletList(gauntlets);
         });
         co_return; }, []() {});
@@ -512,7 +512,7 @@ void GDXGauntletManagePopup::rebuildGauntletList() {
 }
 
 void GDXGauntletManagePopup::update(float dt) {
-    geode::Popup::update(dt);
+    Popup::update(dt);
     if (!m_searchInput) {
         return;
     }
@@ -592,7 +592,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     if (gauntletImage) {
         gauntletImage->setAutoResize(true);
         gauntletImage->setPosition(gauntletSpritePosition);
-        gauntletImage->setLoadCallback([fallbackSprite](geode::Result<> const& result) {
+        gauntletImage->setLoadCallback([fallbackSprite](Result<> const& result) {
             if (result && fallbackSprite) {
                 fallbackSprite->removeFromParent();
             }
@@ -775,12 +775,12 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
 
     auto upopup = UploadActionPopup::create(nullptr, "Deleting Gauntlet...");
     upopup->show();
-    auto self = geode::Ref<GDXGauntletManagePopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    auto self = Ref<GDXGauntletManagePopup>(this);
+    auto upopupRef = Ref<UploadActionPopup>(upopup);
     m_deleteGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
@@ -789,7 +789,7 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
 
         body["argonToken"] = std::move(token);
 
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
@@ -797,14 +797,14 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
 
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to delete gauntlet.");
-            co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+        co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
             if (self) self->refreshList();
             if (!upopupRef) return;
             if (upopupRef) upopupRef->showSuccessMessage("Gauntlet deleted successfully.");

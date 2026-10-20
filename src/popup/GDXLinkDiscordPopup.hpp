@@ -8,7 +8,7 @@
 
 using namespace geode::prelude;
 
-class GDXLinkDiscordPopup : public geode::Popup {
+class GDXLinkDiscordPopup : public Popup {
 public:
     static GDXLinkDiscordPopup* create();
 
@@ -36,9 +36,9 @@ private:
     bool m_isLinked = false;
 
     // Async tasks
-    geode::async::TaskHolder<> m_checkStatusTask;
-    geode::async::TaskHolder<> m_linkTask;
-    geode::async::TaskHolder<> m_unlinkTask;
+    async::TaskHolder<> m_checkStatusTask;
+    async::TaskHolder<> m_linkTask;
+    async::TaskHolder<> m_unlinkTask;
 
     void fetchDiscordStatus(bool silent = false);
     void checkLinkScheduler(float dt);

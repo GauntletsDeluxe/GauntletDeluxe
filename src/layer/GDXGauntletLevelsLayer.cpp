@@ -18,7 +18,7 @@ using namespace geode::prelude;
 
 namespace {
     static asp::fs::path getCompletedGauntletLevelsPath(bool local) {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
         }
@@ -167,7 +167,7 @@ static LazySprite* createLazySpriteWithFallback(CCNode* parent, const std::strin
         }
     }
 
-    sprite->setLoadCallback([fallbackSprite, fallbackShadow, url, sprite, position, size, parent, zOrder](geode::Result<> const& result) {
+    sprite->setLoadCallback([fallbackSprite, fallbackShadow, url, sprite, position, size, parent, zOrder](Result<> const& result) {
         if (!result) {
             return;
         }
@@ -233,7 +233,7 @@ static LazySprite* createLocalSprite(CCNode* parent, const asp::fs::path& path, 
         }
     }
 
-    sprite->setLoadCallback([fallbackSprite, fallbackShadow, sprite, position, size, parent, zOrder](geode::Result<> const& result) {
+    sprite->setLoadCallback([fallbackSprite, fallbackShadow, sprite, position, size, parent, zOrder](Result<> const& result) {
         if (!result) {
             return;
         }
@@ -467,8 +467,8 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
 
         auto imageTarget = imageContainer ? imageContainer : rowNode;
         auto imagePosition = imageContainer
-                                 ? ccp(imageTarget->getContentSize().width / 2.f, imageTarget->getContentSize().height / 2.f)
-                                 : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
+                                ? ccp(imageTarget->getContentSize().width / 2.f, imageTarget->getContentSize().height / 2.f)
+                                : ccp(rowNode->getContentSize().width / 2.f, rowNode->getContentSize().height / 2.f);
         LazySprite* localSprite = nullptr;
         if (m_localMode && m_gauntletData["spritePath"].isString()) {
             auto spritePath = m_gauntletData["spritePath"].asString().unwrapOr("");
@@ -620,7 +620,7 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
             auto b = centers[j + 1];
             auto lower = a.y < b.y ? a : b;
             auto upper = a.y < b.y ? b : a;
-            float direction = upper.x >= lower.x ? 1.f : -1.f;  // the path mirrors depending on which side the upper island is
+            float direction = upper.x >= lower.x ? 1.f : -1.f; // the path mirrors depending on which side the upper island is
             float scaleX = std::abs(upper.x - lower.x) / 90.f;
             float scaleY = (upper.y - lower.y) / 100.f;
             for (auto d = 0u; d < 8; ++d) {
@@ -632,9 +632,9 @@ bool GDXGauntletLevelsLayer::init(CCArray* levels, const std::string& title, con
                 float y = lower.y + (baseOffsetY + pathDots[d].y) * scaleY;
                 dot->setPosition({x, y});
                 dot->setID("path-dot");
-                dot->setTag(static_cast<int>(j + 1));  // index of the level this path leads to
+                dot->setTag(static_cast<int>(j + 1)); // index of the level this path leads to
                 dot->setVisible(pathUnlocked);
-                int lift = rand() % 20;  // each dot is a slightly lighter shade of the background color
+                int lift = rand() % 20; // each dot is a slightly lighter shade of the background color
                 dot->setColor({static_cast<GLubyte>(std::min(m_backgroundColor.r + lift, 255)),
                     static_cast<GLubyte>(std::min(m_backgroundColor.g + lift, 255)),
                     static_cast<GLubyte>(std::min(m_backgroundColor.b + lift, 255))});
@@ -1002,9 +1002,9 @@ void GDXGauntletLevelsLayer::onLikeItem(CCObject* sender) {
 
 void GDXGauntletLevelsLayer::onExportGauntlet(CCObject* sender) {
     auto self = Ref(this);
-    geode::async::spawn([self = std::move(self)]() mutable -> arc::Future<> {
-        geode::utils::file::FilePickOptions options;
-        geode::utils::file::FilePickOptions::Filter filter;
+    async::spawn([self = std::move(self)]() mutable -> arc::Future<> {
+        utils::file::FilePickOptions options;
+        utils::file::FilePickOptions::Filter filter;
         filter.description = "JSON Files";
         filter.files = {"*.json"};
         options.filters.push_back(std::move(filter));
@@ -1017,8 +1017,8 @@ void GDXGauntletLevelsLayer::onExportGauntlet(CCObject* sender) {
         }
         options.defaultPath = fmt::format("{}.json", safeName);
 
-        auto result = co_await geode::utils::file::pick(
-            geode::utils::file::PickMode::SaveFile,
+        auto result = co_await utils::file::pick(
+            utils::file::PickMode::SaveFile,
             std::move(options));
 
         if (!result) {
@@ -1033,7 +1033,7 @@ void GDXGauntletLevelsLayer::onExportGauntlet(CCObject* sender) {
         auto targetPath = maybePath.value();
 
         matjson::Value body = self->m_gauntletData.isObject() ? self->m_gauntletData : matjson::Value::object();
-        body.erase("spritePath");  // nuh uh
+        body.erase("spritePath"); // nuh uh
         body.erase("isFeatured");
         body.erase("levelIds");
         body.erase("index");
@@ -1057,7 +1057,7 @@ void GDXGauntletLevelsLayer::onExportGauntlet(CCObject* sender) {
         auto writeRes = asp::fs::write(targetPath, jsonString.c_str(), jsonString.size());
         bool success = static_cast<bool>(writeRes);
 
-        co_await geode::async::waitForMainThread([self = std::move(self), success]() {
+        co_await async::waitForMainThread([self = std::move(self), success]() {
             if (success) {
                 Notification::create("Gauntlet exported successfully!", NotificationIcon::Success)->show();
             } else {

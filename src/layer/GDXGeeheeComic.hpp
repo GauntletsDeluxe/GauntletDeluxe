@@ -7,6 +7,8 @@
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/ui/TextArea.hpp>
 
+using namespace geode::prelude;
+
 class GDXScrollLayer;
 
 class GDXGeeheeComic : public CCBlockLayer {
@@ -26,8 +28,8 @@ private:
 
     // the tap-to-reveal text sits over its comic image on the same page
     struct PageView {
-        geode::LazySprite* sprite = nullptr;
-        geode::RichTextArea* text = nullptr;
+        LazySprite* sprite = nullptr;
+        RichTextArea* text = nullptr;
         bool textShown = false;
     };
 
@@ -46,11 +48,11 @@ private:
     cocos2d::CCSize m_panelSize;
     cocos2d::CCPoint m_panelCenter;
     cocos2d::CCMenu* m_buttonMenu = nullptr;
-    geode::LoadingSpinner* m_loadingSpinner = nullptr;
+    LoadingSpinner* m_loadingSpinner = nullptr;
     cocos2d::CCLabelBMFont* m_statusLabel = nullptr;
     cocos2d::CCLabelBMFont* m_workInProgressLabel = nullptr;
     GDXScrollLayer* m_scroll = nullptr;
     std::vector<std::string> m_links;
     std::vector<PageView> m_views;
-    geode::async::TaskHolder<> m_fetchTask;
+    async::TaskHolder<> m_fetchTask;
 };

@@ -38,7 +38,7 @@ static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& u
     sprite->setID("gauntlet-image");
     sprite->setAutoResize(true);
     sprite->setPosition(position);
-    sprite->setLoadCallback([sprite, url](geode::Result<> const& result) {
+    sprite->setLoadCallback([sprite, url](Result<> const& result) {
         if (!result) {
             return;
         }
@@ -153,7 +153,7 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     }
 
     auto spriteByName = spriteBy.username.empty() ? "Unknown" : spriteBy.username.c_str();
-    auto spriteByLabel = geode::Button::createWithLabel(spriteByName, "goldFont.fnt", [spriteBy](geode::Button* sender) {
+    auto spriteByLabel = Button::createWithLabel(spriteByName, "goldFont.fnt", [spriteBy](Button* sender) {
         ProfilePage::create(spriteBy.accountId, false)->show();
     });
     if (spriteByLabel) {
@@ -189,7 +189,7 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     }
 
     auto suggestedByName = suggestedBy.username.empty() ? "Unknown" : suggestedBy.username.c_str();
-    auto suggestedByLabel = geode::Button::createWithLabel(suggestedByName, "goldFont.fnt", [suggestedBy](geode::Button* sender) {
+    auto suggestedByLabel = Button::createWithLabel(suggestedByName, "goldFont.fnt", [suggestedBy](Button* sender) {
         ProfilePage::create(suggestedBy.accountId, false)->show();
     });
     if (suggestedByLabel) {

@@ -105,7 +105,7 @@ void GDXAddTagsPopup::onSelectColor(CCObject* sender) {
         static_cast<GLubyte>(std::clamp(m_g, 0, 255)),
         static_cast<GLubyte>(std::clamp(m_b, 0, 255))};
 
-    m_colorPopup = geode::ColorPickPopup::create(color);
+    m_colorPopup = ColorPickPopup::create(color);
     if (m_colorPopup) {
         m_colorPopup->setCallback([this](const cocos2d::ccColor4B& selectedColor) {
             m_r = selectedColor.r;
@@ -144,12 +144,12 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
     auto upopup = UploadActionPopup::create(nullptr, m_editIndex >= 0 ? "Updating tag..." : "Adding tag...");
     upopup->show();
 
-    auto self = geode::Ref<GDXAddTagsPopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    auto self = Ref<GDXAddTagsPopup>(this);
+    auto upopupRef = Ref<UploadActionPopup>(upopup);
     m_requestTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
@@ -157,14 +157,14 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
         }
 
         body["argonToken"] = std::move(token);
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Request failed.");
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
@@ -173,7 +173,7 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to parse response.");
             });
@@ -183,14 +183,14 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
         auto result = std::move(jsonResult).unwrap();
         if (!result["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Request was not successful.");
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+        co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
             if (self) {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showSuccessMessage(self->m_editIndex >= 0 ? "Tag updated." : "Tag added.");

@@ -123,9 +123,9 @@ bool GDXGeeheeComic::init() {
     this->setOpacity(150);
     this->setContentSize(winSize);
 
-    auto backBtn = geode::Button::createWithSpriteFrameName(
+    auto backBtn = Button::createWithSpriteFrameName(
         "GJ_arrow_02_001.png",
-        [this](geode::Button* sender) {
+        [this](Button* sender) {
             this->onClose(sender);
         });
     backBtn->setID("back-button");
@@ -188,7 +188,7 @@ void GDXGeeheeComic::onOpenLink(CCObject*) {
     if (!m_scroll) return;
     auto page = static_cast<size_t>(m_scroll->getCurrentPage());
     if (page >= m_links.size() || m_links[page].empty()) return;
-    geode::utils::web::openLinkInBrowser(m_links[page]);
+    utils::web::openLinkInBrowser(m_links[page]);
 }
 
 void GDXGeeheeComic::onTap(CCPoint const& worldPos) {
@@ -218,11 +218,11 @@ void GDXGeeheeComic::showError(std::string const& message) {
 
 void GDXGeeheeComic::fetchComics() {
     // weak so the layer is never released (and destroyed) on the worker thread if it was closed mid-request
-    auto self = geode::WeakRef<GDXGeeheeComic>(this);
+    auto self = WeakRef<GDXGeeheeComic>(this);
     m_fetchTask.spawn([self = std::move(self)]() mutable -> arc::Future<> {
-        auto response = co_await geode::utils::web::WebRequest().get(kFeedUrl);
+        auto response = co_await utils::web::WebRequest().get(kFeedUrl);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([self] {
+            co_await async::waitForMainThread([self] {
                 if (auto layer = self.lock()) layer->showError("Failed to load the comics.");
             });
             co_return;
@@ -253,9 +253,9 @@ void GDXGeeheeComic::fetchComics() {
 
             constexpr std::string_view marker = "base64,";
             if (src.starts_with("data:") && src.find(marker) != std::string::npos) {
-                auto decoded = geode::utils::base64::decode(
+                auto decoded = utils::base64::decode(
                     std::string_view(src).substr(src.find(marker) + marker.size()),
-                    geode::utils::base64::Base64Variant::Normal);
+                    utils::base64::Base64Variant::Normal);
                 if (decoded) entry.imageData = std::move(decoded).unwrap();
             } else {
                 entry.imageUrl = std::move(src);
@@ -268,7 +268,7 @@ void GDXGeeheeComic::fetchComics() {
         // the feed is newest first, but the comic reads oldest first
         std::reverse(entries.begin(), entries.end());
 
-        co_await geode::async::waitForMainThread([self, entries = std::move(entries)]() mutable {
+        co_await async::waitForMainThread([self, entries = std::move(entries)]() mutable {
             auto layer = self.lock();
             if (!layer) return;
             if (entries.empty()) {
@@ -299,7 +299,7 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
         auto imagePos = CCPoint{m_panelCenter.x, m_panelCenter.y - 10.f};
         auto sprite = LazySprite::create(imageSize, true);
         sprite->setPosition(imagePos);
-        sprite->setLoadCallback([sprite = geode::Ref<LazySprite>(sprite), imageSize](Result<> const& result) {
+        sprite->setLoadCallback([sprite = Ref<LazySprite>(sprite), imageSize](Result<> const& result) {
             if (!result) return;
             auto size = sprite->getContentSize();
             if (size.width <= 0.f || size.height <= 0.f) return;
@@ -316,7 +316,7 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
             auto text = RichTextArea::create(entry.text, "chatFont.fnt", 0.8f, imageSize.width);
             text->setAnchorPoint({0.5f, 0.5f});
             text->setAlignment(cocos2d::kCCTextAlignmentCenter);
-            text->setWrappingMode(geode::WrappingMode::WORD_WRAP);
+            text->setWrappingMode(WrappingMode::WORD_WRAP);
             text->setPosition(imagePos);
             text->setVisible(false);
             page->addChild(text, 1);

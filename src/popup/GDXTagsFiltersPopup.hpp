@@ -6,7 +6,9 @@
 #include <Geode/ui/Layout.hpp>
 #include <functional>
 
-class GDXTagsFiltersPopup : public geode::Popup {
+using namespace geode::prelude;
+
+class GDXTagsFiltersPopup : public Popup {
 public:
     static GDXTagsFiltersPopup* create(std::function<void(std::string const&)> const& onApply, std::string const& initialTag = "");
 
@@ -24,10 +26,10 @@ private:
 
     cocos2d::CCMenu* m_tagMenu = nullptr;
     cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
-    geode::LoadingSpinner* m_loadingSpinner = nullptr;
+    LoadingSpinner* m_loadingSpinner = nullptr;
     std::string m_selectedTag;
     int m_selectedIndex = -1;
     matjson::Value m_tags;
-    geode::async::TaskHolder<> m_fetchTagsTask;
+    async::TaskHolder<> m_fetchTagsTask;
     std::function<void(std::string const&)> m_onApply;
 };

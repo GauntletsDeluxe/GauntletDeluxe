@@ -19,7 +19,7 @@ class $modify(GDXHookGauntletSelectLayer, GauntletSelectLayer) {
             auto gauntletBtnSpr = CircleButtonSprite::create(
                 gauntletSpr,
                 color,
-                geode::CircleBaseSize::Medium
+                CircleBaseSize::Medium
             );
             gauntletBtnSpr->setScale(0.75);
 

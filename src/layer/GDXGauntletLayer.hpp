@@ -87,7 +87,7 @@ private:
     CCMenuItemSpriteExtra* m_localToggle = nullptr;
     CCMenuItemSpriteExtra* m_favoriteToggle = nullptr;
     bool m_favoriteFilter = false;
-    bool m_onlineLoaded = false;  // the online request has answered, so an empty list really is empty
+    bool m_onlineLoaded = false; // the online request has answered, so an empty list really is empty
     matjson::Value m_fetchedGauntlets;
     std::unordered_set<int> m_appliedFavorites;
     bool m_recentFilter = false;
@@ -113,8 +113,8 @@ private:
     int m_levelPoints = Mod::get()->getSavedValue<int>("levelPoints", 0);
     int m_currentPage = -1;
 
-    geode::async::TaskHolder<> m_fetchGauntletsTask;
-    geode::async::TaskHolder<> m_fetchUserDataTask;
-    geode::async::TaskHolder<> m_syncAccountTask;
-    geode::async::TaskHolder<> m_completeGauntletTask;
+    async::TaskHolder<> m_fetchGauntletsTask;
+    async::TaskHolder<> m_fetchUserDataTask;
+    async::TaskHolder<> m_syncAccountTask;
+    async::TaskHolder<> m_completeGauntletTask;
 };

@@ -5,7 +5,7 @@
 
 using namespace geode::prelude;
 
-class GDXLikeItemPopup : public geode::Popup {
+class GDXLikeItemPopup : public Popup {
 public:
     static GDXLikeItemPopup* create(const matjson::Value& gauntlet);
 
@@ -20,6 +20,6 @@ private:
     bool m_isSending = false;
     CCMenuItemSpriteExtra* m_likeButton = nullptr;
     CCMenuItemSpriteExtra* m_dislikeButton = nullptr;
-    geode::Ref<cocos2d::CCObject> m_selfHold;
-    geode::async::TaskHolder<> m_requestTask;
+    Ref<cocos2d::CCObject> m_selfHold;
+    async::TaskHolder<> m_requestTask;
 };

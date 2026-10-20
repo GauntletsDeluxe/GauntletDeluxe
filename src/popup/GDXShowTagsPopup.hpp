@@ -4,7 +4,9 @@
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/Layout.hpp>
 
-class GDXShowTagsPopup : public geode::Popup {
+using namespace geode::prelude;
+
+class GDXShowTagsPopup : public Popup {
 public:
     static GDXShowTagsPopup* create(std::string const& gauntletName, const matjson::Value& tags);
 

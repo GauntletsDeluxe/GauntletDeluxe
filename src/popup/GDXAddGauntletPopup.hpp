@@ -8,6 +8,8 @@
 #include <cue/ListNode.hpp>
 #include <vector>
 
+using namespace geode::prelude;
+
 class SelectArtLayer;
 
 struct LevelRewardEntry {
@@ -19,7 +21,7 @@ struct LevelRewardEntry {
 
 class GDXGauntletManagePopup;
 
-class GDXAddGauntletPopup : public geode::Popup, public LevelManagerDelegate, public SelectArtDelegate {
+class GDXAddGauntletPopup : public Popup, public LevelManagerDelegate, public SelectArtDelegate {
 public:
     static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, bool localMode = false);
     static GDXAddGauntletPopup* create(GDXGauntletManagePopup* owner, const matjson::Value& gauntlet, int index, bool localMode = false);
@@ -64,20 +66,20 @@ private:
     bool m_searchingLevel = false;
     bool m_unsaved = true;
     gd::string m_pendingSearchKey;
-    geode::TextInput* m_nameInput = nullptr;
-    geode::TextInput* m_gauntletReward = nullptr;
-    geode::TextInput* m_descriptionInput = nullptr;
-    geode::TextInput* m_suggestedByInput = nullptr;
-    geode::TextInput* m_spriteByInput = nullptr;
+    TextInput* m_nameInput = nullptr;
+    TextInput* m_gauntletReward = nullptr;
+    TextInput* m_descriptionInput = nullptr;
+    TextInput* m_suggestedByInput = nullptr;
+    TextInput* m_spriteByInput = nullptr;
     int m_bgIndex = 14;
     CCMenuItemSpriteExtra* m_bgIndexButton = nullptr;
     cocos2d::CCSprite* m_bgIconSpr = nullptr;
-    geode::TextInput* m_levelInput = nullptr;
-    geode::TextInput* m_levelRewardInput = nullptr;
+    TextInput* m_levelInput = nullptr;
+    TextInput* m_levelRewardInput = nullptr;
     cue::ListNode* m_levelList = nullptr;
     cocos2d::ccColor3B m_selectedColor = {255, 255, 255};
     cocos2d::CCSprite* m_colorSpr = nullptr;
-    geode::ColorPickPopup* m_colorPopup = nullptr;
+    ColorPickPopup* m_colorPopup = nullptr;
     CCMenuItemSpriteExtra* m_featureToggle = nullptr;
     bool m_isFeatured = false;
     std::vector<LevelRewardEntry> m_levels;
@@ -90,6 +92,6 @@ private:
     std::string m_spritePath;
     cocos2d::CCLabelBMFont* m_spriteNameLabel = nullptr;
     cocos2d::CCMenu* m_settingsMenu = nullptr;
-    geode::async::TaskHolder<> m_addGauntletTask;
-    geode::async::TaskHolder<> m_addSpriteTask;
+    async::TaskHolder<> m_addGauntletTask;
+    async::TaskHolder<> m_addSpriteTask;
 };

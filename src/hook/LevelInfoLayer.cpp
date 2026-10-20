@@ -7,7 +7,7 @@ using namespace geode::prelude;
 
 namespace {
     static asp::fs::path getCompletedGauntletLevelsPath() {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
         }
@@ -75,10 +75,10 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
 
             auto gdxBg = typeinfo_cast<CCSprite*>(this->getChildByID("background"));
             if (gdxBg) {
-                gdxBg->setColor(gdx::gauntletColor());  // color based of the gauntlet color scheme
+                gdxBg->setColor(gdx::gauntletColor()); // color based of the gauntlet color scheme
             }
 
-            geode::async::spawn([self, difficultySpritePos, loadingSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
+            async::spawn([self, difficultySpritePos, loadingSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
                 auto token = co_await gdx::argonToken(accountData);
                 if (token.empty()) {
                     co_return;
@@ -86,7 +86,7 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
 
                 body["argonToken"] = std::move(token);
 
-                auto response = co_await geode::utils::web::WebRequest()
+                auto response = co_await utils::web::WebRequest()
                                     .url(url)
                                     .header("Content-Type", "application/json")
                                     .bodyJSON(body)
@@ -107,7 +107,7 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
                     co_return;
                 }
 
-                co_await geode::async::waitForMainThread([self, levelPoints, loadingSpinner, difficultySpritePos, levelId] {
+                co_await async::waitForMainThread([self, levelPoints, loadingSpinner, difficultySpritePos, levelId] {
                     if (!self) {
                         return;
                     }

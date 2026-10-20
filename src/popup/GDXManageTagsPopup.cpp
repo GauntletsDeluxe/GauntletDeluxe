@@ -31,7 +31,7 @@ bool GDXManageTagsPopup::init() {
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
     addSideArt(m_mainLayer, SideArt::TopRight, SideArtStyle::PopupGold, false);
 
-    m_searchInput = geode::TextInput::create(380.f, "Search tags", "chatFont.fnt");
+    m_searchInput = TextInput::create(380.f, "Search tags", "chatFont.fnt");
     if (m_searchInput) {
         m_searchInput->setAnchorPoint({0.5f, 1.f});
         m_mainLayer->addChildAtPosition(m_searchInput, Anchor::Top, {0.f, -35.f});
@@ -46,7 +46,7 @@ bool GDXManageTagsPopup::init() {
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
     m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, -15.f});
-    m_scrollbar = geode::Scrollbar::create(m_list->getScrollLayer());
+    m_scrollbar = Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
 
     CCMenu* bottomMenu = CCMenu::create();
@@ -115,7 +115,7 @@ void GDXManageTagsPopup::onManageTagsWeb(CCObject* sender) {
             std::string(gdx::baseApiUrl()),
             accountData.accountId,
             token);
-        co_await geode::async::waitForMainThread([url = std::move(url)]() {
+        co_await async::waitForMainThread([url = std::move(url)]() {
             utils::web::openLinkInBrowser(url);
         });
         co_return; }, []() {});
@@ -147,11 +147,11 @@ void GDXManageTagsPopup::fetchTags() {
     }
 
     auto url = std::string(gdx::baseApiUrl()) + "/getTags";
-    auto self = geode::Ref<GDXManageTagsPopup>(this);
+    auto self = Ref<GDXManageTagsPopup>(this);
     m_fetchTagsTask.spawn([self = std::move(self), url = std::move(url)]() mutable -> arc::Future<> {
-        auto response = co_await geode::utils::web::WebRequest().get(url);
+        auto response = co_await utils::web::WebRequest().get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)] {
+            co_await async::waitForMainThread([self = std::move(self)] {
                 if (self && self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -161,7 +161,7 @@ void GDXManageTagsPopup::fetchTags() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self)] {
+            co_await async::waitForMainThread([self = std::move(self)] {
                 if (self && self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -170,7 +170,7 @@ void GDXManageTagsPopup::fetchTags() {
         }
 
         auto tags = std::move(jsonResult).unwrap();
-        co_await geode::async::waitForMainThread([self = std::move(self), tags = std::move(tags)]() mutable {
+        co_await async::waitForMainThread([self = std::move(self), tags = std::move(tags)]() mutable {
             if (self) {
                 if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
@@ -409,12 +409,12 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
 
     auto upopup = UploadActionPopup::create(nullptr, "Deleting tag...");
     upopup->show();
-    auto self = geode::Ref<GDXManageTagsPopup>(this);
-    auto upopupRef = geode::Ref<UploadActionPopup>(upopup);
+    auto self = Ref<GDXManageTagsPopup>(this);
+    auto upopupRef = Ref<UploadActionPopup>(upopup);
     m_deleteTagTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
             });
@@ -422,14 +422,14 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
         }
 
         body["argonToken"] = std::move(token);
-        auto response = co_await geode::utils::web::WebRequest()
+        auto response = co_await utils::web::WebRequest()
                             .url(url)
                             .header("Content-Type", "application/json")
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to delete tag.");
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
@@ -438,7 +438,7 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage("Failed to delete tag.");
             });
@@ -448,14 +448,14 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
         auto result = std::move(jsonResult).unwrap();
         if (!result["success"].asBool().unwrapOr(false)) {
             auto errMsg = gdx::getResponseMessage(response, "Failed to delete tag.");
-            co_await geode::async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
+            co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self), errMsg = std::move(errMsg)] {
                 if (!upopupRef) return;
                 if (upopupRef) upopupRef->showFailMessage(errMsg);
             });
             co_return;
         }
 
-        co_await geode::async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
+        co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
             if (!upopupRef) return;
             if (upopupRef) upopupRef->showSuccessMessage("Tag deleted successfully.");
             if (self) self->fetchTags();

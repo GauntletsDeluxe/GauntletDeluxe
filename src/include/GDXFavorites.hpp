@@ -4,12 +4,14 @@
 #include <asp/fs.hpp>
 #include <unordered_set>
 
+using namespace geode::prelude;
+
 // Favorite gauntlets are stored as a plain json array of gauntlet ids in favorite_gauntlet.json.
 namespace gdx {
     inline asp::fs::path favoriteGauntletsPath() {
-        auto dir = geode::dirs::getModsSaveDir() / geode::Mod::get()->getID();
+        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
-            geode::log::warn("Failed to create favorites save directory: {}", res.unwrapErr().message());
+            log::warn("Failed to create favorites save directory: {}", res.unwrapErr().message());
         }
         return dir / "favorite_gauntlet.json";
     }
@@ -23,13 +25,13 @@ namespace gdx {
 
         auto content = asp::fs::readToString(path);
         if (!content) {
-            geode::log::warn("Failed to read favorite gauntlets file: {}", content.unwrapErr());
+            log::warn("Failed to read favorite gauntlets file: {}", content.unwrapErr());
             return out;
         }
 
         auto parsed = matjson::parse(content.unwrap());
         if (!parsed) {
-            geode::log::warn("Failed to parse favorite gauntlets JSON: {}", parsed.unwrapErr());
+            log::warn("Failed to parse favorite gauntlets JSON: {}", parsed.unwrapErr());
             return out;
         }
 
@@ -52,7 +54,7 @@ namespace gdx {
         auto data = array.dump();
         auto res = asp::fs::write(favoriteGauntletsPath(), data.c_str(), data.size());
         if (!res) {
-            geode::log::warn("Failed to save favorite gauntlets: {}", res.unwrapErr());
+            log::warn("Failed to save favorite gauntlets: {}", res.unwrapErr());
         }
         return static_cast<bool>(res);
     }

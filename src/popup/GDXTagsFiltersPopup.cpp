@@ -121,11 +121,11 @@ void GDXTagsFiltersPopup::fetchTags() {
     }
 
     auto url = std::string(gdx::baseApiUrl()) + "/getTags";
-    auto self = geode::Ref<GDXTagsFiltersPopup>(this);
+    auto self = Ref<GDXTagsFiltersPopup>(this);
     m_fetchTagsTask.spawn([self = std::move(self), url = std::move(url)]() mutable -> arc::Future<> {
-        auto response = co_await geode::utils::web::WebRequest().get(url);
+        auto response = co_await utils::web::WebRequest().get(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await geode::async::waitForMainThread([self = std::move(self)] {
+            co_await async::waitForMainThread([self = std::move(self)] {
                 if (self && self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -135,7 +135,7 @@ void GDXTagsFiltersPopup::fetchTags() {
 
         auto jsonResult = response.json();
         if (!jsonResult) {
-            co_await geode::async::waitForMainThread([self = std::move(self)] {
+            co_await async::waitForMainThread([self = std::move(self)] {
                 if (self && self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
@@ -144,7 +144,7 @@ void GDXTagsFiltersPopup::fetchTags() {
         }
 
         auto tags = std::move(jsonResult).unwrap();
-        co_await geode::async::waitForMainThread([self = std::move(self), tags = std::move(tags)]() mutable {
+        co_await async::waitForMainThread([self = std::move(self), tags = std::move(tags)]() mutable {
             if (self) {
                 if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);

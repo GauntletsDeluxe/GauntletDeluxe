@@ -6,9 +6,11 @@
 #include <Geode/ui/TextInput.hpp>
 #include <cue/ListNode.hpp>
 
+using namespace geode::prelude;
+
 class GDXAddGauntletPopup;
 
-class GDXGauntletManagePopup : public geode::Popup {
+class GDXGauntletManagePopup : public Popup {
 public:
     static GDXGauntletManagePopup* create();
     static GDXGauntletManagePopup* create(bool localMode);
@@ -33,14 +35,14 @@ private:
     void deleteGauntletAtIndex(int index);
     cocos2d::CCNode* createGauntletCell(const matjson::Value& gauntlet, int index);
     cue::ListNode* m_list = nullptr;
-    geode::TextInput* m_searchInput = nullptr;
-    geode::Scrollbar* m_scrollbar = nullptr;
+    TextInput* m_searchInput = nullptr;
+    Scrollbar* m_scrollbar = nullptr;
     cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
     matjson::Value m_gauntlets;
     matjson::Value m_allGauntlets;
     std::string m_searchFilter;
     bool m_localMode = false;
-    geode::async::TaskHolder<> m_manageAssetsTask;
-    geode::async::TaskHolder<> m_fetchGauntletsTask;
-    geode::async::TaskHolder<> m_deleteGauntletTask;
+    async::TaskHolder<> m_manageAssetsTask;
+    async::TaskHolder<> m_fetchGauntletsTask;
+    async::TaskHolder<> m_deleteGauntletTask;
 };

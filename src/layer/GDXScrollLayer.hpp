@@ -4,6 +4,8 @@
 #include <Geode/ui/ScrollLayer.hpp>
 #include <Geode/ui/Scrollbar.hpp>
 
+using namespace geode::prelude;
+
 // dont ask me how i know the boomscrolllayer exactly
 // i just have the yum code for it and attempted to mimic it, its sorta a mess
 class GDXScrollLayer : public cocos2d::CCLayer {
@@ -45,8 +47,8 @@ private:
 
     cocos2d::CCArray* m_pages = nullptr;
     cocos2d::CCLayer* m_contentLayer = nullptr;
-    geode::ScrollLayer* m_scrollProxy = nullptr;
-    geode::Scrollbar* m_scrollbar = nullptr;
+    ScrollLayer* m_scrollProxy = nullptr;
+    Scrollbar* m_scrollbar = nullptr;
     bool m_scrollbarWasTouching = false;
 
     cocos2d::CCTouch* m_touch = nullptr;

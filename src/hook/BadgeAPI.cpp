@@ -15,9 +15,9 @@ namespace {
         bool loaded = false;
     };
 
-    void fetchUserRoles(int targetAccountId, geode::Function<void(const UserRoles&)> callback) {
+    void fetchUserRoles(int targetAccountId, Function<void(const UserRoles&)> callback) {
         static std::unordered_map<int, UserRoles> s_roleCache;
-        static std::unordered_map<int, std::vector<geode::Function<void(const UserRoles&)>>> s_pending;
+        static std::unordered_map<int, std::vector<Function<void(const UserRoles&)>>> s_pending;
 
         if (auto it = s_roleCache.find(targetAccountId); it != s_roleCache.end() && it->second.loaded) {
             callback(it->second);
@@ -35,10 +35,10 @@ namespace {
         body["accountId"] = accountData.accountId;
         body["targetAccountId"] = targetAccountId;
 
-        geode::async::spawn([targetAccountId, url = std::move(url), body = std::move(body), accountData]() mutable -> arc::Future<> {
+        async::spawn([targetAccountId, url = std::move(url), body = std::move(body), accountData]() mutable -> arc::Future<> {
             auto token = co_await gdx::argonToken(accountData);
             if (token.empty()) {
-                co_await geode::async::waitForMainThread([targetAccountId]() {
+                co_await async::waitForMainThread([targetAccountId]() {
                     auto pending = std::move(s_pending[targetAccountId]);
                     s_pending.erase(targetAccountId);
                     for (auto& cb : pending) cb(UserRoles{});
@@ -47,14 +47,14 @@ namespace {
             }
             body["argonToken"] = std::move(token);
 
-            auto response = co_await geode::utils::web::WebRequest()
+            auto response = co_await utils::web::WebRequest()
                                 .url(url)
                                 .header("Content-Type", "application/json")
                                 .bodyJSON(body)
                                 .post(url);
 
             if (response.error() || response.cancelled() || !response.ok()) {
-                co_await geode::async::waitForMainThread([targetAccountId]() {
+                co_await async::waitForMainThread([targetAccountId]() {
                     auto pending = std::move(s_pending[targetAccountId]);
                     s_pending.erase(targetAccountId);
                     for (auto& cb : pending) cb(UserRoles{});
@@ -64,7 +64,7 @@ namespace {
 
             auto jsonResult = response.json();
             if (!jsonResult) {
-                co_await geode::async::waitForMainThread([targetAccountId]() {
+                co_await async::waitForMainThread([targetAccountId]() {
                     auto pending = std::move(s_pending[targetAccountId]);
                     s_pending.erase(targetAccountId);
                     for (auto& cb : pending) cb(UserRoles{});
@@ -74,7 +74,7 @@ namespace {
 
             auto userData = std::move(jsonResult).unwrap();
             if (!userData.isObject()) {
-                co_await geode::async::waitForMainThread([targetAccountId]() {
+                co_await async::waitForMainThread([targetAccountId]() {
                     auto pending = std::move(s_pending[targetAccountId]);
                     s_pending.erase(targetAccountId);
                     for (auto& cb : pending) cb(UserRoles{});
@@ -88,7 +88,7 @@ namespace {
             roles.isLeaderboardMod = userData["isLeaderboardMod"].asBool().unwrapOr(false);
             roles.loaded = true;
 
-            co_await geode::async::waitForMainThread([targetAccountId, roles]() {
+            co_await async::waitForMainThread([targetAccountId, roles]() {
                 s_roleCache[targetAccountId] = roles;
                 auto pending = std::move(s_pending[targetAccountId]);
                 s_pending.erase(targetAccountId);

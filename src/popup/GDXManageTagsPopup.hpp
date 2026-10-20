@@ -8,7 +8,9 @@
 #include <Geode/ui/Scrollbar.hpp>
 #include <cue/ListNode.hpp>
 
-class GDXManageTagsPopup : public geode::Popup {
+using namespace geode::prelude;
+
+class GDXManageTagsPopup : public Popup {
 public:
     static GDXManageTagsPopup* create();
     void refreshTags();
@@ -29,13 +31,13 @@ private:
     cocos2d::CCNode* createTagCell(const matjson::Value& tag, int index);
 
     cue::ListNode* m_list = nullptr;
-    geode::Scrollbar* m_scrollbar = nullptr;
-    geode::TextInput* m_searchInput = nullptr;
+    Scrollbar* m_scrollbar = nullptr;
+    TextInput* m_searchInput = nullptr;
     cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
     matjson::Value m_tags;
     matjson::Value m_allTags;
     std::string m_searchFilter;
-    geode::LoadingSpinner* m_loadingSpinner = nullptr;
-    geode::async::TaskHolder<> m_fetchTagsTask;
-    geode::async::TaskHolder<> m_deleteTagTask;
+    LoadingSpinner* m_loadingSpinner = nullptr;
+    async::TaskHolder<> m_fetchTagsTask;
+    async::TaskHolder<> m_deleteTagTask;
 };
