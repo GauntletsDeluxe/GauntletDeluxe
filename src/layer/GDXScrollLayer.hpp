@@ -18,6 +18,10 @@ public:
     void updatePages();
     void setScrollbarVisible(bool visible);
     void setScrollbarPosition(cocos2d::CCPoint const& pos);
+    // for hosting the scroller in a popup-style layer that swallows touches at a higher priority
+    void setScrollTouchPriority(int priority);
+    // called with the world position when a touch ends without having dragged the pages
+    void setTapCallback(std::function<void(cocos2d::CCPoint const&)> callback) { m_onTap = std::move(callback); }
 
 protected:
     bool init(cocos2d::CCArray* pages);
@@ -54,6 +58,8 @@ private:
     float m_velocity = 0.f;
     bool m_ignoreTouchCancel = false;
 
+    std::function<void(cocos2d::CCPoint const&)> m_onTap;
+    int m_touchPrio = -138;
     int m_page = 0;
     float m_slideThreshold = 20.f;
     float m_scrollbarLength = 300.f;

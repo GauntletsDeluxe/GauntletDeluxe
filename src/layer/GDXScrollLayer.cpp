@@ -53,7 +53,15 @@ bool GDXScrollLayer::init(CCArray* pages) {
 }
 
 void GDXScrollLayer::registerWithTouchDispatcher() {
-    CCDirector::sharedDirector()->getTouchDispatcher()->addPrioTargetedDelegate(this, kTouchPriority, false); // ew touch prio
+    CCDirector::sharedDirector()->getTouchDispatcher()->addPrioTargetedDelegate(this, m_touchPrio, false); // ew touch prio
+}
+
+void GDXScrollLayer::setScrollTouchPriority(int priority) {
+    m_touchPrio = priority;
+    if (this->isTouchEnabled()) {
+        this->setTouchEnabled(false);
+        this->setTouchEnabled(true);
+    }
 }
 
 int GDXScrollLayer::getTotalPages() const {
@@ -238,6 +246,8 @@ void GDXScrollLayer::ccTouchEnded(CCTouch* touch, CCEvent* event) {
                 page--;
         }
         this->moveToPage(page);
+    } else if (drag == Drag::Pending && m_onTap) {
+        m_onTap(touch->getLocation());
     }
 }
 

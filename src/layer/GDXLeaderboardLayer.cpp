@@ -2,6 +2,7 @@
 #include "../include/GDXConstant.hpp"
 #include <Geode/ui/Popup.hpp>
 #include "../popup/GDXLinkDiscordPopup.hpp"
+#include "GDXGeeheeComic.hpp"
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
 #include <asp/fs.hpp>
@@ -202,17 +203,7 @@ void GDXLeaderboardLayer::onLink(CCObject* sender) {
 }
 
 void GDXLeaderboardLayer::onComic(CCObject* sender) {
-    geode::createQuickPopup(
-        "GeeHee's OS Troubles",
-        fmt::format("Do you want to turn on <cr>gdx</c><cy>OS</c>?\n<co>This will open a webcomic in your browser.</c>"),
-        "Leave it off",
-        "Boot Up OS",
-        [](auto, bool yes) {
-            if (!yes) return;
-
-            geode::utils::web::openLinkInBrowser("https://www.newgrounds.com/art/view/darktimeworks/geehee-s-os-troubles-00-startup");
-            Notification::create("Opened link in browser.", NotificationIcon::Info)->show();
-        });
+    if (auto comic = GDXGeeheeComic::create()) comic->show();
 }
 
 void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
