@@ -105,14 +105,14 @@ bool GDXLeaderboardLayer::init() {
     m_bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true)->setCrossAxisReverse(true));
     this->addChild(m_bottomLeftMenu, 2);
 
-    auto linkSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_linkIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto linkSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_linkIcon.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_bottomLeftMenu->addChild(Button::createWithNode(linkSpr, [this](Button* sender) { this->onLink(sender); }));
 
     // @geode-ignore(unknown-resource)
-    auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_syncButton.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_syncButton.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_bottomLeftMenu->addChild(Button::createWithNode(syncSpr, [this](Button* sender) { this->onSyncAccount(sender); }));
 
-    auto comicSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_comicIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto comicSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_comicIcon.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_bottomLeftMenu->addChild(Button::createWithNode(comicSpr, [this](Button* sender) { this->onComic(sender); }));
 
     m_bottomLeftMenu->updateLayout();

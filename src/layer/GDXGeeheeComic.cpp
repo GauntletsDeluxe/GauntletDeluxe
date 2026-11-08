@@ -24,6 +24,7 @@ namespace {
         return str;
     }
 
+    // i wouldve done something better for ts but since the comic is rss, had to do the most hidious thing possible, which is parsing html with string manipulation
     std::string decodeEntities(std::string str) {
         str = replaceAll(std::move(str), "&lt;", "<");
         str = replaceAll(std::move(str), "&gt;", ">");
@@ -358,7 +359,7 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
         m_buttonMenu->addChild(nextBtn);
     }
 
-    auto linkSpr = ButtonSprite::create("View Online", "bigFont.fnt", "GJ_button_01.png", 0.6f);
+    auto linkSpr = ButtonSprite::create("View Online", "goldFont.fnt", "GJ_button_01.png", 0.6f);
     linkSpr->setScale(0.7f);
     auto linkBtn = Button::createWithNode(linkSpr, [this](Button* sender) { this->onOpenLink(sender); });
     linkBtn->setTouchPriority(kMenuPriority);

@@ -476,7 +476,7 @@ namespace {
     static CCSprite* createRecentToggleSprite(bool on) {
         return CircleButtonSprite::createWithSpriteFrameName(
             "GDX_recentGauntlet.png"_spr,
-            1.f,
+            1.2f,
             on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
             CircleBaseSize::Small);
     }
@@ -484,7 +484,7 @@ namespace {
     static CCSprite* createFavoriteToggleSprite(bool on) {
         return CircleButtonSprite::createWithSpriteFrameName(
             on ? "gj_heartOn_001.png" : "gj_heartOff_001.png",
-            0.85f,
+            1.f,
             on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
             CircleBaseSize::Small);
     }
@@ -510,7 +510,7 @@ namespace {
     static CCSprite* createLocalToggleSprite(bool on) {
         return CircleButtonSprite::createWithSpriteFrameName(
             "GDX_localGauntlet.png"_spr,
-            1.f,
+            1.2f,
             on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
             CircleBaseSize::Small);
     }
@@ -578,17 +578,17 @@ bool GDXGauntletLayer::init() {
     this->addChild(bottomLeftMenu, 2);
     m_bottomLeftMenu = bottomLeftMenu;
 
-    auto infoIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_infoIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto infoIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_infoIcon.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     auto infoIconBtn = Button::createWithNode(infoIconSpr, [this](Button* sender) { this->onInfo(sender); });
     bottomLeftMenu->addChild(infoIconBtn);
 
     // leaderboard button
-    auto leaderboardIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_leaderboardIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto leaderboardIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_leaderboardIcon.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_leaderboardBtn = Button::createWithNode(leaderboardIconSpr, [this](Button* sender) { pushSceneWithLayer(GDXLeaderboardLayer::create()); });
     bottomLeftMenu->addChild(m_leaderboardBtn);
 
     // discord button
-    auto discordIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_discord.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
+    auto discordIconSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_discord.png"_spr, 1.2f, CircleBaseColor::Green, CircleBaseSize::Small);
     m_discordBtn = Button::createWithNode(discordIconSpr, [this](Button* sender) { this->onDiscord(sender); });
     bottomLeftMenu->addChild(m_discordBtn);
 

@@ -370,11 +370,11 @@ bool GDXAddGauntletPopup::init() {
     refreshLevelList();
 
     auto addLevelBtn = Button::createWithNode(
-        ButtonSprite::create("Add Level", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
+        ButtonSprite::create("Add Level", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
         [this](Button* sender) { this->onAddLevel(sender); });
 
     auto saveBtn = Button::createWithNode(
-        ButtonSprite::create("Save", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
+        ButtonSprite::create("Save", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_01.png"),
         [this](Button* sender) { this->onSave(sender); });
 
     m_settingsMenu = CCMenu::create();
@@ -382,7 +382,7 @@ bool GDXAddGauntletPopup::init() {
     m_settingsMenu->addChild(saveBtn);
     if (m_localMode) {
         auto addSpriteBtn = Button::createWithNode(
-            ButtonSprite::create("Add Sprite", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
+            ButtonSprite::create("Add Sprite", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
             [this](Button* sender) { this->onAddSprite(sender); });
         if (addSpriteBtn) {
             m_settingsMenu->addChild(addSpriteBtn);

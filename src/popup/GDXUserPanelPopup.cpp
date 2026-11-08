@@ -140,8 +140,8 @@ void GDXUserPanelPopup::updateExcludeButton() {
         return;
     }
 
-    auto offNode = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
-    auto onNode = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_02.png");
+    auto offNode = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
+    auto onNode = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_02.png");
     m_excludeBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
         // Toggler flips its state before invoking this callback; snap it back to the
         // confirmed state so it only changes once the server request succeeds
@@ -159,8 +159,8 @@ void GDXUserPanelPopup::updatePromoteButton() {
         return;
     }
 
-    auto offNode = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
-    auto onNode = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
+    auto offNode = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
+    auto onNode = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
     m_promoteBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
         // Toggler flips its state before invoking this callback; snap it back to the
         // confirmed state so it only changes once the server request succeeds
@@ -178,8 +178,8 @@ void GDXUserPanelPopup::updatePromoteModButton() {
         return;
     }
 
-    auto offNode = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
-    auto onNode = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
+    auto offNode = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
+    auto onNode = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
     m_promoteModBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
         // Toggler flips its state before invoking this callback; snap it back to the
         // confirmed state so it only changes once the server request succeeds
