@@ -7,13 +7,13 @@
 #include "Geode/ui/Layout.hpp"
 #include <Geode/ui/Button.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/binding/MultilineBitmapFont.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/utils/web.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 #include <Geode/ui/Scrollbar.hpp>
 
 using namespace geode;
@@ -60,7 +60,7 @@ static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& u
 }
 
 namespace {
-    static asp::fs::path getLocalGauntletPath() {
+    static asp::fs::Path getLocalGauntletPath() {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
@@ -70,7 +70,7 @@ namespace {
 
     static matjson::Value loadLocalGauntlets() {
         auto path = getLocalGauntletPath();
-        if (!asp::fs::isFile(path).unwrapOr(false)) {
+        if (!path.isFile()) {
             return matjson::Value::array();
         }
 
@@ -196,47 +196,41 @@ bool GDXGauntletManagePopup::init() {
     m_mainLayer->addChildAtPosition(actionBg, Anchor::Left, {75.f, 0}, false);
 
     if (m_localMode) {
-        auto addBtn = CCMenuItemSpriteExtra::create(
+        auto addBtn = Button::createWithNode(
             ButtonSprite::create("Add Local Gauntlet", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
-            this,
-            menu_selector(GDXGauntletManagePopup::onAdd));
+            [this](Button* sender) { this->onAdd(sender); });
         actionMenu->addChild(addBtn);
 
-        auto importBtn = CCMenuItemSpriteExtra::create(
+        auto importBtn = Button::createWithNode(
             ButtonSprite::create("Import Gauntlet", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-            this,
-            menu_selector(GDXGauntletManagePopup::onImport));
+            [this](Button* sender) { this->onImport(sender); });
         actionMenu->addChild(importBtn);
     } else {
         // manager only
         if (gdx::isManager()) {
-            auto addBtn = CCMenuItemSpriteExtra::create(
+            auto addBtn = Button::createWithNode(
                 ButtonSprite::create("Add Gauntlet", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
-                this,
-                menu_selector(GDXGauntletManagePopup::onAdd));
+                [this](Button* sender) { this->onAdd(sender); });
             actionMenu->addChild(addBtn);
         }
 
         if (gdx::isLeaderboardMod()) {
-            auto userBtn = CCMenuItemSpriteExtra::create(
+            auto userBtn = Button::createWithNode(
                 ButtonSprite::create("User Panel", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-                this,
-                menu_selector(GDXGauntletManagePopup::onUserPanel));
+                [this](Button* sender) { this->onUserPanel(sender); });
             actionMenu->addChild(userBtn);
         }
 
         // manager and contributor
         if (gdx::isManager() || gdx::isContributor()) {
-            auto showTagsBtn = CCMenuItemSpriteExtra::create(
+            auto showTagsBtn = Button::createWithNode(
                 ButtonSprite::create("View Tags", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-                this,
-                menu_selector(GDXGauntletManagePopup::onShowTags));
+                [this](Button* sender) { this->onShowTags(sender); });
             actionMenu->addChild(showTagsBtn);
 
-            auto openManageBtn = CCMenuItemSpriteExtra::create(
+            auto openManageBtn = Button::createWithNode(
                 ButtonSprite::create("Asset Manager", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-                this,
-                menu_selector(GDXGauntletManagePopup::onManageAssets));
+                [this](Button* sender) { this->onManageAssets(sender); });
             actionMenu->addChild(openManageBtn);
         }
 
@@ -479,7 +473,7 @@ void GDXGauntletManagePopup::rebuildGauntletList() {
 
     if (!filteredGauntlets.isArray() || filteredGauntlets.size() == 0) {
         if (!m_emptyLabel) {
-            m_emptyLabel = CCLabelBMFont::create("", "goldFont.fnt");
+            m_emptyLabel = Label::create("", "goldFont.fnt");
             if (m_emptyLabel) {
                 m_emptyLabel->setAnchorPoint({0.5f, 0.5f});
                 m_emptyLabel->setScale(0.8f);
@@ -487,7 +481,7 @@ void GDXGauntletManagePopup::rebuildGauntletList() {
             }
         }
         if (m_emptyLabel) {
-            m_emptyLabel->setString(m_localMode ? "No local gauntlets saved." : "No gauntlets available.");
+            m_emptyLabel->setText(m_localMode ? "No local gauntlets saved." : "No gauntlets available.");
             m_emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
             m_emptyLabel->setVisible(true);
         }
@@ -570,7 +564,9 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
         deleteSpr->setScale(0.7f);
 
-        auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXGauntletManagePopup::onDelete));
+        auto deleteBtn = Button::createWithNode(deleteSpr, [this](Button* sender) { this->onDelete(sender); });
+        deleteBtn->setSwallowTouches(false);
+        deleteBtn->setDragCancelDistance(5.f);
         deleteBtn->setTag(tagValue);
         cellMenu->addChild(deleteBtn);
     }
@@ -578,7 +574,9 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
     if (m_localMode || gdx::isManager() || gdx::isContributor()) {
         auto editSpr = CCSprite::createWithSpriteFrameName("GJ_editBtn_001.png");
         editSpr->setScale(0.4f);
-        auto editBtn = CCMenuItemSpriteExtra::create(editSpr, this, menu_selector(GDXGauntletManagePopup::onEdit));
+        auto editBtn = Button::createWithNode(editSpr, [this](Button* sender) { this->onEdit(sender); });
+        editBtn->setSwallowTouches(false);
+        editBtn->setDragCancelDistance(5.f);
         editBtn->setTag(tagValue);
         cellMenu->addChild(editBtn);
     }
@@ -634,14 +632,14 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
         }
     }
 
-    auto nameLabel = CCLabelBMFont::create(name.c_str(), "goldFont.fnt");
+    auto nameLabel = Label::create(name, "goldFont.fnt");
     nameLabel->setAnchorPoint({0.f, .5f});
     nameLabel->setPosition({80.f, cell->getContentSize().height - 10.f});
-    nameLabel->limitLabelWidth(200.f, 0.8f, 0.35f);
+    nameLabel->setLimitLabelWidth(200.f, 0.8f, 0.35f);
     cell->addChild(nameLabel);
 
     if (gauntlet["isFeatured"].asBool().unwrapOr(false)) {
-        auto featuredLabel = CCLabelBMFont::create("Featured", "goldFont.fnt");
+        auto featuredLabel = Label::create("Featured", "goldFont.fnt");
         featuredLabel->setAnchorPoint({0.f, .5f});
         featuredLabel->setScale(0.35f);
         featuredLabel->setColor({255, 215, 0});
@@ -678,10 +676,10 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
             cell->addChild(rewardSpr);
         }
 
-        auto rewardLabel = CCLabelBMFont::create((numToString(reward)).c_str(), "bigFont.fnt");
+        auto rewardLabel = Label::create(numToString(reward), "bigFont.fnt");
         rewardLabel->setAnchorPoint({0.f, 0.5f});
         rewardLabel->setPosition({100.f, 13.f});
-        rewardLabel->limitLabelWidth(180.f, 0.35f, 0.2f);
+        rewardLabel->setLimitLabelWidth(180.f, 0.35f, 0.2f);
         cell->addChild(rewardLabel);
     }
 
@@ -689,7 +687,7 @@ CCNode* GDXGauntletManagePopup::createGauntletCell(const matjson::Value& gauntle
 }
 
 void GDXGauntletManagePopup::onDelete(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }
@@ -709,7 +707,7 @@ void GDXGauntletManagePopup::onDelete(CCObject* sender) {
 }
 
 void GDXGauntletManagePopup::onEdit(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }

@@ -4,7 +4,7 @@
 #include "Geode/ui/MDPopup.hpp"
 #include "Geode/ui/NineSlice.hpp"
 #include "Geode/ui/TextArea.hpp"
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/binding/FLAlertLayer.hpp>
 #include <Geode/ui/Layout.hpp>
@@ -13,7 +13,7 @@
 #include <Geode/ui/Notification.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/utils/general.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 
 using namespace geode::prelude;
 
@@ -52,24 +52,24 @@ bool GDXLinkDiscordPopup::init() {
     m_mainLayer->addChildAtPosition(m_statusLabel, Anchor::Center, {0.f, 25.f});
     m_statusLabel->setVisible(false);
 
-    m_codeHintLabel = CCLabelBMFont::create("Click code below to copy to clipboard", "goldFont.fnt");
-    m_codeHintLabel->limitLabelWidth(m_mainLayer->getContentWidth() - 10.f, 0.6f, 0.2f);
-    m_codeHintLabel->setAlignment(CCTextAlignment::kCCTextAlignmentCenter);
+    m_codeHintLabel = Label::create("Click code below to copy to clipboard", "goldFont.fnt");
+    m_codeHintLabel->setLimitLabelWidth(m_mainLayer->getContentWidth() - 10.f, 0.6f, 0.2f);
+    m_codeHintLabel->setAlignment(Label::Alignment::Center);
     m_mainLayer->addChildAtPosition(m_codeHintLabel, Anchor::Center, {0.f, 55.f});
     m_codeHintLabel->setVisible(false);
 
     auto linkSprite = ButtonSprite::create("Link", "goldFont.fnt", "GJ_button_01.png");
-    m_linkBtn = CCMenuItemSpriteExtra::create(linkSprite, this, menu_selector(GDXLinkDiscordPopup::onLink));
+    m_linkBtn = Button::createWithNode(linkSprite, [this](Button* sender) { this->onLink(sender); });
     m_buttonMenu->addChildAtPosition(m_linkBtn, Anchor::Bottom, {0.f, 35.f});
     m_linkBtn->setVisible(false);
 
     auto unlinkSprite = ButtonSprite::create("Unlink", "goldFont.fnt", "GJ_button_06.png");
-    m_unlinkBtn = CCMenuItemSpriteExtra::create(unlinkSprite, this, menu_selector(GDXLinkDiscordPopup::onUnlink));
+    m_unlinkBtn = Button::createWithNode(unlinkSprite, [this](Button* sender) { this->onUnlink(sender); });
     m_buttonMenu->addChildAtPosition(m_unlinkBtn, Anchor::Bottom, {0.f, 35.f});
     m_unlinkBtn->setVisible(false);
 
-    m_codeLabel = CCLabelBMFont::create("000000", "goldFont.fnt");
-    m_codeBtn = CCMenuItemSpriteExtra::create(m_codeLabel, this, menu_selector(GDXLinkDiscordPopup::onCopyCode));
+    m_codeLabel = Label::create("000000", "goldFont.fnt");
+    m_codeBtn = Button::createWithNode(m_codeLabel, [this](Button* sender) { this->onCopyCode(sender); });
     m_buttonMenu->addChildAtPosition(m_codeBtn, Anchor::Center, {0.f, -20.f});
     m_codeBtn->setVisible(false);
 
@@ -83,23 +83,23 @@ bool GDXLinkDiscordPopup::init() {
     m_loadingCircle = cue::LoadingCircle::create(false);
     m_mainLayer->addChildAtPosition(m_loadingCircle, Anchor::Center, {0.f, 0.f}, 999);
 
-    m_expiresLabel = CCLabelBMFont::create("", "goldFont.fnt");
+    m_expiresLabel = Label::create("", "goldFont.fnt");
     m_expiresLabel->setScale(0.55f);
     m_mainLayer->addChildAtPosition(m_expiresLabel, Anchor::Center, {0.f, -50.f});
     m_expiresLabel->setVisible(false);
 
-    m_linkedUsernameLabel = CCLabelBMFont::create("", "goldFont.fnt");
+    m_linkedUsernameLabel = Label::create("", "goldFont.fnt");
     m_linkedUsernameLabel->setScale(0.85f);
     m_mainLayer->addChildAtPosition(m_linkedUsernameLabel, Anchor::Center, {0.f, 40.f});
     m_linkedUsernameLabel->setVisible(false);
 
-    m_linkedIdLabel = CCLabelBMFont::create("", "chatFont.fnt");
+    m_linkedIdLabel = Label::create("", "chatFont.fnt");
     m_linkedIdLabel->setScale(0.7f);
     m_linkedIdLabel->setColor({200, 200, 200});
     m_mainLayer->addChildAtPosition(m_linkedIdLabel, Anchor::Center, {0.f, 10.f});
     m_linkedIdLabel->setVisible(false);
 
-    m_linkedStatusLabel = CCLabelBMFont::create("", "bigFont.fnt");
+    m_linkedStatusLabel = Label::create("", "bigFont.fnt");
     m_linkedStatusLabel->setScale(0.5f);
     m_mainLayer->addChildAtPosition(m_linkedStatusLabel, Anchor::Center, {0.f, -25.f});
     m_linkedStatusLabel->setVisible(false);
@@ -138,7 +138,7 @@ void GDXLinkDiscordPopup::updateUI(bool isLinked, const std::string& username, c
         m_linkBtn->setVisible(false);
         m_unlinkBtn->setVisible(false);
 
-        m_codeLabel->setString(linkCode.c_str());
+        m_codeLabel->setText(linkCode);
         m_codeBtn->setVisible(true);
         m_codeBg->setVisible(true);
         m_codeHintLabel->setVisible(true);
@@ -166,19 +166,19 @@ void GDXLinkDiscordPopup::updateUI(bool isLinked, const std::string& username, c
         m_statusLabel->setVisible(false);
 
         if (m_linkedUsernameLabel) {
-            m_linkedUsernameLabel->setString(("@" + username).c_str());
+            m_linkedUsernameLabel->setText("@" + username);
             m_linkedUsernameLabel->setVisible(true);
         }
         if (m_linkedIdLabel && !discordId.empty()) {
-            m_linkedIdLabel->setString(("Discord ID: " + discordId).c_str());
+            m_linkedIdLabel->setText("Discord ID: " + discordId);
             m_linkedIdLabel->setVisible(true);
         }
         if (m_linkedStatusLabel) {
             if (isVerified) {
-                m_linkedStatusLabel->setString("Status: Linked & Verified");
+                m_linkedStatusLabel->setText("Status: Linked & Verified");
                 m_linkedStatusLabel->setColor({50, 255, 50});
             } else {
-                m_linkedStatusLabel->setString("Status: Pending Verification");
+                m_linkedStatusLabel->setText("Status: Pending Verification");
                 m_linkedStatusLabel->setColor({255, 200, 50});
             }
             m_linkedStatusLabel->setVisible(true);
@@ -202,13 +202,13 @@ void GDXLinkDiscordPopup::updateTimer(float dt) {
     }
     if (m_expiresLabel) {
         if (m_expiresIn <= 0) {
-            m_expiresLabel->setString("Code expired!");
+            m_expiresLabel->setText("Code expired!");
             this->unschedule(schedule_selector(GDXLinkDiscordPopup::updateTimer));
             this->unschedule(schedule_selector(GDXLinkDiscordPopup::checkLinkScheduler));
         } else {
             int mins = m_expiresIn / 60;
             int secs = m_expiresIn % 60;
-            m_expiresLabel->setString(fmt::format("Expires in {:02d}:{:02d}", mins, secs).c_str());
+            m_expiresLabel->setText(fmt::format("Expires in {:02d}:{:02d}", mins, secs));
         }
     }
 }

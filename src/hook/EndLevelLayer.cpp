@@ -1,18 +1,19 @@
 #include <Geode/Geode.hpp>
 #include <Geode/binding/GJListLayer.hpp>
 #include <Geode/modify/EndLevelLayer.hpp>
+#include <Geode/ui/Label.hpp>
 #include "../include/GDXConstant.hpp"
 #include "ccTypes.h"
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/web.hpp>
 #include <asp/fs.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 #include <arc/runtime/Runtime.hpp>
 
 using namespace geode::prelude;
 
 namespace {
-    static asp::fs::path getCompletedGauntletLevelsPath(bool local) {
+    static asp::fs::Path getCompletedGauntletLevelsPath(bool local) {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
@@ -23,7 +24,7 @@ namespace {
     static std::vector<int> loadCompletedGauntletLevels(bool local = false) {
         std::vector<int> out;
         auto path = getCompletedGauntletLevelsPath(local);
-        if (!asp::fs::isFile(path).unwrapOr(false)) {
+        if (!path.isFile()) {
             return out;
         }
         auto content = asp::fs::readToString(path);
@@ -227,7 +228,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     }
 
                     auto rewardText = std::string("+" + numToString(rewardValue));
-                    auto rewardLabel = CCLabelBMFont::create(rewardText.c_str(), "bigFont.fnt");
+                    auto rewardLabel = Label::create(rewardText, "bigFont.fnt");
                     if (rewardLabel) {
                         rewardLabel->setAnchorPoint({1.f, 0.5f});
                         rewardLabel->setScale(0.8f);
@@ -236,7 +237,7 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     }
 
                     auto levelPointsText = std::string("(" + numToString(levelPointsValue) + ")");
-                    auto levelPointsLabel = CCLabelBMFont::create(levelPointsText.c_str(), "bigFont.fnt");
+                    auto levelPointsLabel = Label::create(levelPointsText, "bigFont.fnt");
                     if (levelPointsLabel) {
                         levelPointsLabel->setAnchorPoint({1.f, 0.5f});
                         levelPointsLabel->setScale(0.4f);

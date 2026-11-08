@@ -6,21 +6,22 @@
 #include <Geode/Geode.hpp>
 #include <asp/fs.hpp>
 #include <arc/runtime/Runtime.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 #include <cue/ListNode.hpp>
 #include <Geode/binding/SelectArtLayer.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
+#include <Geode/ui/Label.hpp>
+#include <Geode/ui/Button.hpp>
 #include <Geode/utils/file.hpp>
 #include <string>
 #include <string_view>
 #include <asp/time.hpp>
-#include <filesystem>
 
 using namespace geode;
 using namespace geode::prelude;
 
 namespace {
-    static asp::fs::path getLocalGauntletPath() {
+    static asp::fs::Path getLocalGauntletPath() {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
@@ -30,7 +31,7 @@ namespace {
 
     static matjson::Value loadLocalGauntlets() {
         auto path = getLocalGauntletPath();
-        if (!asp::fs::isFile(path).unwrapOr(false)) {
+        if (!path.isFile()) {
             return matjson::Value::array();
         }
 
@@ -160,7 +161,9 @@ void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
 
     auto deleteSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
     deleteSpr->setScale(0.5f);
-    auto deleteBtn = CCMenuItemSpriteExtra::create(deleteSpr, this, menu_selector(GDXAddGauntletPopup::onDeleteLevel));
+    auto deleteBtn = Button::createWithNode(deleteSpr, [this](Button* sender) { this->onDeleteLevel(sender); });
+    deleteBtn->setSwallowTouches(false);
+    deleteBtn->setDragCancelDistance(5.f);
     deleteBtn->setPosition(removePos + ccp(20.f, 10.f));
     cell->m_mainMenu->addChild(deleteBtn);
     deleteBtn->setUserObject(cell);
@@ -168,7 +171,9 @@ void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
     auto upSpr = CCSprite::createWithSpriteFrameName("PBtn_Arrow_001.png");
     if (upSpr) {
         upSpr->setRotation(180.f);
-        auto upBtn = CCMenuItemSpriteExtra::create(upSpr, this, menu_selector(GDXAddGauntletPopup::onMoveLevelUp));
+        auto upBtn = Button::createWithNode(upSpr, [this](Button* sender) { this->onMoveLevelUp(sender); });
+        upBtn->setSwallowTouches(false);
+        upBtn->setDragCancelDistance(5.f);
         upBtn->setPosition({-20, removePos.y + 10.f});
         upBtn->setUserObject(cell);
         cell->m_mainMenu->addChild(upBtn);
@@ -176,7 +181,9 @@ void GDXAddGauntletPopup::configureLevelCell(LevelCell* cell, int reward) {
 
     auto downSpr = CCSprite::createWithSpriteFrameName("PBtn_Arrow_001.png");
     if (downSpr) {
-        auto downBtn = CCMenuItemSpriteExtra::create(downSpr, this, menu_selector(GDXAddGauntletPopup::onMoveLevelDown));
+        auto downBtn = Button::createWithNode(downSpr, [this](Button* sender) { this->onMoveLevelDown(sender); });
+        downBtn->setSwallowTouches(false);
+        downBtn->setDragCancelDistance(5.f);
         downBtn->setPosition({-20, removePos.y - 10.f});
         downBtn->setUserObject(cell);
         cell->m_mainMenu->addChild(downBtn);
@@ -290,18 +297,17 @@ bool GDXAddGauntletPopup::init() {
 
     m_bgIndex = 14;
     auto bgIcon = CCSprite::createWithSpriteFrameName(getBgIconSpriteName(m_bgIndex).c_str());
-    auto bgBtn = CCMenuItemSpriteExtra::create(
+    auto bgBtn = Button::createWithNode(
         bgIcon,
-        this,
-        menu_selector(GDXAddGauntletPopup::onPickBackground));
+        [this](Button* sender) { this->onPickBackground(sender); });
     if (bgBtn) {
-        bgBtn->m_scaleMultiplier = 1.05f;
+        bgBtn->setScaleMultiplier(1.05f);
         m_bgIndexButton = bgBtn;
         m_bgIconSpr = bgIcon;
         m_buttonMenu->addChildAtPosition(bgBtn, Anchor::BottomLeft, {45, 55}, false);
     }
 
-    auto bgLabel = CCLabelBMFont::create("BG", "goldFont.fnt");
+    auto bgLabel = Label::create("BG", "goldFont.fnt");
     bgLabel->setScale(0.4);
     m_bgIndexButton->addChildAtPosition(bgLabel, Anchor::Top, ccp(0, 2), ccp(0.5, 0));
 
@@ -324,15 +330,14 @@ bool GDXAddGauntletPopup::init() {
         colorSpr->setColor(m_selectedColor);
     }
     m_colorSpr = colorSpr;
-    auto colorBtn = CCMenuItemSpriteExtra::create(
+    auto colorBtn = Button::createWithNode(
         colorSpr,
-        this,
-        menu_selector(GDXAddGauntletPopup::onPickColor));
+        [this](Button* sender) { this->onPickColor(sender); });
     colorBtn->setPosition({m_descriptionInput->getPositionX() + 90, m_descriptionInput->getPositionY()});
-    colorBtn->m_scaleMultiplier = 1.05f;
+    colorBtn->setScaleMultiplier(1.05f);
     m_buttonMenu->addChild(colorBtn);
 
-    auto colorLabel = CCLabelBMFont::create("Color", "goldFont.fnt");
+    auto colorLabel = Label::create("Color", "goldFont.fnt");
     colorLabel->setScale(0.4);
     colorBtn->addChildAtPosition(colorLabel, Anchor::Top, ccp(0, 0), ccp(0.5, 0));
 
@@ -342,10 +347,10 @@ bool GDXAddGauntletPopup::init() {
     if (featureSprite) {
         featureSprite->setScale(0.6f);
     }
-    m_featureToggle = CCMenuItemSpriteExtra::create(featureSprite, this, menu_selector(GDXAddGauntletPopup::onToggleFeatured));
+    m_featureToggle = Button::createWithNode(featureSprite, [this](Button* sender) { this->onToggleFeatured(sender); });
     m_buttonMenu->addChildAtPosition(m_featureToggle, Anchor::TopRight, {-20.f, -20.f}, false);
-    auto featuredLabel = CCLabelBMFont::create("Set\nFeatured", "bigFont.fnt");
-    featuredLabel->setAlignment(CCTextAlignment::kCCTextAlignmentRight);
+    auto featuredLabel = Label::create("Set\nFeatured", "bigFont.fnt");
+    featuredLabel->setAlignment(Label::Alignment::Right);
     featuredLabel->setAnchorPoint({1.f, 0.5f});
     featuredLabel->setScale(0.3f);
     m_featureToggle->addChildAtPosition(featuredLabel, Anchor::Left, {-5.f, 0.f}, false);
@@ -364,30 +369,29 @@ bool GDXAddGauntletPopup::init() {
     m_levelList->getScrollLayer()->m_disableMovement = true;
     refreshLevelList();
 
-    auto addLevelBtn = CCMenuItemSpriteExtra::create(
+    auto addLevelBtn = Button::createWithNode(
         ButtonSprite::create("Add Level", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-        this,
-        menu_selector(GDXAddGauntletPopup::onAddLevel));
+        [this](Button* sender) { this->onAddLevel(sender); });
 
-    auto saveBtn = CCMenuItemSpriteExtra::create(
+    auto saveBtn = Button::createWithNode(
         ButtonSprite::create("Save", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_01.png"),
-        this,
-        menu_selector(GDXAddGauntletPopup::onSave));
+        [this](Button* sender) { this->onSave(sender); });
 
-    m_settingsMenu = CCMenu::create(addLevelBtn, saveBtn, nullptr);
+    m_settingsMenu = CCMenu::create();
+    m_settingsMenu->addChild(addLevelBtn);
+    m_settingsMenu->addChild(saveBtn);
     if (m_localMode) {
-        auto addSpriteBtn = CCMenuItemSpriteExtra::create(
+        auto addSpriteBtn = Button::createWithNode(
             ButtonSprite::create("Add Sprite", 100.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png"),
-            this,
-            menu_selector(GDXAddGauntletPopup::onAddSprite));
+            [this](Button* sender) { this->onAddSprite(sender); });
         if (addSpriteBtn) {
             m_settingsMenu->addChild(addSpriteBtn);
         }
 
-        m_spriteNameLabel = CCLabelBMFont::create("Sprite: none", "bigFont.fnt");
+        m_spriteNameLabel = Label::create("Sprite: none", "bigFont.fnt");
         if (m_spriteNameLabel) {
-            m_spriteNameLabel->limitLabelWidth(80.f, 0.5f, 0.4f);
-            m_spriteNameLabel->setAlignment(kCCTextAlignmentCenter);
+            m_spriteNameLabel->setLimitLabelWidth(80.f, 0.5f, 0.4f);
+            m_spriteNameLabel->setAlignment(Label::Alignment::Center);
             m_spriteNameLabel->setAnchorPoint({0.5f, 0.5f});
             m_spriteNameLabel->setPosition({0.f, -20.f});
             m_mainLayer->addChildAtPosition(m_spriteNameLabel, Anchor::BottomRight, {-180.f, 22.f}, false);
@@ -529,7 +533,7 @@ void GDXAddGauntletPopup::onAddLevel(CCObject* sender) {
     }
     glm->m_levelManagerDelegate = this;
 
-    auto searchObj = GJSearchObject::create(SearchType::Type19, gd::string(levelValue));
+    auto searchObj = GJSearchObject::create(SearchType::Type19, std::string(levelValue));
     if (!searchObj) {
         m_searchingLevel = false;
         return;
@@ -564,8 +568,7 @@ void GDXAddGauntletPopup::updateLocalSpriteNameLabel() {
         auto pos = m_spritePath.find_last_of("/\\");
         spriteName = pos == std::string::npos ? m_spritePath : m_spritePath.substr(pos + 1);
     }
-    m_spriteNameLabel->setString(fmt::format("Sprite: {}", spriteName).c_str());
-    m_spriteNameLabel->limitLabelWidth(80.f, 0.5f, 0.4f);
+    m_spriteNameLabel->setText(fmt::format("Sprite: {}", spriteName));
 }
 
 void GDXAddGauntletPopup::onPickBackground(CCObject* sender) {
@@ -596,7 +599,7 @@ void GDXAddGauntletPopup::updateBgIcon() {
         return;
     }
     m_bgIconSpr = icon;
-    m_bgIndexButton->setNormalImage(icon);
+    m_bgIndexButton->setDisplayNode(icon);
 }
 
 void GDXAddGauntletPopup::onToggleFeatured(CCObject* sender) {
@@ -638,7 +641,7 @@ void GDXAddGauntletPopup::onAddSprite(CCObject* sender) {
             co_return;
         }
 
-        auto pathString = utils::string::pathToString(path);
+        auto pathString = path.string();
         co_await async::waitForMainThread([self = std::move(self), pathString = std::move(pathString)]() {
             if (self) {
                 self->m_spritePath = std::move(pathString);
@@ -659,8 +662,7 @@ void GDXAddGauntletPopup::updateFeatureToggleState() {
         return;
     }
     sprite->setScale(0.6f);
-    m_featureToggle->setSprite(sprite);
-    m_featureToggle->updateSprite();
+    m_featureToggle->setDisplayNode(sprite);
 }
 
 void GDXAddGauntletPopup::loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
@@ -843,7 +845,7 @@ void GDXAddGauntletPopup::loadLevelsFailed(char const* key, int type) {
 }
 
 void GDXAddGauntletPopup::onDeleteLevel(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn || !m_levelList) {
         return;
     }
@@ -869,7 +871,7 @@ void GDXAddGauntletPopup::onDeleteLevel(CCObject* sender) {
 }
 
 void GDXAddGauntletPopup::onMoveLevelUp(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }
@@ -898,7 +900,7 @@ void GDXAddGauntletPopup::onMoveLevelUp(CCObject* sender) {
 }
 
 void GDXAddGauntletPopup::onMoveLevelDown(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }
@@ -967,8 +969,8 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
     body["description"] = std::string(description);
     if (!m_localMode) {
         body["reward"] = reward;
-        auto suggestedByString = m_suggestedByInput ? m_suggestedByInput->getString() : gd::string();
-        auto spriteByString = m_spriteByInput ? m_spriteByInput->getString() : gd::string();
+        auto suggestedByString = m_suggestedByInput ? m_suggestedByInput->getString() : std::string();
+        auto spriteByString = m_spriteByInput ? m_spriteByInput->getString() : std::string();
         body["suggestedBy"] = numFromString<int>(suggestedByString).unwrapOr(0);
         body["spriteBy"] = numFromString<int>(spriteByString).unwrapOr(0);
     }
@@ -1003,26 +1005,24 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
                     log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
                 }
 
-                auto originalPath = std::filesystem::path(m_spritePath);
-                auto extension = originalPath.has_extension() ? originalPath.extension().string() : ".png";
-                auto newFileName = fmt::format("local_sprite_{}{}",
+                asp::fs::Path originalPath(m_spritePath);
+                // asp::fs extension() does not include the leading dot
+                std::string extension = std::string(originalPath.extension().value_or("png"));
+                auto newFileName = fmt::format("local_sprite_{}.{}",
                     asp::time::SystemTime::now().timeSinceEpoch().millis(),
                     extension);
                 auto newFilePath = savedDir / newFileName;
 
-                std::error_code ec;
-                std::filesystem::copy_file(m_spritePath, newFilePath, std::filesystem::copy_options::overwrite_existing, ec);
-                if (!ec) {
+                if (auto copyRes = asp::fs::copy(originalPath, newFilePath); copyRes) {
                     m_spritePath = newFilePath.string();
                     if (!oldSpritePath.empty()) {
-                        auto oldPath = std::filesystem::path(oldSpritePath);
-                        if (oldPath.parent_path() == savedDir) {
-                            std::error_code ec2;
-                            std::filesystem::remove(oldPath, ec2);
+                        asp::fs::Path oldPath(oldSpritePath);
+                        if (oldPath.parent() == savedDir) {
+                            (void)asp::fs::removeFile(oldPath);
                         }
                     }
                 } else {
-                    log::warn("Failed to copy local sprite to saved directory: {}", ec.message());
+                    log::warn("Failed to copy local sprite to saved directory: {}", copyRes.unwrapErr().message());
                 }
             }
             body["spritePath"] = m_spritePath;

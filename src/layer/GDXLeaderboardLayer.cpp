@@ -9,13 +9,13 @@
 #include <unordered_set>
 #include "Geode/ui/BasedButton.hpp"
 #include "Geode/ui/General.hpp"
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/Button.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/utils/web.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 #include <arc/runtime/Runtime.hpp>
 #include <cue/ListNode.hpp>
 #include <cue/PlayerIcon.hpp>
@@ -24,7 +24,7 @@ using namespace geode::prelude;
 
 namespace {
     // the sync merges server progress into the same files GDXGauntletLayer reads when it builds its pages
-    asp::fs::path completedFilePath(char const* name) {
+    asp::fs::Path completedFilePath(char const* name) {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create save directory: {}", res.unwrapErr().message());
@@ -46,7 +46,7 @@ namespace {
     std::unordered_set<int> loadIds(char const* fileName, char const* objectKey) {
         std::unordered_set<int> out;
         auto path = completedFilePath(fileName);
-        if (!asp::fs::isFile(path).unwrapOr(false)) return out;
+        if (!path.isFile()) return out;
 
         auto content = asp::fs::readToString(path);
         if (!content) {
@@ -106,14 +106,14 @@ bool GDXLeaderboardLayer::init() {
     this->addChild(m_bottomLeftMenu, 2);
 
     auto linkSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_linkIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(linkSpr, this, menu_selector(GDXLeaderboardLayer::onLink)));
+    m_bottomLeftMenu->addChild(Button::createWithNode(linkSpr, [this](Button* sender) { this->onLink(sender); }));
 
     // @geode-ignore(unknown-resource)
     auto syncSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_syncButton.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(syncSpr, this, menu_selector(GDXLeaderboardLayer::onSyncAccount)));
+    m_bottomLeftMenu->addChild(Button::createWithNode(syncSpr, [this](Button* sender) { this->onSyncAccount(sender); }));
 
     auto comicSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_comicIcon.png"_spr, 1.f, CircleBaseColor::Green, CircleBaseSize::Small);
-    m_bottomLeftMenu->addChild(CCMenuItemSpriteExtra::create(comicSpr, this, menu_selector(GDXLeaderboardLayer::onComic)));
+    m_bottomLeftMenu->addChild(Button::createWithNode(comicSpr, [this](Button* sender) { this->onComic(sender); }));
 
     m_bottomLeftMenu->updateLayout();
 
@@ -183,7 +183,7 @@ void GDXLeaderboardLayer::updateTabSelection() {
 }
 
 void GDXLeaderboardLayer::onTabSelected(CCObject* sender) {
-    auto item = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto item = static_cast<CCNode*>(sender);
     if (!item) {
         return;
     }
@@ -358,7 +358,7 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 auto cell = CCLayer::create();
                 cell->setContentSize({356.f, 50.f});
 
-                auto rankLabel = CCLabelBMFont::create(numToString(i + 1).c_str(), "goldFont.fnt");
+                auto rankLabel = Label::create(numToString(i + 1), "goldFont.fnt");
                 rankLabel->setAnchorPoint({0.5f, 0.5f});
                 rankLabel->setScale(0.6f);
                 rankLabel->setPosition({20.f, cell->getContentSize().height / 2.f});
@@ -380,6 +380,8 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                 usernameLabel->setPosition({85.f, cell->getContentSize().height / 2.f});
                 usernameLabel->setAnchorPoint({0.f, 0.5f});
                 usernameLabel->setScale(0.8f);
+                usernameLabel->setSwallowTouches(false);
+                usernameLabel->setDragCancelDistance(5.f);
                 cell->addChild(usernameLabel);
 
                 // level points
@@ -389,10 +391,10 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                     levelPointSpr->setPosition({cell->getContentSize().width - 20.f, cell->getContentSize().height / 2.f + 10.f});
                     cell->addChild(levelPointSpr);
                 }
-                auto levelPointLabel = CCLabelBMFont::create(GameToolbox::pointsToString(levelPoints).c_str(), "bigFont.fnt");
+                auto levelPointLabel = Label::create(GameToolbox::pointsToString(levelPoints), "bigFont.fnt");
                 levelPointLabel->setAnchorPoint({1.f, 0.5f});
                 levelPointLabel->setPosition({cell->getContentSize().width - 35.f, cell->getContentSize().height / 2.f + 10.f});
-                levelPointLabel->limitLabelWidth(100.f, 0.5f, 0.35f);
+                levelPointLabel->setLimitLabelWidth(100.f, 0.5f, 0.35f);
                 cell->addChild(levelPointLabel);
 
                 // gauntlet points
@@ -402,10 +404,10 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                     gauntletPointSpr->setPosition({cell->getContentSize().width - 20.f, cell->getContentSize().height / 2.f - 10.f});
                     cell->addChild(gauntletPointSpr);
                 }
-                auto gauntletPointLabel = CCLabelBMFont::create(GameToolbox::pointsToString(gauntletPoints).c_str(), "bigFont.fnt");
+                auto gauntletPointLabel = Label::create(GameToolbox::pointsToString(gauntletPoints), "bigFont.fnt");
                 gauntletPointLabel->setAnchorPoint({1.f, 0.5f});
                 gauntletPointLabel->setPosition({cell->getContentSize().width - 35.f, cell->getContentSize().height / 2.f - 10.f});
-                gauntletPointLabel->limitLabelWidth(100.f, 0.5f, 0.35f);
+                gauntletPointLabel->setLimitLabelWidth(100.f, 0.5f, 0.35f);
                 cell->addChild(gauntletPointLabel);
 
                 // top 3 gradient

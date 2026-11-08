@@ -4,6 +4,7 @@
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/TextInput.hpp>
+#include <Geode/ui/Label.hpp>
 #include <cue/ListNode.hpp>
 
 using namespace geode::prelude;
@@ -37,7 +38,7 @@ private:
     cue::ListNode* m_list = nullptr;
     TextInput* m_searchInput = nullptr;
     Scrollbar* m_scrollbar = nullptr;
-    cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
+    Label* m_emptyLabel = nullptr;
     matjson::Value m_gauntlets;
     matjson::Value m_allGauntlets;
     std::string m_searchFilter;

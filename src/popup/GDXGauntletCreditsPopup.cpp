@@ -1,8 +1,7 @@
 #include "GDXGauntletCreditsPopup.hpp"
 #include "../include/GDXConstant.hpp"
-#include "Geode/cocos/label_nodes/CCLabelBMFont.h"
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/ui/Button.hpp>
@@ -69,7 +68,7 @@ static cocos2d::CCNode* createGauntletCreditsTagCell(const matjson::Value& tag) 
     tagCell->setColor({r, g, b});
     tagCell->setOpacity(255);
 
-    auto tagLabel = CCLabelBMFont::create(tagName.c_str(), "bigFont.fnt");
+    auto tagLabel = Label::create(tagName, "bigFont.fnt");
     if (tagLabel) {
         tagLabel->setScale(0.4f);
         tagLabel->setAnchorPoint({0.5f, 0.5f});
@@ -132,9 +131,9 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     }
 
     // gauntlet sprite creator label
-    auto spriteLabel = CCLabelBMFont::create("Gauntlet Sprite:", "bigFont.fnt");
+    auto spriteLabel = Label::create("Gauntlet Sprite:", "bigFont.fnt");
     spriteLabel->setScale(.5f);
-    spriteLabel->setAlignment(CCTextAlignment::kCCTextAlignmentLeft);
+    spriteLabel->setAlignment(Label::Alignment::Left);
     spriteLabel->setAnchorPoint({0.f, 0.5f});
     spriteLabel->setPosition({10.f, creditsBg->getContentSize().height - 15.f});
     creditsBg->addChild(spriteLabel);
@@ -168,9 +167,9 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
     }
 
     // gauntlet suggester label
-    auto suggestedLabel = CCLabelBMFont::create("Gauntlet Suggester:", "bigFont.fnt");
+    auto suggestedLabel = Label::create("Gauntlet Suggester:", "bigFont.fnt");
     suggestedLabel->setScale(.5f);
-    suggestedLabel->setAlignment(CCTextAlignment::kCCTextAlignmentLeft);
+    suggestedLabel->setAlignment(Label::Alignment::Left);
     suggestedLabel->setAnchorPoint({0.f, 0.5f});
     suggestedLabel->setPosition({10.f, creditsBg->getContentSize().height - 80.f});
     creditsBg->addChild(suggestedLabel);
@@ -266,9 +265,9 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
             rateNode->addChild(likesIconSpr);
         }
 
-        auto likesLabel = CCLabelBMFont::create(GameToolbox::pointsToString(likes).c_str(), "bigFont.fnt");
+        auto likesLabel = Label::create(GameToolbox::pointsToString(likes).c_str(), "bigFont.fnt");
         if (likesLabel) {
-            likesLabel->limitLabelWidth(50.f, 0.4f, 0.1f);
+            likesLabel->setLimitLabelWidth(50.f, 0.4f, 0.1f);
             likesLabel->setAnchorPoint({0.f, 0.5f});
             likesLabel->setPosition({-55.f, -6.f});
             rateNode->addChild(likesLabel);
@@ -282,9 +281,9 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
             rateNode->addChild(dislikesIconSpr);
         }
 
-        auto dislikesLabel = CCLabelBMFont::create(GameToolbox::pointsToString(dislikes).c_str(), "bigFont.fnt");
+        auto dislikesLabel = Label::create(GameToolbox::pointsToString(dislikes).c_str(), "bigFont.fnt");
         if (dislikesLabel) {
-            dislikesLabel->limitLabelWidth(50.f, 0.4f, 0.1f);
+            dislikesLabel->setLimitLabelWidth(50.f, 0.4f, 0.1f);
             dislikesLabel->setAnchorPoint({0.f, 0.5f});
             dislikesLabel->setPosition({10.f, -6.f});
             rateNode->addChild(dislikesLabel);
@@ -307,7 +306,7 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 
             for (auto i = 0u; i < tags.size(); ++i) {
                 if (auto tagCell = createGauntletCreditsTagCell(tags[i])) {
-                    auto tagButton = CCMenuItemSpriteExtra::create(tagCell, this, menu_selector(GDXGauntletCreditsPopup::onTagCell));
+                    auto tagButton = Button::createWithNode(tagCell, [this](Button* sender) { this->onTagCell(sender); });
                     if (tagButton) {
                         tagButton->setTag(static_cast<int>(i));
                         tagMenu->addChild(tagButton);
@@ -330,7 +329,7 @@ bool GDXGauntletCreditsPopup::init(const matjson::Value& gauntlet) {
 }
 
 void GDXGauntletCreditsPopup::onTagCell(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }

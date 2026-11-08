@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <vector>
+#include <Geode/ui/Button.hpp>
 
 using namespace geode::prelude;
 
@@ -37,9 +38,9 @@ private:
     matjson::Value m_gauntletData;
 
     CCMenu* m_levelsMenu = nullptr;
-    CCMenuItemSpriteExtra* m_favoriteBtn = nullptr;
-    CCMenuItemSpriteExtra* m_feedbackBtn = nullptr;
-    CCMenuItemSpriteExtra* m_safeBtn = nullptr;
+    Button* m_favoriteBtn = nullptr;
+    Button* m_feedbackBtn = nullptr;
+    Button* m_safeBtn = nullptr;
     bool m_gauntletCompleted = false;
     LoadingSpinner* m_pendingSpinner = nullptr;
     std::string m_pendingKey;

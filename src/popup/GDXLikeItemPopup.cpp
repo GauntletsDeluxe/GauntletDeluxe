@@ -1,10 +1,11 @@
 #include "GDXLikeItemPopup.hpp"
 #include "../include/GDXConstant.hpp"
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Button.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/utils/web.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 #include <Geode/Geode.hpp>
 
 using namespace geode::prelude;
@@ -29,9 +30,9 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
 
     auto gauntletName = gauntlet["name"].asString().unwrapOr("Gauntlet");
     this->setTitle(gauntletName.c_str());
-    m_title->limitLabelWidth(m_mainLayer->getContentWidth() - 20.f, 0.5f, 0.1f);
+    m_title->setLimitLabelWidth(m_mainLayer->getContentWidth() - 20.f, 0.5f, 0.1f);
     m_title->setPositionY(m_title->getPositionY() - 2.f);
-    m_title->setFntFile("bigFont.fnt");
+    m_title->setFont("bigFont.fnt");
 
     auto buttonMenu = CCMenu::create();
     if (!buttonMenu) {
@@ -45,7 +46,7 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
     auto likeSprite = CCSprite::createWithSpriteFrameName("GJ_likeBtn_001.png");
     if (likeSprite) {
         likeSprite->setScale(1.2f);
-        m_likeButton = CCMenuItemSpriteExtra::create(likeSprite, this, menu_selector(GDXLikeItemPopup::onLike));
+        m_likeButton = Button::createWithNode(likeSprite, [this](Button* sender) { this->onLike(sender); });
         if (m_likeButton) {
             buttonMenu->addChild(m_likeButton);
         }
@@ -54,7 +55,7 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
     auto dislikeSprite = CCSprite::createWithSpriteFrameName("GJ_dislikeBtn_001.png");
     if (dislikeSprite) {
         dislikeSprite->setScale(1.2f);
-        m_dislikeButton = CCMenuItemSpriteExtra::create(dislikeSprite, this, menu_selector(GDXLikeItemPopup::onDislike));
+        m_dislikeButton = Button::createWithNode(dislikeSprite, [this](Button* sender) { this->onDislike(sender); });
         if (m_dislikeButton) {
             buttonMenu->addChild(m_dislikeButton);
         }
@@ -81,9 +82,9 @@ bool GDXLikeItemPopup::init(const matjson::Value& gauntlet) {
             icon->setScale(0.6f);
             statsMenu->addChild(icon);
         }
-        auto label = CCLabelBMFont::create(GameToolbox::pointsToString(count).c_str(), "bigFont.fnt");
+        auto label = Label::create(GameToolbox::pointsToString(count).c_str(), "bigFont.fnt");
         if (label) {
-            label->limitLabelWidth(100.f, 0.4f, 0.35f);
+            label->setLimitLabelWidth(100.f, 0.4f, 0.35f);
             statsMenu->addChild(label);
         }
     };

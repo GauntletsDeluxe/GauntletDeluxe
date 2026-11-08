@@ -6,6 +6,7 @@
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/TextInput.hpp>
 #include <Geode/ui/Scrollbar.hpp>
+#include <Geode/ui/Label.hpp>
 #include <cue/ListNode.hpp>
 
 using namespace geode::prelude;
@@ -33,7 +34,7 @@ private:
     cue::ListNode* m_list = nullptr;
     Scrollbar* m_scrollbar = nullptr;
     TextInput* m_searchInput = nullptr;
-    cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
+    Label* m_emptyLabel = nullptr;
     matjson::Value m_tags;
     matjson::Value m_allTags;
     std::string m_searchFilter;

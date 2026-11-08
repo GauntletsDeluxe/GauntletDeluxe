@@ -4,9 +4,11 @@
 #include "Geode/ui/General.hpp"
 #include "Geode/ui/TextInput.hpp"
 #include "Geode/ui/Button.hpp"
+#include <Geode/ui/Label.hpp>
+#include <Geode/ui/Toggler.hpp>
 #include "Geode/utils/general.hpp"
 #include <Geode/binding/UploadActionPopup.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 
 using namespace geode::prelude;
 
@@ -35,7 +37,7 @@ bool GDXUserPanelPopup::init() {
     addSideArt(m_mainLayer, SideArt::All, SideArtStyle::PopupGold, false);
 
     // left side: the looked up user and the actions available for them
-    m_usernameLabel = CCLabelBMFont::create("-", "bigFont.fnt");
+    m_usernameLabel = Label::create("-", "bigFont.fnt");
     m_usernameLabel->setScale(0.3f);
     m_mainLayer->addChildAtPosition(m_usernameLabel, Anchor::BottomLeft, {kLeftColumnWidth / 2.f + 15.f, 20.f});
 
@@ -106,8 +108,8 @@ bool GDXUserPanelPopup::init() {
     m_mainLayer->addChildAtPosition(m_listSpinner, Anchor::BottomLeft, {kRightColumnX, 125.f});
 
     // below the list: previous page, the totals, next page
-    m_pageInfoLabel = CCLabelBMFont::create("Loading users...", "goldFont.fnt");
-    m_pageInfoLabel->setScale(0.35f);
+    m_pageInfoLabel = Label::create("Loading users...", "goldFont.fnt");
+    m_pageInfoLabel->setLimitLabelWidth(200.f, 0.35f, 0.15f);
     m_mainLayer->addChildAtPosition(m_pageInfoLabel, Anchor::BottomLeft, {kRightColumnX, 15.f});
 
     auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
@@ -134,74 +136,58 @@ bool GDXUserPanelPopup::init() {
 
 void GDXUserPanelPopup::updateExcludeButton() {
     if (m_excludeBtn) {
-        auto offSprite = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
-        auto onSprite = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_02.png");
-        if (m_excludeBtn->m_offButton) {
-            m_excludeBtn->m_offButton->setSprite(offSprite);
-            m_excludeBtn->m_offButton->updateSprite();
-        }
-        if (m_excludeBtn->m_onButton) {
-            m_excludeBtn->m_onButton->setSprite(onSprite);
-            m_excludeBtn->m_onButton->updateSprite();
-        }
-        m_excludeBtn->toggle(m_isExcluded);
+        m_excludeBtn->setToggled(m_isExcluded);
         return;
     }
 
-    // create toggle with off/on nodes
     auto offNode = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
     auto onNode = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_02.png");
-    m_excludeBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onExclude));
+    m_excludeBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
+        // Toggler flips its state before invoking this callback; snap it back to the
+        // confirmed state so it only changes once the server request succeeds
+        sender->setToggled(m_isExcluded);
+        this->onExclude(sender);
+    });
     m_excludeBtn->setVisible(false);
-    m_excludeBtn->toggle(m_isExcluded);
+    m_excludeBtn->setToggled(m_isExcluded);
     m_manageMenu->addChild(m_excludeBtn);
 }
 
 void GDXUserPanelPopup::updatePromoteButton() {
     if (m_promoteBtn) {
-        auto offSprite = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
-        auto onSprite = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
-        if (m_promoteBtn->m_offButton) {
-            m_promoteBtn->m_offButton->setSprite(offSprite);
-            m_promoteBtn->m_offButton->updateSprite();
-        }
-        if (m_promoteBtn->m_onButton) {
-            m_promoteBtn->m_onButton->setSprite(onSprite);
-            m_promoteBtn->m_onButton->updateSprite();
-        }
-        m_promoteBtn->toggle(m_isContributor);
+        m_promoteBtn->setToggled(m_isContributor);
         return;
     }
 
     auto offNode = ButtonSprite::create("Promote to Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
     auto onNode = ButtonSprite::create("Demote from Contributor", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
-    m_promoteBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onPromote));
+    m_promoteBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
+        // Toggler flips its state before invoking this callback; snap it back to the
+        // confirmed state so it only changes once the server request succeeds
+        sender->setToggled(m_isContributor);
+        this->onPromote(sender);
+    });
     m_promoteBtn->setVisible(false);
-    m_promoteBtn->toggle(m_isContributor);
+    m_promoteBtn->setToggled(m_isContributor);
     m_manageMenu->addChild(m_promoteBtn);
 }
 
 void GDXUserPanelPopup::updatePromoteModButton() {
     if (m_promoteModBtn) {
-        auto offSprite = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
-        auto onSprite = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
-        if (m_promoteModBtn->m_offButton) {
-            m_promoteModBtn->m_offButton->setSprite(offSprite);
-            m_promoteModBtn->m_offButton->updateSprite();
-        }
-        if (m_promoteModBtn->m_onButton) {
-            m_promoteModBtn->m_onButton->setSprite(onSprite);
-            m_promoteModBtn->m_onButton->updateSprite();
-        }
-        m_promoteModBtn->toggle(m_isLeaderboardMod);
+        m_promoteModBtn->setToggled(m_isLeaderboardMod);
         return;
     }
 
     auto offNode = ButtonSprite::create("Promote to LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_05.png");
     auto onNode = ButtonSprite::create("Demote from LB Mod", 130.f, 80.f, 1.f, true, "bigFont.fnt", "GJ_button_06.png");
-    m_promoteModBtn = CCMenuItemToggler::create(offNode, onNode, this, menu_selector(GDXUserPanelPopup::onPromoteMod));
+    m_promoteModBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
+        // Toggler flips its state before invoking this callback; snap it back to the
+        // confirmed state so it only changes once the server request succeeds
+        sender->setToggled(m_isLeaderboardMod);
+        this->onPromoteMod(sender);
+    });
     m_promoteModBtn->setVisible(false);
-    m_promoteModBtn->toggle(m_isLeaderboardMod);
+    m_promoteModBtn->setToggled(m_isLeaderboardMod);
     m_manageMenu->addChild(m_promoteModBtn);
 }
 
@@ -385,7 +371,7 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
                     self->m_manageMenu->setVisible(true);
                 }
                 if (self->m_usernameLabel) {
-                    self->m_usernameLabel->setString(username.c_str());
+                    self->m_usernameLabel->setText(username);
                     if (self->m_usernameBackground) {
                         self->m_usernameBackground->setContentSize(self->m_usernameLabel->getContentSize() + CCSizeMake(10.f, 10.f));
                     }
@@ -593,12 +579,14 @@ CCNode* GDXUserPanelPopup::createUserCell(matjson::Value const& entry, float wid
         m_accountIdInput->setString(numToString(accountId));
         onFindAccountID(nullptr);
     });
+    nameBtn->setSwallowTouches(false);
+    nameBtn->setDragCancelDistance(5.f);
     nameBtn->setAnchorPoint({0.f, 0.5f});
     nameBtn->setScale(0.5f);
     nameBtn->setPosition({10.f, kCellHeight / 2.f + 5.f});
     cell->addChild(nameBtn);
 
-    auto idLabel = CCLabelBMFont::create(fmt::format("ID: {}", accountId).c_str(), "chatFont.fnt");
+    auto idLabel = Label::create(fmt::format("ID: {}", accountId), "chatFont.fnt");
     idLabel->setAnchorPoint({0.f, 0.5f});
     idLabel->setScale(0.45f);
     idLabel->setColor({0, 0, 0});
@@ -624,7 +612,7 @@ CCNode* GDXUserPanelPopup::createUserCell(matjson::Value const& entry, float wid
             sprite->setScale(spriteScale);
             pointsMenu->addChild(sprite);
         }
-        auto label = CCLabelBMFont::create(GameToolbox::pointsToString(points).c_str(), "bigFont.fnt");
+        auto label = Label::create(GameToolbox::pointsToString(points).c_str(), "bigFont.fnt");
         label->setScale(0.3f);
         pointsMenu->addChild(label);
     };
@@ -664,13 +652,12 @@ CCNode* GDXUserPanelPopup::createUserCell(matjson::Value const& entry, float wid
 void GDXUserPanelPopup::updatePageInfo() {
     if (m_pageInfoLabel) {
         if (m_totalUsers <= 0) {
-            m_pageInfoLabel->setString("No users found");
+            m_pageInfoLabel->setText("No users found");
         } else {
             int first = (m_page - 1) * kUsersPerPage + 1;
             int last = std::min(m_page * kUsersPerPage, m_totalUsers);
-            m_pageInfoLabel->setString(fmt::format("Page {}/{} | {}-{} of {} users", m_page, m_totalPages, first, last, m_totalUsers).c_str());
+            m_pageInfoLabel->setText(fmt::format("Page {}/{} | {}-{} of {} users", m_page, m_totalPages, first, last, m_totalUsers));
         }
-        m_pageInfoLabel->limitLabelWidth(200.f, 0.35f, 0.15f);
     }
     if (m_prevPageBtn) m_prevPageBtn->setVisible(m_page > 1);
     if (m_nextPageBtn) m_nextPageBtn->setVisible(m_page < m_totalPages);
@@ -698,8 +685,7 @@ void GDXUserPanelPopup::fetchUsers(int page) {
                 if (!self) return;
                 if (self->m_listSpinner) self->m_listSpinner->setVisible(false);
                 if (self->m_pageInfoLabel) {
-                    self->m_pageInfoLabel->setString("Failed to load users");
-                    self->m_pageInfoLabel->limitLabelWidth(200.f, 0.35f, 0.15f);
+                    self->m_pageInfoLabel->setText("Failed to load users");
                 }
                 Notification::create(message, NotificationIcon::Error)->show();
             });

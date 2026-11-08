@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GauntletSelectLayer.hpp>
+#include <Geode/ui/Button.hpp>
 #include "../layer/GDXGauntletLayer.hpp"
 
 using namespace geode::prelude;
@@ -23,21 +24,11 @@ class $modify(GDXHookGauntletSelectLayer, GauntletSelectLayer) {
             );
             gauntletBtnSpr->setScale(0.75);
 
-            auto gauntletBtn = CCMenuItemSpriteExtra::create(
-                gauntletBtnSpr,
-                this,
-                menu_selector(GDXHookGauntletSelectLayer::onGDXButtonClick)
-            );
+            auto gauntletBtn = Button::createWithNode(gauntletBtnSpr, [this](Button* sender) { pushSceneWithLayer(GDXGauntletLayer::create()); });
             gauntletBtn->setID("gauntlets-deluxe-button"_spr);
             topRight->addChild(gauntletBtn);
             topRight->updateLayout();
         }
         return true;
-    }
-
-    void onGDXButtonClick(CCObject*) {
-        auto scene = CCScene::create();
-        scene->addChild(GDXGauntletLayer::create());
-        CCDirector::sharedDirector()->pushScene(CCTransitionFade::create(0.5f, scene));
     }
 };

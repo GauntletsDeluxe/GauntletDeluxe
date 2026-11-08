@@ -1,8 +1,9 @@
 #include "GDXGeeheeComic.hpp"
 #include "GDXScrollLayer.hpp"
-#include "Geode/ui/TextArea.hpp"
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
+#include <Geode/ui/TextArea.hpp>
+#include <Geode/ui/Button.hpp>
 #include <Geode/utils/base64.hpp>
 #include <Geode/utils/web.hpp>
 #include <algorithm>
@@ -59,8 +60,10 @@ namespace {
             // a block ends at its closing tag, and the closing tag itself is skipped
             auto block = html.substr(pos, end == std::string_view::npos ? std::string_view::npos : end - pos);
             pos = end == std::string_view::npos ? html.size() : html.find('>', end);
-            if (pos == std::string_view::npos) pos = html.size();
-            else ++pos;
+            if (pos == std::string_view::npos)
+                pos = html.size();
+            else
+                ++pos;
 
             // only the headings (<h1>..<h6>) are wanted, not the paragraphs
             auto heading = block.find("<h");
@@ -69,9 +72,12 @@ namespace {
             std::string text;
             bool inTag = false;
             for (char c : block) {
-                if (c == '<') inTag = true;
-                else if (c == '>') inTag = false;
-                else if (!inTag) text += c;
+                if (c == '<')
+                    inTag = true;
+                else if (c == '>')
+                    inTag = false;
+                else if (!inTag)
+                    text += c;
             }
             text = decodeEntities(std::move(text));
 
@@ -146,12 +152,12 @@ bool GDXGeeheeComic::init() {
     m_loadingSpinner->setPosition(m_panelCenter);
     this->addChild(m_loadingSpinner, 5);
 
-    m_statusLabel = CCLabelBMFont::create("", "bigFont.fnt");
+    m_statusLabel = Label::create("", "bigFont.fnt");
     m_statusLabel->setScale(0.5f);
     m_statusLabel->setPosition(m_panelCenter);
     this->addChild(m_statusLabel, 1);
-    
-    m_workInProgressLabel = CCLabelBMFont::create("Work in progress", "chatFont.fnt");
+
+    m_workInProgressLabel = Label::create("Work in progress", "chatFont.fnt");
     m_workInProgressLabel->setScale(0.5f);
     m_workInProgressLabel->setPosition({m_panelCenter.x, 15.f});
     this->addChild(m_workInProgressLabel, 1);
@@ -211,8 +217,8 @@ void GDXGeeheeComic::onTap(CCPoint const& worldPos) {
 void GDXGeeheeComic::showError(std::string const& message) {
     if (m_loadingSpinner) m_loadingSpinner->setVisible(false);
     if (m_statusLabel) {
-        m_statusLabel->setString(message.c_str());
-        m_statusLabel->limitLabelWidth(m_panelSize.width - 40.f, 0.5f, 0.2f);
+        m_statusLabel->setText(message);
+        m_statusLabel->setLimitLabelWidth(m_panelSize.width - 40.f, 0.5f, 0.2f);
     }
 }
 
@@ -291,8 +297,8 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
         auto page = CCLayer::create();
         page->setContentSize(winSize);
 
-        auto titleLabel = CCLabelBMFont::create(entry.title.c_str(), "goldFont.fnt");
-        titleLabel->limitLabelWidth(m_panelSize.width - 120.f, 0.8f, 0.3f);
+        auto titleLabel = Label::create(entry.title, "goldFont.fnt");
+        titleLabel->setLimitLabelWidth(m_panelSize.width - 120.f, 0.8f, 0.3f);
         titleLabel->setPosition({m_panelCenter.x, m_panelCenter.y + m_panelSize.height / 2.f});
         page->addChild(titleLabel);
 
@@ -313,9 +319,9 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
 
         auto view = PageView{.sprite = sprite};
         if (!entry.text.empty()) {
-            auto text = RichTextArea::create(entry.text, "chatFont.fnt", 0.8f, imageSize.width);
+            auto text = SimpleTextArea::create(entry.text, "chatFont.fnt", 0.8f, imageSize.width);
             text->setAnchorPoint({0.5f, 0.5f});
-            text->setAlignment(cocos2d::kCCTextAlignmentCenter);
+            text->setAlignment(kCCTextAlignmentCenter);
             text->setWrappingMode(WrappingMode::WORD_WRAP);
             text->setPosition(imagePos);
             text->setVisible(false);
@@ -340,19 +346,22 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
     if (pages->count() > 1) {
         auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
         prevSpr->setFlipX(true);
-        auto prevBtn = CCMenuItemSpriteExtra::create(prevSpr, this, menu_selector(GDXGeeheeComic::onPrev));
+        auto prevBtn = Button::createWithNode(prevSpr, [this](Button* sender) { this->onPrev(sender); });
+        prevBtn->setTouchPriority(kMenuPriority);
         prevBtn->setPosition({m_panelCenter.x - m_panelSize.width / 2.f - 25.f, m_panelCenter.y});
         m_buttonMenu->addChild(prevBtn);
 
         auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
-        auto nextBtn = CCMenuItemSpriteExtra::create(nextSpr, this, menu_selector(GDXGeeheeComic::onNext));
+        auto nextBtn = Button::createWithNode(nextSpr, [this](Button* sender) { this->onNext(sender); });
+        nextBtn->setTouchPriority(kMenuPriority);
         nextBtn->setPosition({m_panelCenter.x + m_panelSize.width / 2.f + 25.f, m_panelCenter.y});
         m_buttonMenu->addChild(nextBtn);
     }
 
     auto linkSpr = ButtonSprite::create("View Online", "bigFont.fnt", "GJ_button_01.png", 0.6f);
     linkSpr->setScale(0.7f);
-    auto linkBtn = CCMenuItemSpriteExtra::create(linkSpr, this, menu_selector(GDXGeeheeComic::onOpenLink));
+    auto linkBtn = Button::createWithNode(linkSpr, [this](Button* sender) { this->onOpenLink(sender); });
+    linkBtn->setTouchPriority(kMenuPriority);
     linkBtn->setPosition({m_panelCenter.x, 50.f});
     m_buttonMenu->addChild(linkBtn);
 }

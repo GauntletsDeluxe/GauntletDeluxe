@@ -2,10 +2,9 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/binding/CCBlockLayer.hpp>
-#include "Geode/cocos/label_nodes/CCLabelBMFont.h"
-
 #include <Geode/ui/LazySprite.hpp>
 #include <Geode/ui/TextArea.hpp>
+#include <Geode/ui/Label.hpp>
 
 using namespace geode::prelude;
 
@@ -29,7 +28,7 @@ private:
     // the tap-to-reveal text sits over its comic image on the same page
     struct PageView {
         LazySprite* sprite = nullptr;
-        RichTextArea* text = nullptr;
+        SimpleTextArea* text = nullptr;
         bool textShown = false;
     };
 
@@ -49,8 +48,8 @@ private:
     cocos2d::CCPoint m_panelCenter;
     cocos2d::CCMenu* m_buttonMenu = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
-    cocos2d::CCLabelBMFont* m_statusLabel = nullptr;
-    cocos2d::CCLabelBMFont* m_workInProgressLabel = nullptr;
+    Label* m_statusLabel = nullptr;
+    Label* m_workInProgressLabel = nullptr;
     GDXScrollLayer* m_scroll = nullptr;
     std::vector<std::string> m_links;
     std::vector<PageView> m_views;

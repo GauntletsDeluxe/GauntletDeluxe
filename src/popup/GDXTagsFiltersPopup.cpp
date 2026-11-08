@@ -5,7 +5,7 @@
 #include <Geode/ui/Button.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/utils/web.hpp>
 
 using namespace geode::prelude;
@@ -56,16 +56,14 @@ bool GDXTagsFiltersPopup::init() {
     bottomMenu->setContentWidth(m_mainLayer->getContentWidth() - 20.f);
     m_mainLayer->addChildAtPosition(bottomMenu, Anchor::Bottom, {0.f, 25.f}, false);
 
-    auto applyBtn = CCMenuItemSpriteExtra::create(
+    auto applyBtn = Button::createWithNode(
         ButtonSprite::create("Apply", "goldFont.fnt", "GJ_button_01.png"),
-        this,
-        menu_selector(GDXTagsFiltersPopup::onApply));
+        [this](Button* sender) { this->onApply(sender); });
     bottomMenu->addChild(applyBtn);
 
-    auto clearBtn = CCMenuItemSpriteExtra::create(
+    auto clearBtn = Button::createWithNode(
         ButtonSprite::create("Clear", "goldFont.fnt", "GJ_button_06.png"),
-        this,
-        menu_selector(GDXTagsFiltersPopup::onClear));
+        [this](Button* sender) { this->onClear(sender); });
     bottomMenu->addChild(clearBtn);
 
     bottomMenu->updateLayout();
@@ -95,7 +93,7 @@ void GDXTagsFiltersPopup::onClear(CCObject* sender) {
 }
 
 void GDXTagsFiltersPopup::onTagCell(CCObject* sender) {
-    auto item = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto item = static_cast<Button*>(sender);
     if (!item) {
         return;
     }
@@ -185,7 +183,7 @@ void GDXTagsFiltersPopup::rebuildTagList() {
 
     if (!m_tags.isArray() || m_tags.size() == 0) {
         if (!m_emptyLabel) {
-            m_emptyLabel = CCLabelBMFont::create("No tags available.", "goldFont.fnt");
+            m_emptyLabel = Label::create("No tags available.", "goldFont.fnt");
             if (m_emptyLabel) {
                 m_emptyLabel->setAnchorPoint({0.5f, 0.5f});
                 m_emptyLabel->setScale(0.8f);
@@ -245,7 +243,7 @@ CCNode* GDXTagsFiltersPopup::createTagCell(const matjson::Value& tag, int index)
         cell->setColor({r, g, b});
     }
 
-    auto tagLabel = CCLabelBMFont::create(tagName.c_str(), "bigFont.fnt");
+    auto tagLabel = Label::create(tagName, "bigFont.fnt");
     if (!tagLabel) {
         return nullptr;
     }
@@ -260,7 +258,7 @@ CCNode* GDXTagsFiltersPopup::createTagCell(const matjson::Value& tag, int index)
     cell->setContentSize({tagLabel->getScaledContentSize().width + 10.f, tagLabel->getScaledContentSize().height + 10.f});
     cell->addChildAtPosition(tagLabel, Anchor::Center, {0.f, 0.f}, false);
 
-    auto button = CCMenuItemSpriteExtra::create(cell, this, menu_selector(GDXTagsFiltersPopup::onTagCell));
+    auto button = Button::createWithNode(cell, [this](Button* sender) { this->onTagCell(sender); });
     if (!button) {
         return nullptr;
     }

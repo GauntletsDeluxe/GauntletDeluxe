@@ -258,15 +258,16 @@ void GDXScrollLayer::ccTouchCancelled(CCTouch* touch, CCEvent* event) {
     this->moveToPage(m_page);
 }
 
-void GDXScrollLayer::scrollWheel(float y, float x) {
-    if (!nodeIsVisible(this)) return;
+bool GDXScrollLayer::scrollWheel(float y, float x) {
+    if (!nodeIsVisible(this)) return false;
     auto delta = std::abs(y) >= std::abs(x) ? y : x;
-    if (delta == 0.f) return;
+    if (delta == 0.f) return false;
 
     static double lastWheel = 0.0;
     auto now = nowSeconds();
-    if (now - lastWheel < 0.2) return;
+    if (now - lastWheel < 0.2) return true;
     lastWheel = now;
 
     this->moveToPage(m_page + (delta > 0.f ? 1 : -1));
+    return true;
 }

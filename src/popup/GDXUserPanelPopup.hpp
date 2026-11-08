@@ -2,6 +2,8 @@
 #include "Geode/ui/LoadingSpinner.hpp"
 #include "Geode/ui/NineSlice.hpp"
 #include <cue/ListNode.hpp>
+#include <Geode/ui/Label.hpp>
+#include <Geode/ui/Toggler.hpp>
 
 using namespace geode::prelude;
 
@@ -17,10 +19,10 @@ private:
     CCMenu* m_manageMenu = nullptr;
     NineSlice* m_manageMenuBg = nullptr;
     NineSlice* m_usernameBackground = nullptr;
-    CCLabelBMFont* m_usernameLabel = nullptr;
-    CCMenuItemToggler* m_excludeBtn = nullptr;
-    CCMenuItemToggler* m_promoteBtn = nullptr;
-    CCMenuItemToggler* m_promoteModBtn = nullptr;
+    Label* m_usernameLabel = nullptr;
+    Toggler* m_excludeBtn = nullptr;
+    Toggler* m_promoteBtn = nullptr;
+    Toggler* m_promoteModBtn = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
     bool m_isExcluded = false;
     bool m_isContributor = false;
@@ -31,7 +33,7 @@ private:
     TextInput* m_usernameSearchInput = nullptr;
     std::string m_searchQuery;
     LoadingSpinner* m_listSpinner = nullptr;
-    CCLabelBMFont* m_pageInfoLabel = nullptr;
+    Label* m_pageInfoLabel = nullptr;
     Button* m_prevPageBtn = nullptr;
     Button* m_nextPageBtn = nullptr;
     int m_page = 1;

@@ -1,12 +1,13 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
+#include <Geode/ui/Label.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
 
 using namespace geode::prelude;
 
 namespace {
-    static asp::fs::path getCompletedGauntletLevelsPath() {
+    static asp::fs::Path getCompletedGauntletLevelsPath() {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
@@ -16,7 +17,7 @@ namespace {
 
     static bool hasCompletedGauntletLevel(int levelId) {
         auto path = getCompletedGauntletLevelsPath();
-        if (!asp::fs::isFile(path).unwrapOr(false)) {
+        if (!path.isFile()) {
             return false;
         }
         auto content = asp::fs::readToString(path);
@@ -132,11 +133,11 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
                         levelPointsNode->addChild(levelPointsSpr);
                     }
 
-                    auto levelPointsLabel = CCLabelBMFont::create(fmt::format("{}", levelPoints).c_str(), "bigFont.fnt");
+                    auto levelPointsLabel = Label::create(fmt::format("{}", levelPoints), "bigFont.fnt");
                     if (levelPointsLabel) {
                         levelPointsLabel->setAnchorPoint({1.f, 0.5f});
                         levelPointsLabel->setPosition({-5.f, 0.f});
-                        levelPointsLabel->limitLabelWidth(80.f, 0.8f, 0.4f);
+                        levelPointsLabel->setLimitLabelWidth(80.f, 0.8f, 0.4f);
                         if (hasCompletedGauntletLevel(static_cast<int>(levelId))) levelPointsLabel->setColor(ccColor3B{225, 140, 255});
                         levelPointsNode->addChild(levelPointsLabel);
                     }

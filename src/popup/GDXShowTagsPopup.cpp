@@ -1,5 +1,6 @@
 #include "GDXShowTagsPopup.hpp"
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Button.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/ui/General.hpp>
 
 using namespace geode::prelude;
@@ -49,7 +50,7 @@ bool GDXShowTagsPopup::init(std::string const& gauntletName, const matjson::Valu
     }
 
     if (!m_tags.isArray() || m_tags.size() == 0) {
-        auto emptyLabel = CCLabelBMFont::create("No tags applied.", "goldFont.fnt");
+        auto emptyLabel = Label::create("No tags applied.", "goldFont.fnt");
         if (emptyLabel) {
             emptyLabel->setScale(0.8f);
             emptyLabel->setAnchorPoint({0.5f, 0.5f});
@@ -59,7 +60,7 @@ bool GDXShowTagsPopup::init(std::string const& gauntletName, const matjson::Valu
         for (auto i = 0u; i < m_tags.size(); ++i) {
             auto tagCell = createTagCell(m_tags[i], static_cast<int>(i));
             if (tagCell) {
-                auto tagButton = CCMenuItemSpriteExtra::create(tagCell, this, menu_selector(GDXShowTagsPopup::onTagCell));
+                auto tagButton = Button::createWithNode(tagCell, [this](Button* sender) { this->onTagCell(sender); });
                 if (tagButton) {
                     tagButton->setTag(static_cast<int>(i));
                     m_tagMenu->addChild(tagButton);
@@ -79,7 +80,7 @@ void GDXShowTagsPopup::update(float dt) {
 }
 
 void GDXShowTagsPopup::onTagCell(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }
@@ -124,7 +125,7 @@ cocos2d::CCNode* GDXShowTagsPopup::createTagCell(const matjson::Value& tag, int 
     cell->setColor({r, g, b});
     cell->setOpacity(255);
 
-    auto tagLabel = CCLabelBMFont::create(tagName.c_str(), "bigFont.fnt");
+    auto tagLabel = Label::create(tagName, "bigFont.fnt");
     if (tagLabel) {
         tagLabel->setScale(0.45f);
         tagLabel->setAnchorPoint({0.5f, 0.5f});

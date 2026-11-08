@@ -8,7 +8,7 @@ using namespace geode::prelude;
 
 // Favorite gauntlets are stored as a plain json array of gauntlet ids in favorite_gauntlet.json.
 namespace gdx {
-    inline asp::fs::path favoriteGauntletsPath() {
+    inline asp::fs::Path favoriteGauntletsPath() {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
         if (auto res = asp::fs::createDirAll(dir); !res) {
             log::warn("Failed to create favorites save directory: {}", res.unwrapErr().message());
@@ -19,7 +19,7 @@ namespace gdx {
     inline std::unordered_set<int> loadFavoriteGauntlets() {
         std::unordered_set<int> out;
         auto path = favoriteGauntletsPath();
-        if (!asp::fs::isFile(path).unwrapOr(false)) {
+        if (!path.isFile()) {
             return out;
         }
 

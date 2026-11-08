@@ -5,7 +5,7 @@
 #include <Geode/ui/TextInput.hpp>
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/Scrollbar.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Button.hpp>
 
 using namespace geode::prelude;
 
@@ -28,7 +28,7 @@ private:
     GDXManageTagsPopup* m_parent = nullptr;
     TextInput* m_nameInput = nullptr;
     TextInput* m_descriptionInput = nullptr;
-    CCMenuItemSpriteExtra* m_colorButton = nullptr;
+    Button* m_colorButton = nullptr;
     cocos2d::CCSprite* m_colorSpr = nullptr;
     int m_r = 255;
     int m_g = 255;

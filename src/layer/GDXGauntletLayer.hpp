@@ -1,5 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/binding/SetTextPopupDelegate.hpp>
+#include <Geode/ui/Button.hpp>
+#include <Geode/ui/Label.hpp>
 #include <asp/fs.hpp>
 #include <unordered_set>
 #include <vector>
@@ -66,9 +68,9 @@ private:
     void onSearchGauntlets(CCObject* sender);
     void onFilterByTag(CCObject* sender);
     void applyTagFilter(std::string const& tag);
-    void setTextPopupClosed(SetTextPopup* popup, gd::string text) override;
+    void setTextPopupClosed(SetTextPopup* popup, std::string text) override;
 
-    CCMenuItemSpriteExtra* createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local = false);
+    Button* createGauntletButton(const matjson::Value& gauntlet, std::size_t index, bool local = false);
     GDXScrollLayer* getActiveScrollLayer() const;
     const matjson::Value& getActiveGauntlets() const;
     GDXScrollLayer* m_scrollLayer = nullptr;
@@ -76,16 +78,16 @@ private:
     CCMenu* m_gauntletsMenu = nullptr;
     CCMenu* m_bottomLeftMenu = nullptr;
     CCMenu* m_bottomRightMenu = nullptr;
-    CCMenuItemSpriteExtra* m_prevPageBtn = nullptr;
-    CCMenuItemSpriteExtra* m_nextPageBtn = nullptr;
+    Button* m_prevPageBtn = nullptr;
+    Button* m_nextPageBtn = nullptr;
     CCMenu* m_pageNavMenu = nullptr;
-    CCMenuItemSpriteExtra* m_leaderboardBtn = nullptr;
-    CCMenuItemSpriteExtra* m_discordBtn = nullptr;
-    CCMenuItemSpriteExtra* m_tagFilterBtn = nullptr;
-    CCMenuItemSpriteExtra* m_searchBtn = nullptr;
-    CCMenuItemSpriteExtra* m_recentToggle = nullptr;
-    CCMenuItemSpriteExtra* m_localToggle = nullptr;
-    CCMenuItemSpriteExtra* m_favoriteToggle = nullptr;
+    Button* m_leaderboardBtn = nullptr;
+    Button* m_discordBtn = nullptr;
+    Button* m_tagFilterBtn = nullptr;
+    Button* m_searchBtn = nullptr;
+    Button* m_recentToggle = nullptr;
+    Button* m_localToggle = nullptr;
+    Button* m_favoriteToggle = nullptr;
     bool m_favoriteFilter = false;
     bool m_onlineLoaded = false; // the online request has answered, so an empty list really is empty
     matjson::Value m_fetchedGauntlets;
@@ -95,15 +97,15 @@ private:
     std::string m_tagFilter;
     matjson::Value m_onlineGauntlets;
     matjson::Value m_localGauntlets;
-    std::vector<CCMenuItemSpriteExtra*> m_gauntletButtons;
-    std::vector<CCMenuItemSpriteExtra*> m_localGauntletButtons;
+    std::vector<Button*> m_gauntletButtons;
+    std::vector<Button*> m_localGauntletButtons;
     LoadingSpinner* m_loadingSpinner = nullptr;
     std::string m_searchQuery;
     CCSprite* m_levelPointsSpr = nullptr;
     CCSprite* m_gauntletPointsSpr = nullptr;
     CCCounterLabel* m_levelPointsCounter = nullptr;
     CCCounterLabel* m_gauntletPointsCounter = nullptr;
-    CCLabelBMFont* m_emptyStateLabel = nullptr;
+    Label* m_emptyStateLabel = nullptr;
     matjson::Value m_gauntlets;
     std::unordered_set<int> m_completedGauntletLevels;
     std::unordered_set<int> m_claimedGauntlets;

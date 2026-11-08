@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Popup.hpp>
+#include <Geode/ui/Button.hpp>
 
 using namespace geode::prelude;
 
@@ -18,8 +19,8 @@ private:
     matjson::Value m_gauntlet;
     int m_gauntletIndex = 0;
     bool m_isSending = false;
-    CCMenuItemSpriteExtra* m_likeButton = nullptr;
-    CCMenuItemSpriteExtra* m_dislikeButton = nullptr;
+    Button* m_likeButton = nullptr;
+    Button* m_dislikeButton = nullptr;
     Ref<cocos2d::CCObject> m_selfHold;
     async::TaskHolder<> m_requestTask;
 };

@@ -6,9 +6,9 @@
 #include <Geode/ui/Button.hpp>
 #include <Geode/ui/TextInput.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/utils/web.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 
 using namespace geode::prelude;
 
@@ -55,18 +55,16 @@ bool GDXManageTagsPopup::init() {
     m_mainLayer->addChildAtPosition(bottomMenu, Anchor::Bottom, {0.f, 25.f}, false);
 
     if (gdx::isManager()) {
-        auto addBtn = CCMenuItemSpriteExtra::create(
+        auto addBtn = Button::createWithNode(
             ButtonSprite::create("Add Tag", "goldFont.fnt", "GJ_button_01.png"),
-            this,
-            menu_selector(GDXManageTagsPopup::onAddTag));
+            [this](Button* sender) { this->onAddTag(sender); });
         bottomMenu->addChild(addBtn);
     }
 
     if (gdx::isManager() || gdx::isContributor()) {
-        auto webBtn = CCMenuItemSpriteExtra::create(
+        auto webBtn = Button::createWithNode(
             ButtonSprite::create("Tag Manager", "goldFont.fnt", "GJ_button_05.png"),
-            this,
-            menu_selector(GDXManageTagsPopup::onManageTagsWeb));
+            [this](Button* sender) { this->onManageTagsWeb(sender); });
         bottomMenu->addChild(webBtn);
     }
 
@@ -228,7 +226,7 @@ void GDXManageTagsPopup::rebuildTagList() {
 
     if (!filteredTags.isArray() || filteredTags.size() == 0) {
         if (!m_emptyLabel) {
-            m_emptyLabel = CCLabelBMFont::create("", "goldFont.fnt");
+            m_emptyLabel = Label::create("", "goldFont.fnt");
             if (m_emptyLabel) {
                 m_emptyLabel->setAnchorPoint({0.5f, 0.5f});
                 m_emptyLabel->setScale(0.8f);
@@ -236,7 +234,7 @@ void GDXManageTagsPopup::rebuildTagList() {
             }
         }
         if (m_emptyLabel) {
-            m_emptyLabel->setString("No tags found.");
+            m_emptyLabel->setText("No tags found.");
             m_emptyLabel->setPosition({m_list->getListSize().width / 2.f, m_list->getListSize().height / 2.f});
             m_emptyLabel->setVisible(true);
         }
@@ -287,7 +285,7 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
     auto name = tag["name"].asString().unwrapOr("Unknown");
     auto description = tag["description"].asString().unwrapOr("");
 
-    auto nameLabel = CCLabelBMFont::create(name.c_str(), "bigFont.fnt");
+    auto nameLabel = Label::create(name, "bigFont.fnt");
     if (nameLabel) {
         nameLabel->setScale(.6f);
     }
@@ -308,10 +306,10 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
         cell->addChildAtPosition(nameLabel, Anchor::Top, {0, -20}, false);
     }
 
-    auto descriptionLabel = CCLabelBMFont::create(description.c_str(), "chatFont.fnt");
+    auto descriptionLabel = Label::create(description, "chatFont.fnt");
     if (descriptionLabel) {
         descriptionLabel->setPosition({60.f, 45.f});
-        descriptionLabel->limitLabelWidth(260.f, 0.5f, 0.3f);
+        descriptionLabel->setLimitLabelWidth(260.f, 0.5f, 0.3f);
 
         auto descriptionBg = NineSlice::create("square02_small.png");
         if (descriptionBg) {
@@ -332,20 +330,22 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
     if (gdx::isManager()) {
         auto deleteSpr = ButtonSprite::create("Delete", 120.f, 40.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
         deleteSpr->setScale(0.8f);
-        auto deleteBtn = CCMenuItemSpriteExtra::create(
+        auto deleteBtn = Button::createWithNode(
             deleteSpr,
-            this,
-            menu_selector(GDXManageTagsPopup::onDeleteTag));
+            [this](Button* sender) { this->onDeleteTag(sender); });
         deleteBtn->setTag(index);
+        deleteBtn->setSwallowTouches(false);
+        deleteBtn->setDragCancelDistance(5.f);
         actionsMenu->addChild(deleteBtn);
 
         auto editSpr = ButtonSprite::create("Edit", 120.f, 40.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png");
         editSpr->setScale(0.8f);
-        auto editBtn = CCMenuItemSpriteExtra::create(
+        auto editBtn = Button::createWithNode(
             editSpr,
-            this,
-            menu_selector(GDXManageTagsPopup::onEditTag));
+            [this](Button* sender) { this->onEditTag(sender); });
         editBtn->setTag(index);
+        editBtn->setSwallowTouches(false);
+        editBtn->setDragCancelDistance(5.f);
         actionsMenu->addChild(editBtn);
     }
 
@@ -354,7 +354,7 @@ cocos2d::CCNode* GDXManageTagsPopup::createTagCell(const matjson::Value& tag, in
 }
 
 void GDXManageTagsPopup::onEditTag(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }
@@ -369,7 +369,7 @@ void GDXManageTagsPopup::onEditTag(CCObject* sender) {
 }
 
 void GDXManageTagsPopup::onDeleteTag(CCObject* sender) {
-    auto btn = static_cast<CCMenuItemSpriteExtra*>(sender);
+    auto btn = static_cast<Button*>(sender);
     if (!btn) {
         return;
     }

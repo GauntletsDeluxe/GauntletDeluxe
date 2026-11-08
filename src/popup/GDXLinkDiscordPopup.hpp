@@ -3,6 +3,8 @@
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/TextInput.hpp>
+#include <Geode/ui/Button.hpp>
+#include <Geode/ui/Label.hpp>
 #include "Geode/ui/NineSlice.hpp"
 #include <cue/LoadingCircle.hpp>
 
@@ -18,18 +20,18 @@ private:
     // UI elements
     TextInput* m_discordIdInput = nullptr;
     TextInput* m_usernameInput = nullptr;
-    CCMenuItemSpriteExtra* m_linkBtn = nullptr;
-    CCMenuItemSpriteExtra* m_unlinkBtn = nullptr;
-    CCMenuItemSpriteExtra* m_codeBtn = nullptr;
-    CCLabelBMFont* m_codeLabel = nullptr;
+    Button* m_linkBtn = nullptr;
+    Button* m_unlinkBtn = nullptr;
+    Button* m_codeBtn = nullptr;
+    Label* m_codeLabel = nullptr;
     SimpleTextArea* m_statusLabel = nullptr;
-    CCLabelBMFont* m_codeHintLabel = nullptr;
+    Label* m_codeHintLabel = nullptr;
     NineSlice* m_codeBg = nullptr;
     cue::LoadingCircle* m_loadingCircle = nullptr;
-    CCLabelBMFont* m_expiresLabel = nullptr;
-    CCLabelBMFont* m_linkedUsernameLabel = nullptr;
-    CCLabelBMFont* m_linkedIdLabel = nullptr;
-    CCLabelBMFont* m_linkedStatusLabel = nullptr;
+    Label* m_expiresLabel = nullptr;
+    Label* m_linkedUsernameLabel = nullptr;
+    Label* m_linkedIdLabel = nullptr;
+    Label* m_linkedStatusLabel = nullptr;
     int m_expiresIn = 0;
 
     std::string m_linkCode;

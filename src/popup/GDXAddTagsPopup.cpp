@@ -6,10 +6,10 @@
 #include <Geode/ui/Button.hpp>
 #include <Geode/ui/ColorPickPopup.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/ui/Label.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <Geode/utils/web.hpp>
-#include <argon/argon.hpp>
+#include <dankmeme.argon/argon.hpp>
 
 using namespace geode::prelude;
 
@@ -71,21 +71,19 @@ bool GDXAddTagsPopup::init() {
             static_cast<GLubyte>(std::clamp(m_g, 0, 255)),
             static_cast<GLubyte>(std::clamp(m_b, 0, 255))});
     }
-    auto colorBtn = CCMenuItemSpriteExtra::create(
+    auto colorBtn = Button::createWithNode(
         m_colorSpr,
-        this,
-        menu_selector(GDXAddTagsPopup::onSelectColor));
-    colorBtn->m_scaleMultiplier = 1.05f;
-    auto colorLabel = CCLabelBMFont::create("Color", "goldFont.fnt");
+        [this](Button* sender) { this->onSelectColor(sender); });
+    colorBtn->setScaleMultiplier(1.05f);
+    auto colorLabel = Label::create("Color", "goldFont.fnt");
     colorLabel->setScale(0.4f);
     colorLabel->setAnchorPoint({0, 0});
     colorBtn->addChildAtPosition(colorLabel, Anchor::TopLeft, {-2.f, 2.f}, false);
     m_buttonMenu->addChildAtPosition(colorBtn, Anchor::Top, {85.f, -55.f}, false);
 
-    auto submitBtn = CCMenuItemSpriteExtra::create(
+    auto submitBtn = Button::createWithNode(
         ButtonSprite::create(m_editIndex >= 0 ? "Update" : "Add", "goldFont.fnt", "GJ_button_01.png"),
-        this,
-        menu_selector(GDXAddTagsPopup::onSubmit));
+        [this](Button* sender) { this->onSubmit(sender); });
     m_buttonMenu->addChildAtPosition(submitBtn, Anchor::Bottom, {0.f, 20.f}, false);
 
     if (m_editIndex >= 0 && m_editTag.isObject()) {
@@ -120,8 +118,8 @@ void GDXAddTagsPopup::onSelectColor(CCObject* sender) {
 }
 
 void GDXAddTagsPopup::onSubmit(CCObject* sender) {
-    auto name = m_nameInput ? m_nameInput->getString() : gd::string();
-    auto description = m_descriptionInput ? m_descriptionInput->getString() : gd::string();
+    auto name = m_nameInput ? m_nameInput->getString() : std::string();
+    auto description = m_descriptionInput ? m_descriptionInput->getString() : std::string();
     if (name.empty()) {
         Notification::create("Tag name cannot be empty.", NotificationIcon::Warning)->show();
         return;

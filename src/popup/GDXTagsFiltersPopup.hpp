@@ -4,6 +4,7 @@
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/Layout.hpp>
+#include <Geode/ui/Label.hpp>
 #include <functional>
 
 using namespace geode::prelude;
@@ -25,7 +26,7 @@ private:
     cocos2d::CCNode* createTagCell(const matjson::Value& tag, int index);
 
     cocos2d::CCMenu* m_tagMenu = nullptr;
-    cocos2d::CCLabelBMFont* m_emptyLabel = nullptr;
+    Label* m_emptyLabel = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
     std::string m_selectedTag;
     int m_selectedIndex = -1;
