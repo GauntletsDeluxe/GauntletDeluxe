@@ -22,7 +22,6 @@ private:
         std::string link;
         std::string imageUrl;
         std::string text;
-        std::vector<uint8_t> imageData;
     };
 
     // the tap-to-reveal text sits over its comic image on the same page

@@ -5,7 +5,6 @@
 #include <Geode/ui/LoadingSpinner.hpp>
 #include <Geode/ui/TextArea.hpp>
 #include <Geode/ui/Button.hpp>
-#include <Geode/utils/base64.hpp>
 #include <Geode/utils/web.hpp>
 #include <algorithm>
 
@@ -126,7 +125,8 @@ void GDXGeeheeComic::fetchComics() {
     // weak so the layer is never released (and destroyed) on the worker thread if it was closed mid-request
     auto self = WeakRef<GDXGeeheeComic>(this);
     m_fetchTask.spawn([self = std::move(self)]() mutable -> arc::Future<> {
-        auto response = co_await utils::web::WebRequest().get("https://gdxbot.arcticwoof.xyz/api/rss/geehee.xml?comicOnly=true");
+        // the backend mirrors the rss feed as json and already reduced the description to plain text
+        auto response = co_await utils::web::WebRequest().get(gdx::baseApiUrl() + "/geehee");
         if (response.error() || response.cancelled() || !response.ok()) {
             co_await async::waitForMainThread([self] {
                 if (auto layer = self.lock()) layer->showError("Failed to load the comics.");
@@ -134,40 +134,32 @@ void GDXGeeheeComic::fetchComics() {
             co_return;
         }
 
-        auto body = response.string().unwrapOr("");
+        auto parsed = response.json();
+        if (!parsed) {
+            co_await async::waitForMainThread([self] {
+                if (auto layer = self.lock()) layer->showError("Failed to parse the comics.");
+            });
+            co_return;
+        }
+
+        auto data = std::move(parsed).unwrap();
+        if (!data.isArray()) {
+            co_await async::waitForMainThread([self] {
+                if (auto layer = self.lock()) layer->showError("Failed to parse the comics.");
+            });
+            co_return;
+        }
+
         std::vector<Entry> entries;
-        std::string_view view = body;
-        size_t pos = 0;
-        while ((pos = view.find("<item>", pos)) != std::string_view::npos) {
-            auto end = view.find("</item>", pos);
-            if (end == std::string_view::npos) break;
-            auto item = view.substr(pos, end - pos);
-            pos = end;
-
+        for (auto const& comic : data) {
             Entry entry;
-            entry.title = tagContent(item, "title");
-            entry.link = tagContent(item, "link");
-            auto description = tagContent(item, "description");
-            entry.text = descriptionText(description);
+            entry.title = comic["title"].asString().unwrapOr("");
+            entry.link = comic["link"].asString().unwrapOr("");
+            entry.imageUrl = comic["image"].asString().unwrapOr("");
+            entry.text = comic["description"].asString().unwrapOr("");
 
-            // prefer the Newgrounds page the post links to over the discord message
-            auto ngLink = attrAfter(description, "href=\"https://www.newgrounds.com", "href");
-            if (!ngLink.empty()) entry.link = decodeEntities(ngLink);
-
-            auto src = decodeEntities(attrAfter(description, "<img", "src"));
-            if (src.empty()) src = decodeEntities(attrAfter(item, "<enclosure", "url"));
-
-            constexpr std::string_view marker = "base64,";
-            if (src.starts_with("data:") && src.find(marker) != std::string::npos) {
-                auto decoded = utils::base64::decode(
-                    std::string_view(src).substr(src.find(marker) + marker.size()),
-                    utils::base64::Base64Variant::Normal);
-                if (decoded) entry.imageData = std::move(decoded).unwrap();
-            } else {
-                entry.imageUrl = std::move(src);
-            }
-
-            if (entry.imageData.empty() && entry.imageUrl.empty()) continue;
+            // nothing to show without an image
+            if (entry.imageUrl.empty()) continue;
             entries.push_back(std::move(entry));
         }
 
@@ -211,10 +203,7 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
             if (size.width <= 0.f || size.height <= 0.f) return;
             sprite->setScale(std::min(imageSize.width / size.width, imageSize.height / size.height));
         });
-        if (!entry.imageData.empty())
-            sprite->loadFromData(std::move(entry.imageData));
-        else
-            sprite->loadFromUrl(entry.imageUrl, CCImage::kFmtUnKnown, true);
+        sprite->loadFromUrl(entry.imageUrl, CCImage::kFmtUnKnown, true);
         page->addChild(sprite);
 
         auto view = PageView{.sprite = sprite};

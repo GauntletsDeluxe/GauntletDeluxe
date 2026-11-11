@@ -856,103 +856,6 @@ namespace gdx {
         return static_cast<double>(asp::time::SystemTime::now().timeSinceEpoch().micros()) / 1'000'000.0;
     }
 
-    // Comic RSS / HTML helpers (this is just ass but honestly probs gonna refactor this when i get around to adding another param for the backend and such :v)
-
-    inline std::string replaceAll(std::string str, std::string_view from, std::string_view to) {
-        size_t pos = 0;
-        while ((pos = str.find(from, pos)) != std::string::npos) {
-            str.replace(pos, from.size(), to);
-            pos += to.size();
-        }
-        return str;
-    }
-
-    inline std::string decodeEntities(std::string str) {
-        str = replaceAll(std::move(str), "&lt;", "<");
-        str = replaceAll(std::move(str), "&gt;", ">");
-        str = replaceAll(std::move(str), "&quot;", "\"");
-        str = replaceAll(std::move(str), "&apos;", "'");
-        return replaceAll(std::move(str), "&amp;", "&");
-    }
-
-    // text between <tag> and </tag> in the first match, CDATA unwrapped
-    inline std::string tagContent(std::string_view src, std::string_view tag) {
-        auto open = fmt::format("<{}>", tag);
-        auto close = fmt::format("</{}>", tag);
-        auto start = src.find(open);
-        if (start == std::string_view::npos) return "";
-        start += open.size();
-        auto end = src.find(close, start);
-        if (end == std::string_view::npos) return "";
-
-        auto content = src.substr(start, end - start);
-        constexpr std::string_view cdataOpen = "<![CDATA[";
-        constexpr std::string_view cdataClose = "]]>";
-        if (content.starts_with(cdataOpen) && content.ends_with(cdataClose)) {
-            return std::string(content.substr(cdataOpen.size(), content.size() - cdataOpen.size() - cdataClose.size()));
-        }
-        return decodeEntities(std::string(content));
-    }
-
-    // the headings of a description, which carry the comic's own text
-    inline std::string descriptionText(std::string_view html) {
-        std::string out;
-        size_t pos = 0;
-        while (pos < html.size()) {
-            auto end = html.find("</", pos);
-            // a block ends at its closing tag, and the closing tag itself is skipped
-            auto block = html.substr(pos, end == std::string_view::npos ? std::string_view::npos : end - pos);
-            pos = end == std::string_view::npos ? html.size() : html.find('>', end);
-            if (pos == std::string_view::npos)
-                pos = html.size();
-            else
-                ++pos;
-
-            // only the headings (<h1>..<h6>) are wanted, not the paragraphs
-            auto heading = block.find("<h");
-            if (heading == std::string_view::npos || heading + 2 >= block.size() || block[heading + 2] < '1' || block[heading + 2] > '6') continue;
-
-            std::string text;
-            bool inTag = false;
-            for (char c : block) {
-                if (c == '<')
-                    inTag = true;
-                else if (c == '>')
-                    inTag = false;
-                else if (!inTag)
-                    text += c;
-            }
-            text = decodeEntities(std::move(text));
-
-            // discord mentions like <@&123> would read as rich text tags
-            for (size_t at; (at = text.find("<@")) != std::string::npos;) {
-                auto close = text.find('>', at);
-                text.erase(at, close == std::string::npos ? std::string::npos : close - at + 1);
-            }
-            text = replaceAll(replaceAll(std::move(text), "<", ""), ">", "");
-
-            auto first = text.find_first_not_of(" \t\r\n");
-            if (first == std::string::npos) continue;
-            auto last = text.find_last_not_of(" \t\r\n");
-            if (!out.empty()) out += "\n\n";
-            out += text.substr(first, last - first + 1);
-        }
-        return out;
-    }
-
-    // value of the first `attr="..."` after the first occurrence of `marker`
-    inline std::string attrAfter(std::string_view src, std::string_view marker, std::string_view attr) {
-        auto at = src.find(marker);
-        if (at == std::string_view::npos) return "";
-        auto key = fmt::format("{}=\"", attr);
-        auto start = src.find(key, at);
-        if (start == std::string_view::npos) return "";
-        start += key.size();
-        auto end = src.find('"', start);
-        if (end == std::string_view::npos) return "";
-        return std::string(src.substr(start, end - start));
-    }
-
     // Favorite gauntlets are stored as a plain json array of gauntlet ids in favorite_gauntlet.json.
     inline asp::fs::Path favoriteGauntletsPath() {
         auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
@@ -1013,8 +916,10 @@ namespace gdx {
     inline bool toggleFavoriteGauntlet(int gauntletId) {
         auto favorites = loadFavoriteGauntlets();
         bool nowFavorite = !favorites.contains(gauntletId);
-        if (nowFavorite) favorites.insert(gauntletId);
-        else favorites.erase(gauntletId);
+        if (nowFavorite)
+            favorites.insert(gauntletId);
+        else
+            favorites.erase(gauntletId);
         saveFavoriteGauntlets(favorites);
         return nowFavorite;
     }
