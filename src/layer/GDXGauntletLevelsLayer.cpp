@@ -1,7 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include "../include/GDXConstant.hpp"
-#include "../include/GDXFavorites.hpp"
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>

@@ -722,7 +722,7 @@ namespace gdx {
     inline CCSprite* createFavoriteSprite(bool on) {
         return CircleButtonSprite::createWithSpriteFrameName(
             on ? "gj_heartOn_001.png" : "gj_heartOff_001.png",
-            0.85f,
+            1.f,
             on ? CircleBaseColor::Cyan : CircleBaseColor::Gray,
             CircleBaseSize::Small);
     }

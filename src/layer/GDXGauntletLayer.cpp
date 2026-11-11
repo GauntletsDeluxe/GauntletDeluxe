@@ -6,11 +6,9 @@
 #include "../popup/GDXLikeItemPopup.hpp"
 #include "../popup/GDXShowTagsPopup.hpp"
 #include "../popup/GDXTagsFiltersPopup.hpp"
-#include "../popup/GDXLinkDiscordPopup.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/UploadActionPopup.hpp>
 #include <algorithm>
-#include <cctype>
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/LoadingSpinner.hpp>
@@ -21,16 +19,13 @@
 #include <Geode/binding/SetTextPopup.hpp>
 #include <asp/fs.hpp>
 #include "../include/GDXConstant.hpp"
-#include "../include/GDXFavorites.hpp"
 #include "Geode/ui/BasedButtonSprite.hpp"
 #include "Geode/ui/Layout.hpp"
-#include "Geode/ui/LazySprite.hpp"
 #include "Geode/ui/NineSlice.hpp"
 #include <dankmeme.argon/argon.hpp>
 
 using namespace geode::prelude;
 using namespace gdx;
-
 
 GDXGauntletLayer* GDXGauntletLayer::create() {
     auto ret = new GDXGauntletLayer();

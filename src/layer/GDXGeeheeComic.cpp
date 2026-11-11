@@ -12,13 +12,6 @@
 using namespace geode::prelude;
 using namespace gdx;
 
-namespace {
-    constexpr char const* kFeedUrl = "https://gdxbot.arcticwoof.xyz/api/rss/geehee.xml?comicOnly=true";
-    constexpr int kMenuPriority = -504;
-    constexpr int kScrollPriority = -505;
-}
-
-
 GDXGeeheeComic* GDXGeeheeComic::create() {
     auto ret = new GDXGeeheeComic();
     if (ret->init()) {
@@ -53,7 +46,6 @@ bool GDXGeeheeComic::init() {
     m_buttonMenu = CCMenu::create();
     m_buttonMenu->setPosition({0.f, 0.f});
     m_buttonMenu->setContentSize(winSize);
-    m_buttonMenu->setTouchPriority(kMenuPriority);
     this->addChild(m_buttonMenu, 10);
 
     m_loadingSpinner = LoadingSpinner::create(60.f);
@@ -134,7 +126,7 @@ void GDXGeeheeComic::fetchComics() {
     // weak so the layer is never released (and destroyed) on the worker thread if it was closed mid-request
     auto self = WeakRef<GDXGeeheeComic>(this);
     m_fetchTask.spawn([self = std::move(self)]() mutable -> arc::Future<> {
-        auto response = co_await utils::web::WebRequest().get(kFeedUrl);
+        auto response = co_await utils::web::WebRequest().get("https://gdxbot.arcticwoof.xyz/api/rss/geehee.xml?comicOnly=true");
         if (response.error() || response.cancelled() || !response.ok()) {
             co_await async::waitForMainThread([self] {
                 if (auto layer = self.lock()) layer->showError("Failed to load the comics.");
@@ -244,7 +236,7 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
 
     m_scroll = GDXScrollLayer::create(pages);
     if (!m_scroll) return;
-    m_scroll->setScrollTouchPriority(kScrollPriority);
+    m_scroll->setScrollTouchPriority(-505);
     m_scroll->setTapCallback([this](CCPoint const& worldPos) {
         this->onTap(worldPos);
     });
@@ -255,13 +247,13 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
         auto prevSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
         prevSpr->setFlipX(true);
         auto prevBtn = Button::createWithNode(prevSpr, [this](Button* sender) { this->onPrev(sender); });
-        prevBtn->setTouchPriority(kMenuPriority);
+        prevBtn->setTouchPriority(-504);
         prevBtn->setPosition({m_panelCenter.x - m_panelSize.width / 2.f - 25.f, m_panelCenter.y});
         m_buttonMenu->addChild(prevBtn);
 
         auto nextSpr = CCSprite::createWithSpriteFrameName("navArrowBtn_001.png");
         auto nextBtn = Button::createWithNode(nextSpr, [this](Button* sender) { this->onNext(sender); });
-        nextBtn->setTouchPriority(kMenuPriority);
+        nextBtn->setTouchPriority(-504);
         nextBtn->setPosition({m_panelCenter.x + m_panelSize.width / 2.f + 25.f, m_panelCenter.y});
         m_buttonMenu->addChild(nextBtn);
     }
@@ -269,7 +261,7 @@ void GDXGeeheeComic::buildPages(std::vector<Entry> entries) {
     auto linkSpr = ButtonSprite::create("View Online", "goldFont.fnt", "GJ_button_01.png", 0.6f);
     linkSpr->setScale(0.7f);
     auto linkBtn = Button::createWithNode(linkSpr, [this](Button* sender) { this->onOpenLink(sender); });
-    linkBtn->setTouchPriority(kMenuPriority);
+    linkBtn->setTouchPriority(-504);
     linkBtn->setPosition({m_panelCenter.x, 50.f});
     m_buttonMenu->addChild(linkBtn);
 }

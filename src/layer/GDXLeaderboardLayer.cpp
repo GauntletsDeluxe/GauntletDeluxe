@@ -87,6 +87,14 @@ bool GDXLeaderboardLayer::init() {
             m_loadingSpinner->setVisible(false);
             this->addChild(m_loadingSpinner, 4);
         }
+        m_errorLabel = Label::create("", "goldFont.fnt");
+        if (m_errorLabel) {
+            m_errorLabel->setPosition(m_list->getPosition());
+            m_errorLabel->setAlignment(Label::Alignment::Center);
+            m_errorLabel->setLimitLabelWidth(m_list->getContentWidth() - 20.f, 0.8f, 0.3f);
+            m_errorLabel->setVisible(false);
+            this->addChild(m_errorLabel, 4);
+        }
     }
 
     m_scrollbar = Scrollbar::create(m_list->getScrollLayer());
@@ -238,6 +246,10 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     if (m_loadingSpinner) {
         m_loadingSpinner->setVisible(true);
     }
+    if (m_errorLabel) {
+        m_errorLabel->setVisible(false);
+        m_errorLabel->setText("");
+    }
     m_list->clear();
     auto accountData = argon::getGameAccountData();
     auto url = std::string(gdx::baseApiUrl()) + "/getLeaderboard";
@@ -250,7 +262,17 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     m_leaderboardTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
         auto token = co_await gdx::argonToken(accountData);
         if (token.empty()) {
-            co_await async::waitForMainThread([self = std::move(self)]() {});
+            co_await async::waitForMainThread([self = std::move(self)]() {
+                if (!self) return;
+                if (self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
+                }
+                if (self->m_errorLabel) {
+                    self->m_errorLabel->setVisible(true);
+                    self->m_errorLabel->setString("Failed to authenticate with argon.");
+                }
+                //Notification::create("Failed to authenticate with argon.", NotificationIcon::Error)->show();
+            });
             co_return;
         }
 
@@ -261,10 +283,17 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
                             .bodyJSON(body)
                             .post(url);
         if (response.error() || response.cancelled() || !response.ok()) {
-            co_await async::waitForMainThread([self = std::move(self)]() {
-                if (self && self->m_loadingSpinner) {
+            auto errMsg = gdx::getResponseMessage(response, "Failed to load leaderboard.");
+            co_await async::waitForMainThread([self = std::move(self), errMsg = std::move(errMsg)] {
+                if (!self) return;
+                if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
+                if (self->m_errorLabel) {
+                    self->m_errorLabel->setVisible(true);
+                    self->m_errorLabel->setText(errMsg);
+                }
+                //Notification::create(errMsg, NotificationIcon::Error)->show();
             });
             co_return;
         }
@@ -272,9 +301,15 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
         auto jsonResult = response.json();
         if (!jsonResult) {
             co_await async::waitForMainThread([self = std::move(self)]() {
-                if (self && self->m_loadingSpinner) {
+                if (!self) return;
+                if (self->m_loadingSpinner) {
                     self->m_loadingSpinner->setVisible(false);
                 }
+                if (self->m_errorLabel) {
+                    self->m_errorLabel->setVisible(true);
+                    self->m_errorLabel->setString("Failed to parse leaderboard response.");
+                }
+                //Notification::create("Failed to parse leaderboard response.", NotificationIcon::Error)->show();
             });
             co_return;
         }
@@ -286,6 +321,14 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
             }
 
             if (!leaderboard.isArray()) {
+                if (self->m_loadingSpinner) {
+                    self->m_loadingSpinner->setVisible(false);
+                }
+                if (self->m_errorLabel) {
+                    self->m_errorLabel->setVisible(true);
+                    self->m_errorLabel->setString("Unexpected leaderboard response.");
+                }
+                //Notification::create("Unexpected leaderboard response.", NotificationIcon::Error)->show();
                 return;
             }
 

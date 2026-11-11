@@ -1,7 +1,6 @@
 #include "GDXLinkDiscordPopup.hpp"
 #include "../include/GDXConstant.hpp"
 #include "Geode/cocos/cocoa/CCGeometry.h"
-#include "Geode/ui/MDPopup.hpp"
 #include "Geode/ui/NineSlice.hpp"
 #include "Geode/ui/TextArea.hpp"
 #include <Geode/ui/Label.hpp>
@@ -95,7 +94,7 @@ bool GDXLinkDiscordPopup::init() {
 
     m_linkedIdLabel = Label::create("", "chatFont.fnt");
     m_linkedIdLabel->setScale(0.7f);
-    m_linkedIdLabel->setColor({200, 200, 200});
+    m_linkedIdLabel->setColor(ccWHITE);
     m_mainLayer->addChildAtPosition(m_linkedIdLabel, Anchor::Center, {0.f, 10.f});
     m_linkedIdLabel->setVisible(false);
 
@@ -176,10 +175,10 @@ void GDXLinkDiscordPopup::updateUI(bool isLinked, const std::string& username, c
         if (m_linkedStatusLabel) {
             if (isVerified) {
                 m_linkedStatusLabel->setText("Status: Linked & Verified");
-                m_linkedStatusLabel->setColor({50, 255, 50});
+                m_linkedStatusLabel->setColor(ccGREEN);
             } else {
                 m_linkedStatusLabel->setText("Status: Pending Verification");
-                m_linkedStatusLabel->setColor({255, 200, 50});
+                m_linkedStatusLabel->setColor(ccORANGE);
             }
             m_linkedStatusLabel->setVisible(true);
         }
@@ -273,6 +272,10 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
                             self->m_statusLabel->setText(errMsg.c_str());
                             self->m_statusLabel->setVisible(true);
                         }
+                        // should probably make each of the state its own menu or layer goog
+                        self->m_discordIdInput->setVisible(false);
+                        self->m_usernameInput->setVisible(false);
+                        self->m_linkBtn->setVisible(false);
                     }
                 });
             }

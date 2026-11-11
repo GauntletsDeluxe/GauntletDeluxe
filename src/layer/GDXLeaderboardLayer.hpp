@@ -25,6 +25,7 @@ private:
     CCMenu* m_bottomLeftMenu = nullptr;
     Scrollbar* m_scrollbar = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
+    Label* m_errorLabel = nullptr;
     int m_type = 1;
     TabButton* m_levelPointsTabSprite = nullptr;
     TabButton* m_gauntletPointsTabSprite = nullptr;
