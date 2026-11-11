@@ -5,48 +5,7 @@
 #include "../include/GDXConstant.hpp"
 
 using namespace geode::prelude;
-
-namespace {
-    static asp::fs::Path getCompletedGauntletLevelsPath() {
-        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
-        if (auto res = asp::fs::createDirAll(dir); !res) {
-            log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
-        }
-        return dir / "completed_gauntlet_levels.json";
-    }
-
-    static bool hasCompletedGauntletLevel(int levelId) {
-        auto path = getCompletedGauntletLevelsPath();
-        if (!path.isFile()) {
-            return false;
-        }
-        auto content = asp::fs::readToString(path);
-        if (!content) {
-            return false;
-        }
-        auto jsonResult = matjson::parse(content.unwrap());
-        if (!jsonResult) {
-            return false;
-        }
-        auto data = std::move(jsonResult).unwrap();
-        if (data.isObject() && data["completedLevels"].isArray()) {
-            data = data["completedLevels"];
-        }
-        if (!data.isArray()) {
-            return false;
-        }
-        for (auto const& value : data) {
-            if (!value.isNumber()) {
-                continue;
-            }
-            auto maybeId = value.asInt();
-            if (maybeId && static_cast<int>(maybeId.unwrap()) == levelId) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
+using namespace gdx;
 
 class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
     bool init(GJGameLevel* level, bool challenge) {

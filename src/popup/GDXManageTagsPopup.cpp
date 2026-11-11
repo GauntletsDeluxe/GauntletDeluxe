@@ -11,6 +11,7 @@
 #include <dankmeme.argon/argon.hpp>
 
 using namespace geode::prelude;
+using namespace gdx;
 
 GDXManageTagsPopup* GDXManageTagsPopup::create() {
     auto ret = new GDXManageTagsPopup();
@@ -186,33 +187,6 @@ void GDXManageTagsPopup::createTagList(const matjson::Value& tags) {
 
 void GDXManageTagsPopup::refreshTags() {
     fetchTags();
-}
-
-static matjson::Value filterTagsByName(const matjson::Value& tags, const std::string& query) {
-    if (!tags.isArray()) {
-        return matjson::Value::array();
-    }
-    if (query.empty()) {
-        return tags;
-    }
-
-    std::string lowerQuery = query;
-    std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-
-    matjson::Value filtered = matjson::Value::array();
-    for (auto const& tag : tags) {
-        auto name = tag["name"].asString().unwrapOr("");
-        std::string lowerName = name;
-        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), [](unsigned char c) {
-            return static_cast<char>(std::tolower(c));
-        });
-        if (lowerName.find(lowerQuery) != std::string::npos) {
-            filtered.push(tag);
-        }
-    }
-    return filtered;
 }
 
 void GDXManageTagsPopup::rebuildTagList() {

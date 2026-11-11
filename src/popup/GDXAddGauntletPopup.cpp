@@ -19,64 +19,7 @@
 
 using namespace geode;
 using namespace geode::prelude;
-
-namespace {
-    static asp::fs::Path getLocalGauntletPath() {
-        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
-        if (auto res = asp::fs::createDirAll(dir); !res) {
-            log::warn("Failed to create local gauntlet save directory: {}", res.unwrapErr().message());
-        }
-        return dir / "local_gauntlets.json";
-    }
-
-    static matjson::Value loadLocalGauntlets() {
-        auto path = getLocalGauntletPath();
-        if (!path.isFile()) {
-            return matjson::Value::array();
-        }
-
-        auto content = asp::fs::readToString(path);
-        if (!content) {
-            log::warn("Failed to read local gauntlet file: {}", content.unwrapErr());
-            return matjson::Value::array();
-        }
-
-        auto jsonResult = matjson::parse(content.unwrap());
-        if (!jsonResult) {
-            log::warn("Failed to parse local gauntlet JSON: {}", jsonResult.unwrapErr());
-            return matjson::Value::array();
-        }
-
-        auto data = std::move(jsonResult).unwrap();
-        if (data.isObject() && data["gauntlets"].isArray()) {
-            return data["gauntlets"];
-        }
-        if (data.isArray()) {
-            return data;
-        }
-        return matjson::Value::array();
-    }
-
-    static bool saveLocalGauntlets(matjson::Value const& gauntlets) {
-        auto path = getLocalGauntletPath();
-        matjson::Value data = matjson::Value::array();
-        if (gauntlets.isArray()) {
-            for (auto const& item : gauntlets) {
-                data.push(item);
-            }
-        }
-        auto result = asp::fs::write(path, data.dump().c_str(), data.dump().size());
-        if (!result) {
-            log::warn("Failed to save local gauntlets: {}", result.unwrapErr());
-        }
-        return static_cast<bool>(result);
-    }
-}
-
-static std::string getBgIconSpriteName(int index) {
-    int bgIndex = std::clamp(index, 1, 59);
-    return fmt::format("bgIcon_{:02d}_001.png", bgIndex);
-}
+using namespace gdx;
 
 LevelCell* GDXAddGauntletPopup::createLevelCellFromLevel(GJGameLevel* level, int reward) {
     if (!level) {

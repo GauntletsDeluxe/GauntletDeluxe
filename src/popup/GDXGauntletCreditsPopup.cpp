@@ -9,76 +9,7 @@
 
 using namespace geode;
 using namespace geode::prelude;
-
-static CCSprite* createCachedGauntletSprite(CCNode* parent, const std::string& url, const CCPoint& position, const CCSize& size, int zOrder = 2) {
-    if (!parent) {
-        return nullptr;
-    }
-
-    if (auto texture = gdx::findGauntletTexture(url)) {
-        auto sprite = CCSprite::createWithTexture(texture);
-        if (!sprite) {
-            return nullptr;
-        }
-        sprite->setID("gauntlet-image");
-        if (sprite->getContentSize().width > 0 && sprite->getContentSize().height > 0) {
-            const float fitScale = std::min(size.width / sprite->getContentSize().width, size.height / sprite->getContentSize().height);
-            sprite->setScale(fitScale);
-        }
-        sprite->setPosition(position);
-        parent->addChild(sprite, zOrder);
-        return sprite;
-    }
-
-    auto sprite = LazySprite::create(size, false);
-    if (!sprite) {
-        return nullptr;
-    }
-    sprite->setID("gauntlet-image");
-    sprite->setAutoResize(true);
-    sprite->setPosition(position);
-    sprite->setLoadCallback([sprite, url](Result<> const& result) {
-        if (!result) {
-            return;
-        }
-        if (auto texture = sprite->getTexture()) {
-            gdx::cacheGauntletTexture(url, texture);
-        }
-    });
-    sprite->loadFromUrl(url, CCImage::kFmtPng, true);
-    parent->addChild(sprite, zOrder);
-    return sprite;
-}
-
-static cocos2d::CCNode* createGauntletCreditsTagCell(const matjson::Value& tag) {
-    std::string tagName = tag["name"].asString().unwrapOr("Tag");
-    if (tagName.empty()) {
-        tagName = "Tag";
-    }
-
-    // @geode-ignore(unknown-resource)
-    auto tagCell = NineSlice::createWithSpriteFrameName("geode.loader/tab-bg.png");
-    if (!tagCell) {
-        return nullptr;
-    }
-
-    auto r = static_cast<GLubyte>(tag["r"].asInt().unwrapOr(255));
-    auto g = static_cast<GLubyte>(tag["g"].asInt().unwrapOr(255));
-    auto b = static_cast<GLubyte>(tag["b"].asInt().unwrapOr(255));
-    tagCell->setColor({r, g, b});
-    tagCell->setOpacity(255);
-
-    auto tagLabel = Label::create(tagName, "bigFont.fnt");
-    if (tagLabel) {
-        tagLabel->setScale(0.4f);
-        tagLabel->setAnchorPoint({0.5f, 0.5f});
-        tagLabel->setColor({255, 255, 255});
-        tagCell->setContentSize({tagLabel->getScaledContentSize().width + 10.f, tagLabel->getScaledContentSize().height + 10.f});
-        tagCell->addChildAtPosition(tagLabel, Anchor::Center, {0.f, 0.f}, false);
-    }
-
-    return tagCell;
-}
+using namespace gdx;
 
 GDXUserInfo GDXUserInfo::fromJson(const matjson::Value& value) {
     GDXUserInfo info;

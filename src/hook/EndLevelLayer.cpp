@@ -11,85 +11,7 @@
 #include <arc/runtime/Runtime.hpp>
 
 using namespace geode::prelude;
-
-namespace {
-    static asp::fs::Path getCompletedGauntletLevelsPath(bool local) {
-        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
-        if (auto res = asp::fs::createDirAll(dir); !res) {
-            log::warn("Failed to create completed levels save directory: {}", res.unwrapErr().message());
-        }
-        return dir / (local ? "completed_gauntlet_levels_local.json" : "completed_gauntlet_levels.json");
-    }
-
-    static std::vector<int> loadCompletedGauntletLevels(bool local = false) {
-        std::vector<int> out;
-        auto path = getCompletedGauntletLevelsPath(local);
-        if (!path.isFile()) {
-            return out;
-        }
-        auto content = asp::fs::readToString(path);
-        if (!content) {
-            log::warn("Failed to read completed gauntlet levels file: {}", content.unwrapErr());
-            return out;
-        }
-        auto jsonResult = matjson::parse(content.unwrap());
-        if (!jsonResult) {
-            log::warn("Failed to parse completed gauntlet levels JSON: {}", jsonResult.unwrapErr());
-            return out;
-        }
-        auto data = std::move(jsonResult).unwrap();
-        if (data.isObject() && data["completedLevels"].isArray()) {
-            data = data["completedLevels"];
-        }
-        if (!data.isArray()) {
-            return out;
-        }
-        for (auto const& value : data) {
-            if (!value.isNumber()) {
-                continue;
-            }
-            auto maybeId = value.asInt();
-            if (maybeId) {
-                out.push_back(static_cast<int>(maybeId.unwrap()));
-            }
-        }
-        return out;
-    }
-
-    static bool saveCompletedGauntletLevels(std::vector<int> const& levels, bool local = false) {
-        auto path = getCompletedGauntletLevelsPath(local);
-        matjson::Value array = matjson::Value::array();
-        for (auto levelId : levels) {
-            array.push(levelId);
-        }
-        auto data = array.dump();
-        auto res = asp::fs::write(path, data.c_str(), data.size());
-        if (!res) {
-            log::warn("Failed to save completed gauntlet levels: {}", res.unwrapErr());
-        }
-        return static_cast<bool>(res);
-    }
-
-    static void addCompletedGauntletLevel(int levelId, bool local = false) {
-        auto levels = loadCompletedGauntletLevels(local);
-        bool hasLevel = false;
-        for (auto existingLevelId : levels) {
-            if (existingLevelId == levelId) {
-                hasLevel = true;
-                break;
-            }
-        }
-        if (!hasLevel) {
-            levels.push_back(levelId);
-            saveCompletedGauntletLevels(levels, local);
-        }
-    }
-
-    // backward-compatible wrapper
-    static void addCompletedGauntletLevel(int levelId) {
-        addCompletedGauntletLevel(levelId, false);
-    }
-}
+using namespace gdx;
 
 class $modify(GDXEndLevelLayer, EndLevelLayer) {
     struct Fields {
@@ -106,15 +28,8 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 if (this->m_listLayer) {
                     int levelId = static_cast<int>(this->m_playLayer->m_level->m_levelID);
                     auto completedLevels = loadCompletedGauntletLevels(true);
-                    bool hasLevel = false;
-                    for (auto existingLevelId : completedLevels) {
-                        if (existingLevelId == levelId) {
-                            hasLevel = true;
-                            break;
-                        }
-                    }
-                    if (!hasLevel) {
-                        completedLevels.push_back(levelId);
+                    if (!completedLevels.contains(levelId)) {
+                        completedLevels.insert(levelId);
                         saveCompletedGauntletLevels(completedLevels, true);
 
                         auto completedIcon = CCSprite::createWithSpriteFrameName("GJ_completesIcon_001.png");
@@ -202,15 +117,8 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                     if (!self) return;
                     auto gdxSelf = static_cast<GDXEndLevelLayer*>(self.data());
                     auto completedLevels = loadCompletedGauntletLevels(false);
-                    bool hasLevel = false;
-                    for (auto existingLevelId : completedLevels) {
-                        if (existingLevelId == levelId) {
-                            hasLevel = true;
-                            break;
-                        }
-                    }
-                    if (!hasLevel) {
-                        completedLevels.push_back(levelId);
+                    if (!completedLevels.contains(levelId)) {
+                        completedLevels.insert(levelId);
                         saveCompletedGauntletLevels(completedLevels, false);
                     }
 

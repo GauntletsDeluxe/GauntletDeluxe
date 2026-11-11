@@ -21,58 +21,7 @@
 #include <cue/PlayerIcon.hpp>
 
 using namespace geode::prelude;
-
-namespace {
-    // the sync merges server progress into the same files GDXGauntletLayer reads when it builds its pages
-    asp::fs::Path completedFilePath(char const* name) {
-        auto dir = dirs::getModsSaveDir() / Mod::get()->getID();
-        if (auto res = asp::fs::createDirAll(dir); !res) {
-            log::warn("Failed to create save directory: {}", res.unwrapErr().message());
-        }
-        return dir / name;
-    }
-
-    void insertIds(std::unordered_set<int>& out, matjson::Value const& data) {
-        if (!data.isArray()) return;
-        for (auto const& entry : data) {
-            if (entry.isNumber()) {
-                if (auto id = entry.asInt()) out.insert(static_cast<int>(id.unwrap()));
-            } else if (entry.isString()) {
-                if (auto id = numFromString<int>(entry.asString().unwrapOr(""))) out.insert(id.unwrap());
-            }
-        }
-    }
-
-    std::unordered_set<int> loadIds(char const* fileName, char const* objectKey) {
-        std::unordered_set<int> out;
-        auto path = completedFilePath(fileName);
-        if (!path.isFile()) return out;
-
-        auto content = asp::fs::readToString(path);
-        if (!content) {
-            log::warn("Failed to read {}: {}", fileName, content.unwrapErr());
-            return out;
-        }
-        auto parsed = matjson::parse(content.unwrap());
-        if (!parsed) {
-            log::warn("Failed to parse {}: {}", fileName, parsed.unwrapErr());
-            return out;
-        }
-        auto data = std::move(parsed).unwrap();
-        if (data.isObject() && data[objectKey].isArray()) data = data[objectKey];
-        insertIds(out, data);
-        return out;
-    }
-
-    bool saveIds(char const* fileName, std::unordered_set<int> const& ids) {
-        matjson::Value array = matjson::Value::array();
-        for (auto id : ids) array.push(id);
-        auto data = array.dump();
-        auto res = asp::fs::write(completedFilePath(fileName), data.c_str(), data.size());
-        if (!res) log::warn("Failed to save {}: {}", fileName, res.unwrapErr());
-        return static_cast<bool>(res);
-    }
-}
+using namespace gdx;
 
 GDXLeaderboardLayer* GDXLeaderboardLayer::create() {
     auto ret = new GDXLeaderboardLayer();

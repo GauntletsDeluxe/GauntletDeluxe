@@ -1,18 +1,16 @@
 #include "GDXScrollLayer.hpp"
+#include "../include/GDXConstant.hpp"
 #include <algorithm>
 #include <cmath>
 #include <asp/time/SystemTime.hpp>
 
 using namespace geode::prelude;
+using namespace gdx;
 
 constexpr int kScrollActionTag = 2;
 constexpr float kRubberBand = 0.35f;
 constexpr float kFlingSpeed = 450.f;
 constexpr int kTouchPriority = -138;
-
-double nowSeconds() {
-    return static_cast<double>(asp::time::SystemTime::now().timeSinceEpoch().micros()) / 1'000'000.0;
-}
 
 GDXScrollLayer* GDXScrollLayer::create(CCArray* pages) {
     auto ret = new GDXScrollLayer();
