@@ -47,6 +47,17 @@ bool GDXGeeheeComic::init() {
     m_buttonMenu->setContentSize(winSize);
     this->addChild(m_buttonMenu, 10);
 
+    m_bottomLeftMenu = CCMenu::create();
+    m_bottomLeftMenu->setPosition({10, 10});
+    m_bottomLeftMenu->setAnchorPoint({0.f, 0.f});
+    m_bottomLeftMenu->setContentHeight(200);
+    m_bottomLeftMenu->setLayout(ColumnLayout::create()->setGap(5.f)->setAxisAlignment(AxisAlignment::Start)->setGrowCrossAxis(true)->setCrossAxisReverse(true));
+    this->addChild(m_bottomLeftMenu, 2);
+
+    auto rssSpr = CircleButtonSprite::createWithSpriteFrameName("GDX_rssIcon.png"_spr, 1.1f, CircleBaseColor::Green, CircleBaseSize::Small);
+    m_bottomLeftMenu->addChild(Button::createWithNode(rssSpr, [this](Button* sender) { this->onRSSLink(sender); }));
+    m_bottomLeftMenu->updateLayout();
+
     m_loadingSpinner = LoadingSpinner::create(60.f);
     m_loadingSpinner->setPosition(m_panelCenter);
     this->addChild(m_loadingSpinner, 5);
@@ -65,6 +76,11 @@ bool GDXGeeheeComic::init() {
     this->setKeypadEnabled(true);
     this->fetchComics();
     return true;
+}
+
+void GDXGeeheeComic::onRSSLink(CCObject*) {
+    utils::web::openLinkInBrowser(gdx::baseBotUrl() + "api/rss/geehee.xml");
+    Notification::create("Opened GeeHee RSS feed in browser", NotificationIcon::Info)->show();
 }
 
 void GDXGeeheeComic::show() {
@@ -155,8 +171,10 @@ void GDXGeeheeComic::fetchComics() {
             Entry entry;
             entry.title = comic["title"].asString().unwrapOr("");
             entry.link = comic["link"].asString().unwrapOr("");
-            entry.imageUrl = comic["image"].asString().unwrapOr("");
             entry.text = comic["description"].asString().unwrapOr("");
+            auto image = comic["image"].asString().unwrapOr("");
+            if (!image.empty() && !image.starts_with("http")) image = gdx::baseApiUrl() + image;
+            entry.imageUrl = std::move(image);
 
             // nothing to show without an image
             if (entry.imageUrl.empty()) continue;

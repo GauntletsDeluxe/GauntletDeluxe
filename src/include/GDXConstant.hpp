@@ -22,12 +22,17 @@ using namespace geode::prelude;
 
 namespace gdx {
     constexpr std::string_view BASE_API_URL = "https://gdgauntletdeluxe.arcticwoof.xyz";
+    constexpr std::string_view BASE_BOT_URL = "https://gdxbot.arcticwoof.xyz/";
 
     inline std::string baseApiUrl() {
         if (Mod::get()->getSettingValue<bool>("enableLocalServer")) {
             return "http://127.0.0.1:1027";
         }
         return std::string(BASE_API_URL);
+    }
+
+    inline std::string baseBotUrl() {
+        return std::string(BASE_BOT_URL);
     }
 
     // since im tired to getting the argon token in multiple places, just make a helper function for it

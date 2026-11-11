@@ -35,6 +35,7 @@ private:
     void keyBackClicked() override;
 
     void fetchComics();
+    void onRSSLink(CCObject* sender);
     void showError(std::string const& message);
     void buildPages(std::vector<Entry> entries);
     void onClose(cocos2d::CCObject* sender);
@@ -46,6 +47,7 @@ private:
     cocos2d::CCSize m_panelSize;
     cocos2d::CCPoint m_panelCenter;
     cocos2d::CCMenu* m_buttonMenu = nullptr;
+    cocos2d::CCMenu* m_bottomLeftMenu = nullptr;
     LoadingSpinner* m_loadingSpinner = nullptr;
     Label* m_statusLabel = nullptr;
     Label* m_workInProgressLabel = nullptr;

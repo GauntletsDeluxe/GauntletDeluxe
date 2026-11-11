@@ -40,7 +40,7 @@ bool GDXScrollLayer::init(CCArray* pages) {
     this->addChild(m_scrollProxy);
 
     m_scrollbar = Scrollbar::create(m_scrollProxy);
-    m_scrollbar->setRotation(-90.f);  // vertical top -> left, so the first page is at the left end
+    m_scrollbar->setRotation(-90.f);
     m_scrollbar->setPosition({winSize.width / 2.f, 60.f});
     this->addChild(m_scrollbar, 5);
 
@@ -51,7 +51,7 @@ bool GDXScrollLayer::init(CCArray* pages) {
 }
 
 void GDXScrollLayer::registerWithTouchDispatcher() {
-    CCDirector::sharedDirector()->getTouchDispatcher()->addPrioTargetedDelegate(this, m_touchPrio, false); // ew touch prio
+    CCDirector::sharedDirector()->getTouchDispatcher()->addPrioTargetedDelegate(this, m_touchPrio, false);  // ew touch prio
 }
 
 void GDXScrollLayer::setScrollTouchPriority(int priority) {
