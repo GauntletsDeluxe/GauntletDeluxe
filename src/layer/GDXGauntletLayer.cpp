@@ -274,8 +274,8 @@ void GDXGauntletLayer::onManageGauntlets(CCObject* sender) {
     body["accountId"] = accountData.accountId;
 
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_syncAccountTask.spawn([upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_syncAccountTask.spawn([upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef = std::move(upopupRef)] {
                 if (!upopupRef) return;
@@ -721,8 +721,8 @@ void GDXGauntletLayer::fetchUserData() {
     body["argonToken"] = "";
 
     auto self = Ref<GDXGauntletLayer>(this);
-    m_fetchUserDataTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_fetchUserDataTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self)]() {});
             co_return;
@@ -1158,8 +1158,8 @@ void GDXGauntletLayer::onCompleteGauntlet(CCObject* sender) {
     }
 
     auto self = Ref<GDXGauntletLayer>(this);
-    m_completeGauntletTask.spawn([self = std::move(self), button, buttonPos, rewardSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), gauntletIndex]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_completeGauntletTask.spawn([self = std::move(self), button, buttonPos, rewardSpinner, url = std::move(url), body = std::move(body), gauntletIndex]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self), button, rewardSpinner]() {
                 if (button) {

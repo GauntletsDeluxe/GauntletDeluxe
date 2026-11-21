@@ -173,8 +173,8 @@ void GDXLeaderboardLayer::onSyncAccount(CCObject* sender) {
     body["accountId"] = accountData.accountId;
 
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_syncAccountTask.spawn([upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_syncAccountTask.spawn([upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef] {
                 if (upopupRef) upopupRef->showFailMessage("Authentication failed.");
@@ -259,8 +259,8 @@ void GDXLeaderboardLayer::fetchLeaderboard() {
     body["type"] = m_type;
 
     auto self = Ref<GDXLeaderboardLayer>(this);
-    m_leaderboardTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_leaderboardTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self)]() {
                 if (!self) return;

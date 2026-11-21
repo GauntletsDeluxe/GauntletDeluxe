@@ -215,8 +215,8 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
 
     auto self = Ref<GDXUserPanelPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_excludeTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_excludeTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
                 if (!upopupRef) return;
@@ -303,8 +303,8 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
     body["argonToken"] = ""; // Will be set later after fetching the token
 
     auto self = Ref<GDXUserPanelPopup>(this);
-    m_findAccountTask.spawn([self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_findAccountTask.spawn([self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self)]() {});
             co_return;
@@ -409,8 +409,8 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
 
     auto self = Ref<GDXUserPanelPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_promoteTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_promoteTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
                 if (!upopupRef) return;
@@ -498,8 +498,8 @@ void GDXUserPanelPopup::onPromoteMod(CCObject* sender) {
 
     auto self = Ref<GDXUserPanelPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_promoteModTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_promoteModTask.spawn([upopupRef = std::move(upopupRef), self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)]() {
                 if (!upopupRef) return;
@@ -679,7 +679,7 @@ void GDXUserPanelPopup::fetchUsers(int page) {
     body["search"] = m_searchQuery;
 
     auto self = Ref<GDXUserPanelPopup>(this);
-    m_fetchUsersTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
+    m_fetchUsersTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
         auto fail = [](Ref<GDXUserPanelPopup> self, std::string message) -> arc::Future<> {
             co_await async::waitForMainThread([self = std::move(self), message = std::move(message)]() {
                 if (!self) return;
@@ -691,7 +691,7 @@ void GDXUserPanelPopup::fetchUsers(int page) {
             });
         };
 
-        auto token = co_await gdx::argonToken(accountData);
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await fail(self, "Authentication failed.");
             co_return;

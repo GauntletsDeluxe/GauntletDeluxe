@@ -35,8 +35,8 @@
 //         body["accountId"] = accountData.accountId;
 //         body["targetAccountId"] = targetAccountId;
 
-//         async::spawn([targetAccountId, url = std::move(url), body = std::move(body), accountData]() mutable -> arc::Future<> {
-//             auto token = co_await gdx::argonToken(accountData);
+//         async::spawn([targetAccountId, url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+//             auto token = co_await gdx::argonToken();
 //             if (token.empty()) {
 //                 co_await async::waitForMainThread([targetAccountId]() {
 //                     auto pending = std::move(s_pending[targetAccountId]);

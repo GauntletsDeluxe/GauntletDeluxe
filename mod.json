@@ -1,5 +1,5 @@
 {
-	"geode": "6.0.0-alpha.1",
+	"geode": "6.0.0-beta.1",
 	"gd": {
 		"win": "2.2091",
 		"android": "2.2091",
@@ -8,7 +8,7 @@
 	},
 	"id": "arcticwoof.gauntlets_deluxe",
 	"name": "Gauntlets Deluxe",
-	"version": "v1.0.9",
+	"version": "v1.1.0",
 	"developers": [
 		"ArcticWoof",
 		"Supernova3339"
@@ -16,7 +16,7 @@
 	"description": "Community-run, fan-made Custom Gauntlets",
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3",
-		"dankmeme.argon": ">=2.0.0-alpha.2"
+		"dankmeme.argon": ">=2.0.0-beta.1"
 	},
 	"resources": {
 		"spritesheets": {

@@ -120,9 +120,8 @@ bool GDXGauntletManagePopup::init() {
             auto argonBtn = Button::createWithNode(
                 ButtonSprite::create("Copy Token", 100.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_05.png"),
                 [this](Button* sender) {
-                    auto accountData = argon::getGameAccountData();
-                    m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
-                        auto token = co_await gdx::argonToken(accountData);
+                    m_manageAssetsTask.spawn([]() -> arc::Future<> {
+                        auto token = co_await gdx::argonToken();
                         if (token.empty()) {
                             co_return;
                         }
@@ -149,7 +148,7 @@ void GDXGauntletManagePopup::onUserPanel(CCObject* sender) {
 void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
     auto accountData = argon::getGameAccountData();
     m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_return;
         }
@@ -168,7 +167,7 @@ void GDXGauntletManagePopup::onManageAssets(CCObject* sender) {
 void GDXGauntletManagePopup::onManageTags(CCObject* sender) {
     auto accountData = argon::getGameAccountData();
     m_manageAssetsTask.spawn([accountData]() -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_return;
         }
@@ -656,8 +655,8 @@ void GDXGauntletManagePopup::deleteGauntletAtIndex(int index) {
     upopup->show();
     auto self = Ref<GDXGauntletManagePopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_deleteGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_deleteGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
                 if (!upopupRef) return;

@@ -144,8 +144,8 @@ void GDXAddTagsPopup::onSubmit(CCObject* sender) {
 
     auto self = Ref<GDXAddTagsPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_requestTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_requestTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
                 if (!upopupRef) return;

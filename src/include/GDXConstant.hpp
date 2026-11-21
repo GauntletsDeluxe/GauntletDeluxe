@@ -36,9 +36,10 @@ namespace gdx {
     }
 
     // since im tired to getting the argon token in multiple places, just make a helper function for it
-    inline auto argonToken = [](const argon::AccountData& accountData) -> arc::Future<std::string> {
-        auto authResult = co_await argon::startAuth(accountData);
+    inline auto argonToken = []() -> arc::Future<std::string> {
+        auto authResult = co_await argon::startAuth();
         if (!authResult) {
+            argon::clearToken();
             co_return std::string();
         }
         co_return std::move(authResult).unwrap();

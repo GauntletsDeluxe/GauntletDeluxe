@@ -1003,8 +1003,8 @@ void GDXAddGauntletPopup::onSave(CCObject* sender) {
 
     auto self = Ref<GDXAddGauntletPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upoup);
-    m_addGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_addGauntletTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self), upopupRef = std::move(upopupRef)] {
                 if (!upopupRef) return;

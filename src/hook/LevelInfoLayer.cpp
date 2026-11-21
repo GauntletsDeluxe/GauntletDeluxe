@@ -38,8 +38,8 @@ class $modify(GDXLevelInfoLayer, LevelInfoLayer) {
                 gdxBg->setColor(gdx::gauntletColor()); // color based of the gauntlet color scheme
             }
 
-            async::spawn([self, difficultySpritePos, loadingSpinner, url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
-                auto token = co_await gdx::argonToken(accountData);
+            async::spawn([self, difficultySpritePos, loadingSpinner, url = std::move(url), body = std::move(body), levelId]() mutable -> arc::Future<> {
+                auto token = co_await gdx::argonToken();
                 if (token.empty()) {
                     co_return;
                 }

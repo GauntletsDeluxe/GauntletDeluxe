@@ -104,7 +104,7 @@ void GDXManageTagsPopup::onAddTag(CCObject* sender) {
 void GDXManageTagsPopup::onManageTagsWeb(CCObject* sender) {
     auto accountData = argon::getGameAccountData();
     m_fetchTagsTask.spawn([accountData]() -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_return;
         }
@@ -385,8 +385,8 @@ void GDXManageTagsPopup::deleteTagAtIndex(int index) {
     upopup->show();
     auto self = Ref<GDXManageTagsPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
-    m_deleteTagTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_deleteTagTask.spawn([self = std::move(self), upopupRef = std::move(upopupRef), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([upopupRef = std::move(upopupRef), self = std::move(self)] {
                 if (!upopupRef) return;

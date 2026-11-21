@@ -81,8 +81,8 @@ class $modify(GDXEndLevelLayer, EndLevelLayer) {
                 body["jumps"] = static_cast<int>(this->m_playLayer->m_level->m_jumps);
 
                 auto self = Ref<EndLevelLayer>(this);
-                m_fields->m_requestTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData), levelId]() mutable -> arc::Future<> {
-                auto token = co_await gdx::argonToken(accountData);
+                m_fields->m_requestTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), levelId]() mutable -> arc::Future<> {
+                auto token = co_await gdx::argonToken();
                 if (token.empty()) {
                     log::warn("Failed to get argon token for completing level");
                     co_return;

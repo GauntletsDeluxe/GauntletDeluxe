@@ -236,8 +236,8 @@ void GDXLinkDiscordPopup::fetchDiscordStatus(bool silent) {
 
     auto self = Ref<GDXLinkDiscordPopup>(this);
 
-    m_checkStatusTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData), silent]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_checkStatusTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), silent]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             if (!silent) {
                 co_await async::waitForMainThread([self = std::move(self)]() {
@@ -373,8 +373,8 @@ void GDXLinkDiscordPopup::onLink(CCObject* sender) {
 
     auto self = Ref<GDXLinkDiscordPopup>(this);
 
-    m_linkTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData), username = std::move(username), discordId = std::move(discordId)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_linkTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), username = std::move(username), discordId = std::move(discordId)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self)]() {
                 if (self) {
@@ -465,8 +465,8 @@ void GDXLinkDiscordPopup::onUnlink(CCObject* sender) {
 
     auto self = Ref<GDXLinkDiscordPopup>(this);
 
-    m_unlinkTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body), accountData = std::move(accountData)]() mutable -> arc::Future<> {
-        auto token = co_await gdx::argonToken(accountData);
+    m_unlinkTask.spawn([self = std::move(self), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
+        auto token = co_await gdx::argonToken();
         if (token.empty()) {
             co_await async::waitForMainThread([self = std::move(self)]() {
                 if (self) {
