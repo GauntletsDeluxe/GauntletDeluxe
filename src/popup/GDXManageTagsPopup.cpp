@@ -35,10 +35,12 @@ bool GDXManageTagsPopup::init() {
     m_searchInput = TextInput::create(380.f, "Search tags", "chatFont.fnt");
     if (m_searchInput) {
         m_searchInput->setAnchorPoint({0.5f, 1.f});
+        m_searchInput->setZOrder(2);
+        m_searchInput->setCommonFilter(CommonFilter::Alphanumeric);
         m_mainLayer->addChildAtPosition(m_searchInput, Anchor::Top, {0.f, -35.f});
     }
 
-    auto listSize = CCSizeMake(370.f, 160.f);
+    auto listSize = CCSizeMake(370.f, 175.f);
     m_list = cue::ListNode::create(listSize);
     m_list->getScrollLayer()->m_contentLayer->setLayout(
         ColumnLayout::create()
@@ -46,7 +48,7 @@ bool GDXManageTagsPopup::init() {
             ->setAxisReverse(true)
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
-    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, -15.f});
+    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {0.f, -5.f});
     m_scrollbar = Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
 

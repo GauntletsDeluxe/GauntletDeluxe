@@ -45,7 +45,7 @@ bool GDXGauntletManagePopup::init() {
     addSideArt(m_mainLayer, SideArt::TopLeft, SideArtStyle::PopupGold, false);
     addSideArt(m_mainLayer, SideArt::TopRight, SideArtStyle::PopupGold, false);
 
-    auto listSize = CCSizeMake(356.f, 190.f);
+    auto listSize = CCSizeMake(356.f, 205.f);
     m_list = cue::ListNode::create(listSize);
     m_list->getScrollLayer()->m_contentLayer->setLayout(
         ColumnLayout::create()
@@ -53,7 +53,7 @@ bool GDXGauntletManagePopup::init() {
             ->setAxisReverse(true)
             ->setAxisAlignment(AxisAlignment::End)
             ->setAutoGrowAxis(0.f));
-    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {60.f, -30.f});
+    m_mainLayer->addChildAtPosition(m_list, Anchor::Center, {60.f, -20.f});
     m_scrollbar = Scrollbar::create(m_list->getScrollLayer());
     m_list->addChildAtPosition(m_scrollbar, Anchor::Right, {10.f, 0.f});
 

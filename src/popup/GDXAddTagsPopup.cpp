@@ -49,15 +49,17 @@ bool GDXAddTagsPopup::init() {
 
     m_nameInput = TextInput::create(160.f, "Tag Name", "chatFont.fnt");
     m_nameInput->setLabel("Tag Name");
+    m_nameInput->getCaptionLabel()->setFont("goldFont.fnt");
     m_nameInput->setCommonFilter(CommonFilter::Any);
     m_nameInput->setAnchorPoint({0.5f, 1.f});
     m_mainLayer->addChildAtPosition(m_nameInput, Anchor::Top, {-30.f, -40.f});
 
-    m_descriptionInput = TextInput::create(220.f, "Tag Description", "chatFont.fnt");
+    m_descriptionInput = TextInput::createMultiline({220.f, 40.f}, "Tag Description", "chatFont.fnt");
     m_descriptionInput->setLabel("Tag Description");
+    m_descriptionInput->getCaptionLabel()->setFont("goldFont.fnt");
     m_descriptionInput->setCommonFilter(CommonFilter::Any);
-    m_descriptionInput->setAnchorPoint({0.5f, 1.f});
-    m_mainLayer->addChildAtPosition(m_descriptionInput, Anchor::Top, {0.f, -90.f});
+    m_descriptionInput->setAnchorPoint({0.5f, 0.5f});
+    m_mainLayer->addChildAtPosition(m_descriptionInput, Anchor::Top, {0.f, -100.f});
 
     m_r = m_editTag["r"].asInt().unwrapOr(m_r);
     m_g = m_editTag["g"].asInt().unwrapOr(m_g);

@@ -1,3 +1,8 @@
+## v1.1.1
+
+- Added Muitiline on Description Text Inputs
+- Minor UI Tweaks
+
 ## v1.1.0
 
 - Bumped to Geode v6

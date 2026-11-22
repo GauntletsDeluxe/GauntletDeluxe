@@ -211,22 +211,26 @@ bool GDXAddGauntletPopup::init() {
 
     m_nameInput = TextInput::create(80.f, "Gauntlet Name", "chatFont.fnt");
     m_nameInput->setLabel("Gauntlet Name");
+    m_nameInput->getCaptionLabel()->setFont("goldFont.fnt");
     m_nameInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_nameInput, Anchor::Left, {65, 80});
 
-    m_descriptionInput = TextInput::create(105.f, "Gauntlet Description", "chatFont.fnt");
+    m_descriptionInput = TextInput::createMultiline({105.f, 40.f}, "Gauntlet Description", "chatFont.fnt");
     m_descriptionInput->setLabel("Gauntlet Description");
+    m_descriptionInput->getCaptionLabel()->setFont("goldFont.fnt");
     m_descriptionInput->setCommonFilter(CommonFilter::Any);
     m_mainLayer->addChildAtPosition(m_descriptionInput, Anchor::Left, {75, 30});
 
     if (!m_localMode) {
         m_suggestedByInput = TextInput::create(80.f, "Suggested By", "chatFont.fnt");
         m_suggestedByInput->setLabel("Suggested By");
+        m_suggestedByInput->getCaptionLabel()->setFont("goldFont.fnt");
         m_suggestedByInput->setCommonFilter(CommonFilter::Int);
         m_mainLayer->addChildAtPosition(m_suggestedByInput, Anchor::Left, {65, -20});
 
         m_spriteByInput = TextInput::create(80.f, "Sprite By", "chatFont.fnt");
         m_spriteByInput->setLabel("Sprite By");
+        m_spriteByInput->getCaptionLabel()->setFont("goldFont.fnt");
         m_spriteByInput->setCommonFilter(CommonFilter::Int);
         m_mainLayer->addChildAtPosition(m_spriteByInput, Anchor::Left, {155, -20});
     }
@@ -235,6 +239,7 @@ bool GDXAddGauntletPopup::init() {
         m_gauntletReward = TextInput::create(80.f, "Gauntlet Reward", "chatFont.fnt");
         m_gauntletReward->setCommonFilter(CommonFilter::Int);
         m_gauntletReward->setLabel("Gauntlet Reward");
+        m_gauntletReward->getCaptionLabel()->setFont("goldFont.fnt");
         m_mainLayer->addChildAtPosition(m_gauntletReward, Anchor::Left, {155, 80});
     }
 
@@ -257,14 +262,17 @@ bool GDXAddGauntletPopup::init() {
     m_levelInput = TextInput::create(static_cast<float>(m_localMode ? 80.f : 120.f), m_localMode ? "Enter a Level ID to add" : "Level ID", "chatFont.fnt");
     m_levelInput->setCommonFilter(CommonFilter::Int);
     m_levelInput->setZOrder(2);
-    if (m_localMode) m_levelInput->setLabel("Level ID");
-    m_mainLayer->addChildAtPosition(m_levelInput, m_localMode ? Anchor::Left : Anchor::Bottom, {static_cast<float>(m_localMode ? 155 : 10), static_cast<float>(m_localMode ? 80 : 22)}, false);
+    m_levelInput->setLabel("Level ID");
+    m_levelInput->getCaptionLabel()->setFont("goldFont.fnt");
+    m_mainLayer->addChildAtPosition(m_levelInput, m_localMode ? Anchor::Left : Anchor::Bottom, {static_cast<float>(m_localMode ? 155 : 10), static_cast<float>(m_localMode ? 80 : 15)}, false);
 
     if (!m_localMode) {
         m_levelRewardInput = TextInput::create(120.f, "Level Reward", "chatFont.fnt");
         m_levelRewardInput->setCommonFilter(CommonFilter::Int);
+        m_levelRewardInput->setLabel("Level Reward");
+        m_levelRewardInput->getCaptionLabel()->setFont("goldFont.fnt");
         m_levelRewardInput->setZOrder(2);
-        m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 22});
+        m_mainLayer->addChildAtPosition(m_levelRewardInput, Anchor::Bottom, {160, 15});
     }
 
     auto colorSpr = CCSprite::createWithSpriteFrameName("GDX_gauntletSquare_01.png"_spr);

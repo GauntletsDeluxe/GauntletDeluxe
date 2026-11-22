@@ -15,7 +15,7 @@ using namespace geode::prelude;
 constexpr float kLeftColumnWidth = 160.f;
 constexpr float kRightColumnX = 350.f;
 constexpr float kListWidth = 280.f;
-constexpr float kListHeight = 170.f;
+constexpr float kListHeight = 180.f;
 constexpr float kCellHeight = 28.f;
 
 GDXUserPanelPopup* GDXUserPanelPopup::create() {
@@ -72,26 +72,31 @@ bool GDXUserPanelPopup::init() {
     m_accountIdInput = TextInput::create(110.f, "Account ID", "chatFont.fnt");
     m_accountIdInput->setLabel("Target Account ID");
     m_accountIdInput->setCommonFilter(CommonFilter::Int);
+    m_accountIdInput->getCaptionLabel()->setFont("goldFont.fnt");
     m_accountIdInput->setZOrder(2);
-    m_mainLayer->addChildAtPosition(m_accountIdInput, Anchor::BottomLeft, {kRightColumnX - 103.f, 215.f});
+    m_mainLayer->addChildAtPosition(m_accountIdInput, Anchor::TopRight, {-110.f, -60.f});
 
     // check button on the provided accountId
     auto findBtn = Button::createWithSpriteFrameName("gj_findBtn_001.png");
     findBtn->setActivateCallback([this](CCObject* sender) {
         GDXUserPanelPopup::onFindAccountID(sender);
     });
-    m_accountIdInput->addChildAtPosition(findBtn, Anchor::Right, {25.f, 0.f}, false);
+    findBtn->setScale(0.75f);
+    findBtn->setZOrder(2);
+    m_mainLayer->addChildAtPosition(findBtn, Anchor::TopRight, {-30.f, -60.f}, false);
 
     // search the list by username, narrower than the left column so both inputs fit side by side
     m_usernameSearchInput = TextInput::create(kLeftColumnWidth - 10.f, "Username", "chatFont.fnt");
     m_usernameSearchInput->setLabel("Search Username");
+    m_usernameSearchInput->getCaptionLabel()->setFont("goldFont.fnt");
+    m_usernameSearchInput->setCommonFilter(CommonFilter::Alphanumeric);
     m_usernameSearchInput->setMaxCharCount(20);
     m_usernameSearchInput->setZOrder(2);
     m_usernameSearchInput->setCallback([this](std::string const& text) {
         m_searchQuery = text;
         fetchUsers(1);
     });
-    m_mainLayer->addChildAtPosition(m_usernameSearchInput, Anchor::BottomLeft, {kRightColumnX + 77.f, 215.f});
+    m_mainLayer->addChildAtPosition(m_usernameSearchInput, Anchor::TopRight, {-250.f, -60.f});
 
     m_userList = cue::ListNode::create({kListWidth, kListHeight}, {191, 114, 62, 255}, cue::ListBorderStyle::CommentsBlue);
     m_userList->setCellHeight(kCellHeight);
@@ -102,7 +107,7 @@ bool GDXUserPanelPopup::init() {
         layout->setAxisReverse(true);
         contentLayer->setLayout(layout);
     }
-    m_mainLayer->addChildAtPosition(m_userList, Anchor::BottomLeft, {kRightColumnX, 110.f});
+    m_mainLayer->addChildAtPosition(m_userList, Anchor::BottomLeft, {kRightColumnX, 115.f});
 
     m_listSpinner = LoadingSpinner::create(40.f);
     m_mainLayer->addChildAtPosition(m_listSpinner, Anchor::BottomLeft, {kRightColumnX, 125.f});
@@ -143,8 +148,6 @@ void GDXUserPanelPopup::updateExcludeButton() {
     auto offNode = ButtonSprite::create("Exclude User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_06.png");
     auto onNode = ButtonSprite::create("Include User", 130.f, 80.f, 1.f, true, "goldFont.fnt", "GJ_button_02.png");
     m_excludeBtn = Toggler::create(offNode, onNode, [this](Toggler* sender, bool) {
-        // Toggler flips its state before invoking this callback; snap it back to the
-        // confirmed state so it only changes once the server request succeeds
         sender->setToggled(m_isExcluded);
         this->onExclude(sender);
     });
@@ -210,8 +213,8 @@ void GDXUserPanelPopup::onExclude(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
-    body["isExcluded"] = !m_isExcluded; // Toggle the state
-    body["argonToken"] = ""; // Will be set later after fetching the token
+    body["isExcluded"] = !m_isExcluded;  // Toggle the state
+    body["argonToken"] = "";             // Will be set later after fetching the token
 
     auto self = Ref<GDXUserPanelPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
@@ -300,7 +303,7 @@ void GDXUserPanelPopup::onFindAccountID(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
-    body["argonToken"] = ""; // Will be set later after fetching the token
+    body["argonToken"] = "";  // Will be set later after fetching the token
 
     auto self = Ref<GDXUserPanelPopup>(this);
     m_findAccountTask.spawn([self = std::move(self), accountIdStr = std::move(accountIdStr), url = std::move(url), body = std::move(body)]() mutable -> arc::Future<> {
@@ -404,8 +407,8 @@ void GDXUserPanelPopup::onPromote(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
-    body["isContributor"] = !m_isContributor; // toggle
-    body["argonToken"] = ""; // Will be set later after fetching the token
+    body["isContributor"] = !m_isContributor;  // toggle
+    body["argonToken"] = "";                   // Will be set later after fetching the token
 
     auto self = Ref<GDXUserPanelPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
@@ -493,8 +496,8 @@ void GDXUserPanelPopup::onPromoteMod(CCObject* sender) {
     matjson::Value body = matjson::Value::object();
     body["accountId"] = accountData.accountId;
     body["targetAccountId"] = numFromString<int>(accountIdStr).unwrapOr(0);
-    body["isLeaderboardMod"] = !m_isLeaderboardMod; // toggle
-    body["argonToken"] = ""; // Will be set later after fetching the token
+    body["isLeaderboardMod"] = !m_isLeaderboardMod;  // toggle
+    body["argonToken"] = "";                         // Will be set later after fetching the token
 
     auto self = Ref<GDXUserPanelPopup>(this);
     auto upopupRef = Ref<UploadActionPopup>(upopup);
@@ -575,8 +578,9 @@ CCNode* GDXUserPanelPopup::createUserCell(matjson::Value const& entry, float wid
     cell->setContentSize({width, kCellHeight});
 
     // selecting a user fills in the account id and looks them up
-    auto nameBtn = Button::createWithLabel(username.c_str(), "goldFont.fnt", [this, accountId](Button*) {
+    auto nameBtn = Button::createWithLabel(username.c_str(), "goldFont.fnt", [this, accountId, username](Button*) {
         m_accountIdInput->setString(numToString(accountId));
+        m_usernameSearchInput->setString(username.c_str());
         onFindAccountID(nullptr);
     });
     nameBtn->setSwallowTouches(false);
@@ -642,7 +646,7 @@ CCNode* GDXUserPanelPopup::createUserCell(matjson::Value const& entry, float wid
     if (isManager) addBadge("GDX_manager_badge.png"_spr);
     if (isContributor) addBadge("GDX_contributor_badge.png"_spr);
     if (isLeaderboardMod) addBadge("GDX_leaderboard_badge.png"_spr);
-    if (isExcluded) addBadge("GJ_deleteIcon_001.png"); // no badge of its own, so a delete icon marks excluded users
+    if (isExcluded) addBadge("GJ_deleteIcon_001.png");  // no badge of its own, so a delete icon marks excluded users
     badgeMenu->updateLayout();
     cell->addChild(badgeMenu);
 
